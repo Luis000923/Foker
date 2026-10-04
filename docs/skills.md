@@ -43,3 +43,6 @@ OpenCode y Antigravity reciben `.agents/skills/<name>/`. La materialización por
 sync corresponde a su integración; no edites las copias generadas. La posible
 duplicación en OpenCode sigue pendiente de verificación. Para anfitriones sin
 skills, MCP ofrece `foker://skills/{name}` y devuelve FKR-SKL-001 si no está visible.
+
+`workflow_ref: SKILL.md` referencia el documento completo. Si se indica un fragmento,
+el encabezado correspondiente debe existir. Los assets binarios conservan sus bytes al sincronizar.

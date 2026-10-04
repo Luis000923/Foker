@@ -20,6 +20,11 @@ export async function loadConfig(root: string, options: { configPath?: string } 
     else if (error instanceof FokerError) throw error;
     else throw new FokerError('FKR-CFG-001', error instanceof Error ? error.message : String(error));
   }
+  return resolveConfig(project, source);
+}
+
+/** Resuelve una configuración propuesta sin leer el disco. */
+export function resolveConfig(project: FokerConfig, source: string | null = null) {
   const { policy, overrides } = effectivePolicy(DEFAULT_POLICY, project.policy);
   const validation = {
     profiles: project.validation?.profiles ?? {},

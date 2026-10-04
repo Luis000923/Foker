@@ -7,7 +7,7 @@ export type HostId = (typeof HOST_IDS)[number];
 /** Archivo de una skill, relativo a su directorio (`SKILL.md`, `references/x.md`…). */
 export interface SkillFile {
   path: string;
-  content: string;
+  content: string | Uint8Array;
 }
 
 export interface SkillInput {
@@ -39,7 +39,7 @@ export interface SyncInput {
 
 /** Lo que un adaptador quiere que exista en el proyecto. */
 export type Desired =
-  | { kind: 'file'; path: string; content: string }
+  | { kind: 'file'; path: string; content: string | Uint8Array }
   | { kind: 'block'; path: string; body: string; header?: string }
   | {
       kind: 'json';

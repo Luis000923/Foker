@@ -36,3 +36,13 @@ determinista; `foker sync --check` falla (exit 1) si algo difiere, útil en CI.
 - **Antigravity**: solo las capas C2–C4 protegen (R-11). La regla `foker.md` cabe en 24 KB.
 
 Verificación manual por release: [verification.md](verification.md).
+
+Los assets de skills se copian y comparan por bytes; solo `SKILL.md` recibe la nota de generado.
+Las listas JSON registran únicamente los elementos añadidos por Foker o ya gestionados.
+Una propiedad intermedia incompatible produce un conflicto y no se aplica el plan.
+
+`doctor` respeta `--config` en todo el diagnóstico. Con `--fix --dry-run` devuelve
+`proposed` sin aplicar reparaciones; verifica las reglas efectivas de Git (o las líneas
+en orden con sus negaciones cuando Git no puede consultarlas).
+`init` deduplica los targets y planifica `--dry-run` con la configuración propuesta,
+incluso al reemplazar una configuración existente mediante `--force`.

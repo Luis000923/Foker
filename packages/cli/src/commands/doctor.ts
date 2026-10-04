@@ -4,12 +4,25 @@ import { appendFile, mkdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { estimateTokens, versionInfo } from '@foker/core';
-import { FokerError, isTrusted, loadConfig } from '@foker/engine';
+import { FokerError, isTrusted, loadConfig, matchGlobs } from '@foker/engine';
 import { MANIFEST_PATH } from '@foker/integrations';
 import { type Command, flag } from '../types.js';
 import { runSync } from './sync.js';
 
 const exec = promisify(execFile);
+
+/** Evalúa reglas en orden cuando Git no puede consultar el repositorio. */
+export function fallbackIgnored(text: string): boolean {
+  let ignored = false;
+  for (const line of text.split(/\r?\n/)) {
+    const rule = line.trim();
+    if (!rule || rule.startsWith('#')) continue;
+    const negate = rule.startsWith('!');
+    const pattern = (negate ? rule.slice(1) : rule).replace(/^\//, '').replace(/\/$/, '');
+    if (matchGlobs('.foker', [pattern]) || matchGlobs('.foker/x', [pattern])) ignored = !negate;
+  }
+  return ignored;
+}
 
 /** Resultado de una comprobación de `foker doctor`. */
 export interface Check {
@@ -59,7 +72,7 @@ function sandboxDetected(env: NodeJS.ProcessEnv): boolean {
 export async function runDoctor(
   root: string,
   env: NodeJS.ProcessEnv,
-  options: { fix?: boolean; trustBaseDir?: string },
+  options: { fix?: boolean; dryRun?: boolean; configPath?: string; trustBaseDir?: string },
 ) {
   const checks: Check[] = [];
   const add = (check: Check) => checks.push(check);
@@ -90,11 +103,13 @@ export async function runDoctor(
 
   let loaded: Awaited<ReturnType<typeof loadConfig>> | undefined;
   try {
-    loaded = await loadConfig(root);
+    loaded = await loadConfig(root, options);
     add({
       id: 'config',
       status: loaded.source ? 'ok' : 'warn',
-      message: loaded.source ? 'foker.config.yaml válido' : 'Sin foker.config.yaml: se usan los valores por defecto',
+      message: loaded.source
+        ? `${options.configPath ?? 'foker.config.yaml'} válido`
+        : 'Sin foker.config.yaml: se usan los valores por defecto',
       ...(loaded.source ? {} : { hint: 'Ejecuta foker init' }),
     });
     for (const override of loaded.overrides ?? []) {
@@ -110,7 +125,7 @@ export async function runDoctor(
       id: 'config',
       status: 'fail',
       message: error instanceof Error ? error.message : String(error),
-      hint: 'Corrige foker.config.yaml (FKR-CFG-001)',
+      hint: `Corrige ${options.configPath ?? 'foker.config.yaml'} (FKR-CFG-001)`,
     });
   }
 
@@ -128,7 +143,7 @@ export async function runDoctor(
           },
     );
     try {
-      const { plan } = await runSync(root, { check: true });
+      const { plan } = await runSync(root, { check: true, config: loaded.config });
       const drift = plan.writes.length + plan.conflicts.length;
       const synced = existsSync(join(root, MANIFEST_PATH));
       add(
@@ -189,17 +204,30 @@ export async function runDoctor(
 
   const gitignorePath = join(root, '.gitignore');
   const gitignore = existsSync(gitignorePath) ? readFileSync(gitignorePath, 'utf8') : '';
-  const ignored = gitignore.split(/\r?\n/).some((l) => ['.foker', '.foker/', '/.foker', '/.foker/'].includes(l.trim()));
+  let ignored = fallbackIgnored(gitignore);
+  try {
+    await exec('git', ['check-ignore', '-q', '.foker/x'], { cwd: root, timeout: 5000 });
+    ignored = true;
+  } catch (error) {
+    if ((error as { code?: number }).code === 1) ignored = false;
+  }
+  const proposed: string[] = [];
   const fixed: string[] = [];
   if (options.fix) {
     // Solo acciones seguras (FOKER-SPEC §16.1).
     if (!existsSync(join(root, '.foker'))) {
-      await mkdir(join(root, '.foker'), { recursive: true });
-      fixed.push('.foker/');
+      proposed.push('.foker/');
+      if (!options.dryRun) {
+        await mkdir(join(root, '.foker'), { recursive: true });
+        fixed.push('.foker/');
+      }
     }
     if (!ignored) {
-      await appendFile(gitignorePath, `${gitignore && !gitignore.endsWith('\n') ? '\n' : ''}.foker/\n`);
-      fixed.push('.gitignore');
+      proposed.push('.gitignore');
+      if (!options.dryRun) {
+        await appendFile(gitignorePath, `${gitignore && !gitignore.endsWith('\n') ? '\n' : ''}.foker/\n`);
+        fixed.push('.gitignore');
+      }
     }
   }
   add(
@@ -207,7 +235,7 @@ export async function runDoctor(
       ? { id: 'gitignore', status: 'ok', message: '.foker/ está en .gitignore' }
       : { id: 'gitignore', status: 'warn', message: '.foker/ no está en .gitignore', hint: 'foker doctor --fix' },
   );
-  return { checks, fixed };
+  return { checks, fixed, proposed };
 }
 
 export const doctorCommand: Command = {
@@ -216,16 +244,18 @@ export const doctorCommand: Command = {
   maxArgs: 0,
   flags: [flag('fix', 'boolean', 'Aplica solo correcciones seguras (crear .foker/, añadirlo a .gitignore)')],
   async run(ctx) {
-    const { checks, fixed } = await runDoctor(ctx.cwd, ctx.env, {
+    const { checks, fixed, proposed } = await runDoctor(ctx.cwd, ctx.env, {
       fix: Boolean(ctx.flags['fix']),
+      dryRun: Boolean(ctx.flags['dry-run']),
+      ...(ctx.flags['config'] ? { configPath: String(ctx.flags['config']) } : {}),
       ...(ctx.trustBaseDir ? { trustBaseDir: ctx.trustBaseDir } : {}),
     });
     const icon = { ok: '✓', warn: '!', fail: '✗' } as const;
     const human = `${checks
       .map((c) => `${icon[c.status]} ${c.id}: ${c.message}${c.hint ? ` — ${c.hint}` : ''}`)
-      .join('\n')}\n`;
+      .join('\n')}\n${ctx.flags['dry-run'] && proposed.length ? `Se modificarían: ${proposed.join(', ')}\n` : ''}`;
     return {
-      data: { checks, fixed },
+      data: { checks, fixed, proposed },
       warnings: [],
       human,
       exitCode: checks.some((c) => c.status === 'fail') ? 1 : 0,

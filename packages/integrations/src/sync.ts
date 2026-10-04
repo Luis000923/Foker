@@ -39,7 +39,7 @@ export interface Conflict {
 
 export interface SyncPlan {
   /** Escrituras (contenido completo) y borrados (`null`), ordenados por ruta. */
-  writes: { path: string; content: string | null }[];
+  writes: { path: string; content: string | Uint8Array | null }[];
   conflicts: Conflict[];
   manifest: SyncManifest;
 }
@@ -101,18 +101,23 @@ function collect(targets: HostId[], input: SyncInput): Map<string, Desired> {
   return byPath;
 }
 
+function asText(value: string | Uint8Array | undefined): string | undefined {
+  return typeof value === 'string' || value === undefined ? value : Buffer.from(value).toString('utf8');
+}
+
 interface Io {
-  read(path: string): string | undefined;
+  read(path: string): string | Uint8Array | undefined;
 }
 
 function planFile(
   item: Extract<Desired, { kind: 'file' }>,
-  current: string | undefined,
+  current: string | Uint8Array | undefined,
   old: ManifestEntry | undefined,
   force: boolean,
 ) {
   const entry: ManifestEntry = { kind: 'file', hash: hashText(item.content) };
-  if (current === item.content) return { content: undefined, entry, conflict: undefined };
+  if (current !== undefined && hashText(current) === entry.hash)
+    return { content: undefined, entry, conflict: undefined };
   const ours = current === undefined || (old?.kind === 'file' && old.hash === hashText(current));
   if (!ours && !force) {
     return {
@@ -205,10 +210,19 @@ function planJson(
       return !(ownedBefore.has(c) && !wantedValues.has(c));
     });
     const present = new Set(list.map(canonical));
-    for (const value of values) if (!present.has(canonical(value))) list.push(value);
-    if (list.length) setAt(doc, path, list);
-    else if (existing !== undefined) deleteAt(doc, path);
-    if (values.length) arrays.push({ pointer, values: [...wantedValues].sort() });
+    const ownedNow = new Set([...ownedBefore].filter((v) => wantedValues.has(v)));
+    for (const value of values) {
+      const key = canonical(value);
+      if (!present.has(key)) {
+        list.push(value);
+        present.add(key);
+        ownedNow.add(key);
+      }
+    }
+    if (list.length) {
+      if (!setAt(doc, path, list)) conflicts.push(`${pointer}: un tramo intermedio no es un objeto`);
+    } else if (existing !== undefined) deleteAt(doc, path);
+    if (ownedNow.size) arrays.push({ pointer, values: [...ownedNow].sort() });
   }
   if (conflicts.length) return { content: undefined, entry: old, conflict: conflicts.join('; ') };
   const entry: ManifestEntry = {
@@ -224,12 +238,13 @@ function planJson(
 }
 
 /** Retira lo que un sync anterior generó y ya no corresponde. */
-function planRemoval(path: string, current: string | undefined, old: ManifestEntry, force: boolean) {
+function planRemoval(path: string, current: string | Uint8Array | undefined, old: ManifestEntry, force: boolean) {
   if (current === undefined) return { content: undefined, conflict: undefined };
   if (old.kind === 'file') {
     if (hashText(current) === old.hash || force) return { content: null, conflict: undefined };
     return { content: undefined, conflict: 'ya no se genera pero fue modificado a mano' };
   }
+  current = asText(current) ?? '';
   if (old.kind === 'block') {
     const found = findBlock(current);
     if (!found) return { content: undefined, conflict: undefined };
@@ -250,9 +265,9 @@ function planRemoval(path: string, current: string | undefined, old: ManifestEnt
  */
 export function planSync(input: SyncInput, io: Io, options: { force?: boolean } = {}): SyncPlan {
   const force = options.force ?? false;
-  const oldManifest = parseManifest(io.read(MANIFEST_PATH));
+  const oldManifest = parseManifest(asText(io.read(MANIFEST_PATH)));
   const desired = collect(input.targets, input);
-  const writes = new Map<string, string | null>();
+  const writes = new Map<string, string | Uint8Array | null>();
   const conflicts: Conflict[] = [];
   const files: Record<string, ManifestEntry> = {};
 
@@ -264,8 +279,8 @@ export function planSync(input: SyncInput, io: Io, options: { force?: boolean } 
       item.kind === 'file'
         ? planFile(item, current, old, force)
         : item.kind === 'block'
-          ? planBlock(item, current, old, force)
-          : planJson(item, current, old, force);
+          ? planBlock(item, asText(current), old, force)
+          : planJson(item, asText(current), old, force);
     if (result.conflict) conflicts.push({ path, reason: result.conflict });
     if (result.content !== undefined) writes.set(path, result.content);
     if (result.entry) files[path] = result.entry;
@@ -283,7 +298,7 @@ export function planSync(input: SyncInput, io: Io, options: { force?: boolean } 
   }
   const manifest: SyncManifest = { version: 1, files };
   const manifestText = formatManifest(manifest);
-  if (io.read(MANIFEST_PATH) !== manifestText) writes.set(MANIFEST_PATH, manifestText);
+  if (asText(io.read(MANIFEST_PATH)) !== manifestText) writes.set(MANIFEST_PATH, manifestText);
   return {
     writes: [...writes.entries()]
       .map(([path, content]) => ({ path, content }))

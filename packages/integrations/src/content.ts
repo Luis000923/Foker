@@ -35,12 +35,15 @@ export function claudeBlock(): string {
 }
 
 /** Copias de una skill para un anfitrión: SKILL.md con nota de generado; sin `foker.skill.yaml`. */
-export function skillFiles(base: string, skill: SkillInput): { path: string; content: string }[] {
+export function skillFiles(base: string, skill: SkillInput): { path: string; content: string | Uint8Array }[] {
   return skill.files
     .filter((f) => f.path !== 'foker.skill.yaml')
     .map((f) => ({
       path: `${base}/${skill.name}/${f.path}`,
-      content: f.path === 'SKILL.md' ? withGeneratedNote(f.content) : f.content,
+      content:
+        f.path === 'SKILL.md'
+          ? withGeneratedNote(typeof f.content === 'string' ? f.content : Buffer.from(f.content).toString('utf8'))
+          : f.content,
     }));
 }
 

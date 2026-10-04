@@ -1,8 +1,8 @@
 import { createHash } from 'node:crypto';
 
 /** `sha256:<hex>` de un texto (identifica contenido generado en el manifiesto). */
-export function hashText(text: string): string {
-  return `sha256:${createHash('sha256').update(text, 'utf8').digest('hex')}`;
+export function hashText(text: string | Uint8Array): string {
+  return `sha256:${createHash('sha256').update(text).digest('hex')}`;
 }
 
 /** JSON con claves ordenadas, para comparar y hashear valores sin depender del orden. */

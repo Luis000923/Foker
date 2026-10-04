@@ -150,3 +150,29 @@ describe('foker policy check --hook claude-code', () => {
     expect((await run(['policy', 'check', '--path', 'src/a.ts'])).exit).toBe(0);
   });
 });
+
+it('copia assets binarios intactos, compara bytes y detecta ediciones', async () => {
+  const dir = join(root, 'foker/skills/demo');
+  await mkdir(join(dir, 'assets'), { recursive: true });
+  await writeFile(join(dir, 'SKILL.md'), '---\nname: demo\ndescription: demo\n---\n# Demo\n');
+  const bytes = Buffer.from([137, 80, 78, 71, 0, 255, 254, 128]);
+  await writeFile(join(dir, 'assets/example.png'), bytes);
+  await writeFile(join(dir, 'references.md'), '# Referencia\n');
+  expect((await run(['sync'])).exit).toBe(0);
+  for (const base of ['.claude/skills', '.agents/skills']) {
+    expect(await readFile(join(root, base, 'demo/assets/example.png'))).toEqual(bytes);
+    expect(await readFile(join(root, base, 'demo/references.md'), 'utf8')).toBe('# Referencia\n');
+  }
+  expect((await run(['sync', '--check'])).exit).toBe(0);
+  await writeFile(
+    join(root, '.claude/skills/demo/assets/example.png'),
+    Buffer.from([137, 80, 78, 71, 0, 255, 254, 129]),
+  );
+  expect((await run(['sync', '--check'])).exit).toBe(1);
+  expect((await run(['sync', '--force'])).exit).toBe(0);
+  expect(await readFile(join(root, '.claude/skills/demo/assets/example.png'))).toEqual(bytes);
+  expect((await run(['sync', '--target', 'opencode'])).exit).toBe(0);
+  await expect(readFile(join(root, '.claude/skills/demo/assets/example.png'))).rejects.toMatchObject({
+    code: 'ENOENT',
+  });
+});
