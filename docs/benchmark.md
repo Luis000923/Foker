@@ -26,8 +26,9 @@ workspace nuevo. Alternativa directa: `node benchmarks/run.mjs ctx-gold` (análo
 y evaluador). No se añaden dependencias externas al repositorio.
 
 `manifest.yaml` usa JSON, subconjunto válido de YAML, con comentarios iniciales. Incluye las suites
-`smoke` de tres tareas y `full` de veinte, semillas y precios USD/MTok versionados. Modelo, precios y
-límite USD son `null`, **PENDIENTE PREGUNTA-2**. La versión real del anfitrión debe fijarse antes de construir la imagen (no se ha consultado el registro).
+`smoke` de tres tareas y `full` de veinte, semillas y precios USD/MTok versionados. Modelo fijado
+`claude-sonnet-5-5`, Claude Code 2.1.289, precios por MTok (input 2, cache read 0,2, cache write 5 min 2,5,
+output 10) y límite de 2 USD por ejecución (equivalente API si se usa suscripción, ADR-029).
 El commit de cuarenta ceros identifica el fixture generado, no un commit remoto; reproducirlo exige
 fijar el commit de Foker que contiene el generador y la semilla 42.
 
