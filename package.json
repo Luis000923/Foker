@@ -13,11 +13,12 @@
     "typecheck": "tsc -p tsconfig.json",
     "lint": "biome check .",
     "format": "biome format --write .",
-    "test": "pnpm run test:rust && pnpm run test:ts",
+    "test": "pnpm run build:native && pnpm run test:rust && pnpm run test:ts",
     "test:rust": "cargo nextest run --workspace",
     "test:ts": "vitest run",
     "clean": "node scripts/clean.mjs",
-    "check:deps": "node scripts/check-deps.mjs"
+    "check:deps": "node scripts/check-deps.mjs",
+    "build:native": "pnpm --filter @foker/core run build:native"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",

@@ -12,12 +12,29 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "binding.cjs",
+    "binding.d.cts"
   ],
   "engines": {
     "node": ">=22.14.0"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json"
+    "build": "tsc -p tsconfig.json",
+    "build:native": "napi build --platform --release --manifest-path ../../crates/foker-napi/Cargo.toml --output-dir . --js binding.cjs --dts binding.d.cts --js-package-name @foker/core"
+  },
+  "devDependencies": {
+    "@napi-rs/cli": "3.10.6"
+  },
+  "napi": {
+    "binaryName": "foker-core",
+    "targets": [
+      "x86_64-unknown-linux-gnu",
+      "aarch64-unknown-linux-gnu",
+      "x86_64-apple-darwin",
+      "aarch64-apple-darwin",
+      "x86_64-pc-windows-msvc",
+      "aarch64-pc-windows-msvc"
+    ]
   }
 }

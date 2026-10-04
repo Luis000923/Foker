@@ -1,18 +1,65 @@
 //! Bindings napi-rs de Foker (FOKER-SPEC §7).
 //!
 //! Este crate solo expone la API de `foker-map` y `foker-context` a Node.js.
-//! No contiene lógica de dominio (REQ-NAPI-001). Los bindings llegan en FKR-005.
+//! No contiene lógica de dominio (REQ-NAPI-001).
 
-/// Versión del crate, en lockstep con los paquetes npm (ADR-013).
-pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+use std::collections::HashMap;
+use std::panic::{AssertUnwindSafe, catch_unwind};
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+use foker_map::FokerCode;
+use napi_derive::napi;
 
-    #[test]
-    fn version_matches_dependencies() {
-        assert_eq!(VERSION, foker_map::VERSION);
-        assert_eq!(VERSION, foker_context::VERSION);
+/// Versión de la API nativa. Se incrementa al romper el contrato de `foker-core.d.ts`.
+const NATIVE_API: u32 = 1;
+
+/// Resultado interno con código `FKR-…` en `error.code`. Las funciones `#[napi]` deben escribir
+/// `napi::Result<T, FokerCode>` de forma literal: la macro no reconoce alias de tipo.
+type NativeResult<T> = napi::Result<T, FokerCode>;
+
+/// Ejecuta `body` y convierte un pánico en `FKR-INT-001` en vez de abortar el proceso Node
+/// (FOKER-SPEC §7.4). Toda función exportada pasa por aquí.
+fn guard<T>(body: impl FnOnce() -> NativeResult<T>) -> NativeResult<T> {
+    match catch_unwind(AssertUnwindSafe(body)) {
+        Ok(result) => result,
+        Err(payload) => {
+            let detail = payload
+                .downcast_ref::<&str>()
+                .map(|s| (*s).to_owned())
+                .or_else(|| payload.downcast_ref::<String>().cloned())
+                .unwrap_or_else(|| "pánico sin mensaje".to_owned());
+            Err(napi::Error::new(
+                FokerCode::Int001,
+                format!("error interno en el núcleo nativo: {detail}"),
+            ))
+        }
     }
+}
+
+/// Versiones del núcleo nativo y de los formatos que produce.
+#[napi(object)]
+pub struct VersionInfo {
+    /// Versión del núcleo; debe coincidir exactamente con la de `@foker/core` (REQ-NAPI-003).
+    pub core_version: String,
+    /// Versión entera de la API nativa.
+    pub native_api: u32,
+    /// `schema_version` del Project Map.
+    pub map_schema: u32,
+    /// `pack_version` del Context Pack.
+    pub context_schema: u32,
+    /// Versiones de las gramáticas tree-sitter enlazadas, por lenguaje.
+    pub grammars: HashMap<String, String>,
+}
+
+/// Devuelve las versiones del núcleo nativo.
+#[napi]
+pub fn version_info() -> napi::Result<VersionInfo, FokerCode> {
+    guard(|| {
+        Ok(VersionInfo {
+            core_version: env!("CARGO_PKG_VERSION").to_owned(),
+            native_api: NATIVE_API,
+            map_schema: foker_map::MAP_SCHEMA_VERSION,
+            context_schema: foker_context::PACK_VERSION,
+            grammars: HashMap::new(),
+        })
+    })
 }

@@ -21,8 +21,9 @@ Resumen de FOKER-SPEC §7.7 y §19.
 | `pnpm typecheck` | `tsc` sobre todo el código TS, tests y scripts incluidos |
 | `pnpm lint` / `pnpm format` | Biome |
 | `pnpm check:deps` | Regla de dependencias entre módulos (REQ-REPO-001) |
-| `pnpm test` | `cargo nextest run` + `vitest run` |
-| `pnpm test:rust` / `pnpm test:ts` | Cada mitad por separado |
+| `pnpm build:native` | Compila el addon `foker-napi` para la plataforma local (`packages/core/*.node`) |
+| `pnpm test` | `build:native` + `cargo nextest run` + `vitest run` |
+| `pnpm test:rust` / `pnpm test:ts` | Cada mitad por separado (`test:ts` necesita el addon compilado) |
 | `pnpm clean` | Borra `dist/` y `target/` |
 
 ## Organización del código TS
@@ -48,5 +49,19 @@ las regenera; un cambio en doradas exige revisión explícita. Los fixtures no d
 
 ## Addon nativo
 
-`pnpm build:native` (FKR-005) compila `foker-napi` para la plataforma local. Las demás plataformas
-se compilan en CI (`release.yml`).
+`pnpm build:native` ejecuta `napi build --platform --release` en `packages/core`. Genera:
+
+- `foker-core.<plataforma>.node`: el binario (ignorado por git).
+- `binding.cjs` y `binding.d.cts`: cargador y tipos generados por napi-rs. Se versionan; regenéralos
+  y revisa el diff al cambiar la API nativa.
+
+`@foker/core` carga el binario y exige que `versionInfo().coreVersion` coincida con su propia versión
+(REQ-NAPI-003, `FKR-INT-002`). Sin binario para la plataforma lanza `FKR-INT-003`.
+
+Reglas del crate `foker-napi`:
+
+- Solo delega en `foker-map` y `foker-context` (REQ-NAPI-001); sus tests viven en esos crates y en `@foker/core`.
+- Cada función exportada envuelve su cuerpo en `guard()`, que convierte un pánico en `FKR-INT-001`.
+- Las funciones `#[napi]` escriben `napi::Result<T, FokerCode>` de forma literal; la macro no expande alias.
+
+Las demás plataformas se compilan en CI (`release.yml`).
