@@ -1,0 +1,10 @@
+.env*
+!.env.example
+.foker/
+.next/
+node_modules/
+dist/
+.turbo/
+coverage/
+playwright-report/
+test-results/

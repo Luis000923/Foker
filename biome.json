@@ -16,7 +16,8 @@
       "!packages/core/binding.d.cts",
       "!packages/schemas/src/generated",
       "!packages/core/src/error-codes.generated.ts",
-      "!fixtures"
+      "!fixtures",
+      "!templates"
     ]
   },
   "formatter": {

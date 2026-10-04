@@ -112,10 +112,16 @@ export async function listSkills(
   const config = options.config ?? (await loadConfig(root, options)).config;
   const included = (await directories(packaged)).length ? packaged : development;
   const entries = new Map<string, { name: string; dir: string; source: string }>();
-  for (const [base, source] of [
-    [included, 'included'],
-    [join(root, normalizePath(root, 'foker/skills')), 'project'],
-  ] as const)
+  const projectExists = await lstat(root).then(
+    () => true,
+    (error: NodeJS.ErrnoException) => {
+      if (error.code === 'ENOENT') return false;
+      throw error;
+    },
+  );
+  const sources: [string, string][] = [[included, 'included']];
+  if (projectExists) sources.push([join(root, normalizePath(root, 'foker/skills')), 'project']);
+  for (const [base, source] of sources)
     for (const name of await directories(base)) entries.set(name, { name, dir: join(base, name), source });
   return [...entries.values()]
     .filter((e) => !config.skills.disabled.includes(e.name))

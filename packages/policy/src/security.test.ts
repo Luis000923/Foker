@@ -124,3 +124,9 @@ it('timeout mata el grupo incluyendo nietos', async () => {
   }
   expect(alive).toBe(false);
 });
+
+it('no redacta metadatos del shell ni valores muy cortos, pero sí secretos de cualquier forma', () => {
+  const env = { SHLVL: '1', PWD: '/home/a/proyecto', PASSWORD: '12345678', KEY: '/abc/def/ghi', X: 'abc' };
+  expect(redact('nivel 1 en /home/a/proyecto x=abc', env, [])).toBe('nivel 1 en /home/a/proyecto x=abc');
+  expect(redact('valor 12345678 ruta /abc/def/ghi', env, [])).toBe('valor [REDACTED:env] ruta [REDACTED:env]');
+});
