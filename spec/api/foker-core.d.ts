@@ -206,7 +206,36 @@ export interface ImpactReport {
 
 export type Intent = 'fix' | 'add' | 'modify' | 'refactor' | 'test' | 'explain';
 
+/** Interno: calibración FKR-037; no se expone en CLI/MCP. */
+export interface ContextParams {
+  wAnchor?: number;
+  mentionFactor?: number;
+  wLex?: number;
+  bm25Top?: number;
+  wDirty?: number;
+  wTaskScope?: number;
+  wSkill?: number;
+  rFix?: number;
+  rModify?: number;
+  rTest?: number;
+  rRefactor?: number;
+  rAdd?: number;
+  rExplain?: number;
+  testFactor?: number;
+  l2Count?: number;
+  anchorFraction?: number;
+  marginFraction?: number;
+  l0Count?: number;
+  l0MinFraction?: number;
+  coreFiles?: number;
+  coreFraction?: number;
+  bm25K1?: number;
+  bm25B?: number;
+}
+
 export interface ContextRequest {
+  /** Interno: overrides de calibración; omitir conserva los defaults. */
+  params?: ContextParams;
   task: string;
   anchors?: { files?: string[]; symbols?: string[] };
   intent?: Intent;

@@ -247,3 +247,46 @@ it('las tareas discriminan sin filtrar rutas ni texto de issues en JSDoc', () =>
     }
   }
 });
+
+it('el split de calibración es estratificado, disjunto y estable al reordenar casos', async () => {
+  const { splitCases, configurations, better } = await import('./src/calibrate.js');
+  const cases = readFileSync(join(repo, 'benchmarks/ctx-gold/cases.jsonl'), 'utf8')
+    .trim()
+    .split('\n')
+    .map((line) => JSON.parse(line) as GoldCase);
+  const split = splitCases(cases, '37');
+  expect(splitCases([...cases].reverse(), '37')).toEqual(split);
+  expect(split.calibration).toHaveLength(21);
+  expect(split.validation).toHaveLength(9);
+  expect(split.calibration.filter((c) => c.fixture === 'fixture-a')).toHaveLength(14);
+  expect(split.validation.filter((c) => c.fixture === 'monorepo-pnpm')).toHaveLength(3);
+  expect(new Set([...split.calibration, ...split.validation].map((c) => c.id)).size).toBe(cases.length);
+  expect(splitCases(cases, '38')).not.toEqual(split);
+  expect(configurations().length).toBeLessThanOrEqual(200);
+  expect(new Set(configurations().map((p) => JSON.stringify(p))).size).toBe(configurations().length);
+  const baseline = { recall: 0.7, precision: 0.03, median_tokens: 7500 };
+  expect(better({ ...baseline, recall: 0.8, median_tokens: 8001 }, baseline)).toBe(false);
+  expect(better({ ...baseline, recall: 0.8 }, baseline)).toBe(true);
+  expect(better({ ...baseline, recall: 0.6, precision: 1 }, baseline)).toBe(false);
+  expect(better({ ...baseline, precision: 0.04 }, baseline)).toBe(true);
+});
+
+it('el evaluador conserva defaults y excluye el contorno L0 de precisión', async () => {
+  const cases = readFileSync(join(repo, 'benchmarks/ctx-gold/cases.jsonl'), 'utf8')
+    .trim()
+    .split('\n')
+    .map((line) => JSON.parse(line) as GoldCase);
+  const item = cases[0];
+  if (!item) throw new Error('Caso ausente');
+  const baseline = await evaluateContext([item], repo);
+  const explicit = await evaluateContext([item], repo, 8000, false, { wLex: 0.6, bm25Top: 20, coreFiles: 15 });
+  expect(explicit).toEqual(baseline);
+  // Fuerza un contorno core amplio: algunos ids solo entran a L0.
+  const outlines = await evaluateContext([item], repo, 8000, false, { coreFiles: 100, coreFraction: 0.8 });
+  const row = outlines.rows[0];
+  if (!row) throw new Error('Fila ausente');
+  const l0 = row.occupants.filter((f) => f.level === 'L0').map((f) => f.id);
+  expect(l0.length).toBeGreaterThan(0);
+  expect(row.exposed.some((id) => l0.includes(id))).toBe(false);
+  expect(row.precision).toBe(score(row.exposed, item.gold_modified, item.gold_read).precision);
+});

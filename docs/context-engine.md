@@ -76,3 +76,33 @@ mapa caliente y 20 construcciones sin caché del pack (p95 informativo, TARGET
 ```sh
 cargo test --release -p foker-context --test perf_large -- --ignored --nocapture
 ```
+
+## Calibración FKR-037
+
+Los pesos y umbrales viven en `foker-context::ContextParams`; conservan los valores
+originales de §9. La API nativa admite `ContextRequest.params` opcional **interno**
+para experimentos. Sus campos omitidos usan defaults de Rust. No se expone en MCP
+ni CLI pública. Incluye pesos de ancla, menciones, BM25, dirty, alcance y skill;
+r(intent), factor tests; top BM25, k1/b; niveles L2/L0; umbral de ancla, margen y
+reserva core. Valores no finitos/fuera de rango producen FKR-INP-001.
+
+Solo params efectivos distintos de los defaults aparecen en la petición JSON
+normalizada (snake_case, completos), se añaden canónicamente al pack_hash y forman
+parte de la clave de caché. Omitir params o indicar los defaults conserva los packs
+anteriores. Para calibrar core se usa `params.coreFiles` sin `coreFiles` separado;
+un `coreFiles` explícito de la API nativa prevalece por compatibilidad.
+
+```sh
+pnpm --filter @foker/benchmarks run diagnose
+pnpm --filter @foker/benchmarks run calibrate
+```
+
+El [diagnóstico baseline](../benchmarks/reports/ctx-gold-diagnostico.md) explica cada
+miss y presupuesto. El [informe semilla 37](../benchmarks/reports/calibracion-37.md)
+contiene split estratificado por fixture (21/9), 144 configuraciones y resultado.
+La precisión cuenta únicamente archivos distintos a nivel ≥ L1; L0 del core queda
+fuera. La configuración elegida conserva recall 0,7143 en calibración y 0,6296 en
+validación; medianas antes/después 7.548/7.532 y 7.540/7.553 tokens. No mejora la
+validación: defaults y snapshots se conservan. [ADR-024](../spec/adr/ADR-024-calibracion-context-engine.md)
+rechaza el cambio y propone mejoras de recuperación sin implementarlas. El TARGET
+0,80 sigue pendiente; los 30 casos tampoco cubren el mínimo normativo de 60.

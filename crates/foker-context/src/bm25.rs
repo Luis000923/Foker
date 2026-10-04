@@ -87,6 +87,10 @@ impl Bm25 {
     }
     /// Top 20 puntuaciones positivas, normalizadas por el máximo, empates por id.
     pub fn search(&self, terms: &[String]) -> Vec<Hit> {
+        self.search_with_params(terms, &crate::ContextParams::default())
+    }
+    /// Búsqueda parametrizada para calibración interna.
+    pub fn search_with_params(&self, terms: &[String], params: &crate::ContextParams) -> Vec<Hit> {
         let mut hits = Vec::new();
         for document in &self.documents {
             let mut score = 0.0;
@@ -97,8 +101,11 @@ impl Bm25 {
                     let idf =
                         libm::log(1.0 + (self.documents.len() as f64 - df + 0.5) / (df + 0.5));
                     let tf = count as f64;
-                    score += idf * tf * 2.2
-                        / (tf + 1.2 * (0.25 + 0.75 * document.len as f64 / self.average));
+                    score += idf * tf * (params.bm25_k1 + 1.0)
+                        / (tf
+                            + params.bm25_k1
+                                * (1.0 - params.bm25_b
+                                    + params.bm25_b * document.len as f64 / self.average));
                     matched.push(term.clone());
                 }
             }
@@ -118,7 +125,7 @@ impl Bm25 {
                 hit.score /= max;
             }
         }
-        hits.truncate(20);
+        hits.truncate(params.bm25_top);
         hits
     }
 }

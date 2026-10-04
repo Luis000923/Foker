@@ -75,3 +75,21 @@ Se añade `ContextRequest.coreFiles?: number`, con default 15. El addon lo trans
 ## Ampliación FKR-046
 Se añade `hashBytes(bytes: Buffer): string`, que delega en `foker_map::canonical::hash_bytes`.
 Es una ampliación compatible de la API nativa v1 para snapshots de archivos binarios.
+
+## Ampliación FKR-037: calibración interna
+
+Se añade `ContextRequest.params?: ContextParams` exclusivamente a la API nativa y
+su wrapper core. No se admite en las entradas MCP ni CLI pública. Sus campos
+opcionales usan los defaults centralizados en `foker-context`; napi solo adapta
+nombres/tipos. Los pesos deben ser finitos, no negativos y ≤ 100, las fracciones
+≤ 1, k1 > 0 y los límites enteros ≤ 10.000; entradas inválidas producen FKR-INP-001.
+`coreFiles` explícito mantiene su compatibilidad y prevalece sobre `params.coreFiles`
+en la API nativa (para calibrar core se usa params sin coreFiles).
+
+Solo parámetros efectivos distintos de los defaults aparecen como `request.params`
+(snake_case, completos) en el JSON interno y se concatenan canónicamente al
+material del pack_hash. También participan en la clave de caché mediante la
+petición normalizada. Omitir params o pasar los defaults produce los mismos bytes
+anteriores. Se amplía de forma compatible el esquema v1 para admitir este campo
+opcional interno; no cambia el estimador ni la política pública de contexto.
+ADR-024 registra la decisión sobre los defaults tras la validación separada.

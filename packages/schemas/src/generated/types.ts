@@ -322,6 +322,34 @@ skill: (string | null)
 task_id: (TaskId | null)
 dirty_files: boolean
 explain: boolean
+/**
+ * Interno: parámetros efectivos no predeterminados de calibración (ADR-021/FKR-037).
+ */
+params?: {
+w_anchor: number
+mention_factor: number
+w_lex: number
+bm25_top: number
+w_dirty: number
+w_task_scope: number
+w_skill: number
+r_fix: number
+r_modify: number
+r_test: number
+r_refactor: number
+r_add: number
+r_explain: number
+test_factor: number
+l2_count: number
+anchor_fraction: number
+margin_fraction: number
+l0_count: number
+l0_min_fraction: number
+core_files: number
+core_fraction: number
+bm25_k1: number
+bm25_b: number
+}
 }
 export interface PackSection {
 id: ("rules" | "core" | "skill" | "task_scope" | "related" | "targets" | "request")

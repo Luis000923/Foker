@@ -35,13 +35,7 @@ impl Intent {
     }
     /// Peso de dependientes (§9.6).
     pub fn reverse(self) -> f64 {
-        match self {
-            Self::Fix | Self::Modify => 0.5,
-            Self::Test => 0.4,
-            Self::Refactor => 0.7,
-            Self::Add => 0.1,
-            Self::Explain => 0.3,
-        }
+        crate::ContextParams::default().reverse(self)
     }
 }
 /// Anclas explícitas.
@@ -67,6 +61,8 @@ pub struct ContextRequest {
     pub budget_tokens: usize,
     /// Incluir semillas de archivos modificados.
     pub dirty_files: bool,
+    /// Interno: parámetros opcionales para calibración.
+    pub params: Option<crate::ContextParams>,
     /// Incluir traza para el anfitrión.
     pub explain: bool,
 }
@@ -79,6 +75,7 @@ impl Default for ContextRequest {
             budget_tokens: 8000,
             dirty_files: true,
             explain: false,
+            params: None,
         }
     }
 }
@@ -127,7 +124,7 @@ impl Default for ContextInputs {
             skill: None,
             task_scope: None,
             dirty_files: Vec::new(),
-            core_files: 15,
+            core_files: crate::ContextParams::default().core_files,
         }
     }
 }
@@ -233,6 +230,9 @@ pub struct NormalizedRequest {
     pub task_id: Option<String>,
     /// Semillas dirty activadas.
     pub dirty_files: bool,
+    /// Parámetros efectivos no predeterminados (interno).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub params: Option<crate::ContextParams>,
     /// Traza.
     pub explain: bool,
 }

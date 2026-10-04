@@ -3,7 +3,14 @@ import { existsSync, readFileSync } from 'node:fs';
 import { registerHooks, stripTypeScriptTypes } from 'node:module';
 import { fileURLToPath } from 'node:url';
 
-const commands = new Set(['ctx-gold', 'evaluate-task', 'validate-results', 'validate-manifest']);
+const commands = new Set([
+  'diagnose',
+  'calibrate',
+  'ctx-gold',
+  'evaluate-task',
+  'validate-results',
+  'validate-manifest',
+]);
 const command = process.argv[2];
 if (!commands.has(command)) throw new Error('Comando de benchmark desconocido');
 registerHooks({

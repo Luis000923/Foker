@@ -6,6 +6,8 @@
   "scripts": {
     "validate-manifest": "node run.mjs validate-manifest",
     "validate-results": "node run.mjs validate-results",
+    "diagnose": "node run.mjs diagnose",
+    "calibrate": "node run.mjs calibrate",
     "ctx-gold": "node run.mjs ctx-gold",
     "evaluate-task": "node run.mjs evaluate-task",
     "generate": "node fixtures/fixture-a/generate.mjs",

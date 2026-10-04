@@ -26,3 +26,7 @@ coverage/
 /benchmarks/reports/ctx-gold-*.md
 /benchmarks/reports/ctx-gold-*.json
 !/benchmarks/reports/ctx-gold-example.md
+
+!/benchmarks/reports/ctx-gold-diagnostico.md
+# JSON de calibración generado; el informe Markdown conserva la tabla versionada.
+/benchmarks/reports/calibracion-*.json

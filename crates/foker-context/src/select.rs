@@ -65,6 +65,7 @@ fn core(
     index: &render::RenderIndex<'_>,
     n: usize,
     budget: usize,
+    params: &crate::ContextParams,
 ) -> Result<(SectionText, Vec<PackFile>), ContextError> {
     let mut files: Vec<_> = state.map.files.iter().filter(|f| eligible(f)).collect();
     files.sort_by(|a, b| {
@@ -82,7 +83,9 @@ fn core(
             anchor: false,
         };
         let (file, text) = render_candidate(index, root, &candidate, RenderLevel::L0, None)?;
-        if estimate_tokens(&format!("## core\n\n{body}{text}\n")) <= budget / 10 {
+        if estimate_tokens(&format!("## core\n\n{body}{text}\n"))
+            <= (budget as f64 * params.core_fraction).floor() as usize
+        {
             body.push_str(&text);
             selected.push(file);
         }
@@ -100,9 +103,10 @@ pub fn select(
     fixed: &[SectionText],
     budget: usize,
     core_files: usize,
+    params: &crate::ContextParams,
 ) -> Result<Selection, ContextError> {
     let index = render::RenderIndex::new(state);
-    let mut capacity = budget * 95 / 100;
+    let mut capacity = (budget as f64 * (1.0 - params.margin_fraction)).floor() as usize;
     let mut breakdown: Vec<_> = fixed
         .iter()
         .filter(|s| s.section.tokens > 0)
@@ -134,7 +138,7 @@ pub fn select(
         });
     }
     capacity = capacity.max(minimum);
-    let (mut core, mut core_selected) = core(state, root, &index, core_files, budget)?;
+    let (mut core, mut core_selected) = core(state, root, &index, core_files, budget, params)?;
     let mut used = minimum;
     // Core es opcional; nunca provoca un fallo de contexto obligatorio.
     if used + core.section.tokens + related_header > capacity {
@@ -147,7 +151,7 @@ pub fn select(
     for (candidate, minimum_pair) in ranked.iter().filter(|c| c.anchor).zip(anchors) {
         used -= minimum_pair.0.tokens;
         let full = render_candidate(&index, root, candidate, RenderLevel::L3, None)?;
-        let choices = if full.0.tokens > budget * 40 / 100 {
+        let choices = if full.0.tokens > (budget as f64 * params.anchor_fraction).floor() as usize {
             vec![
                 render_candidate(
                     &index,
@@ -183,7 +187,7 @@ pub fn select(
     let mut omitted = BTreeMap::new();
     let mut included: BTreeSet<_> = selected.iter().map(|f| f.id.clone()).collect();
     for (position, candidate) in ranked.iter().filter(|c| !c.anchor).enumerate() {
-        let levels = if position < 5 {
+        let levels = if position < params.l2_count {
             vec![RenderLevel::L2, RenderLevel::L1]
         } else {
             vec![RenderLevel::L1]
@@ -209,10 +213,10 @@ pub fn select(
             omitted.insert(candidate.id.clone(), "BUDGET");
         }
     }
-    if capacity.saturating_sub(used) > budget * 3 / 100 {
+    if capacity.saturating_sub(used) > (budget as f64 * params.l0_min_fraction).floor() as usize {
         let mut outlines = 0;
         for candidate in ranked.iter().filter(|c| !included.contains(&c.id)) {
-            if outlines == 30 {
+            if outlines == params.l0_count {
                 break;
             }
             let pair = render_candidate(&index, root, candidate, RenderLevel::L0, None)?;
