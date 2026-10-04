@@ -38,3 +38,6 @@ mod tests {
         assert_eq!(VERSION.split('.').count(), 3);
     }
 }
+
+#[doc(hidden)]
+pub mod testing;
