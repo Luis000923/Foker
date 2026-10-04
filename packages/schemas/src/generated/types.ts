@@ -747,13 +747,25 @@ max_cost_usd?: number
  */
 metrics: {
 /**
- * input_tokens + cache_read_input_tokens + cache_creation_input_tokens.
+ * input_tokens + cache_read_input_tokens + cache_creation_input_tokens. null: no observado/calculable (ADR-025).
  */
-input_tokens_total: number
-cached_tokens: number
-cache_write_tokens: number
-output_tokens: number
-cost_usd: number
+input_tokens_total: (number | null)
+/**
+ *  null: no observado/calculable (ADR-025).
+ */
+cached_tokens: (number | null)
+/**
+ *  null: no observado/calculable (ADR-025).
+ */
+cache_write_tokens: (number | null)
+/**
+ *  null: no observado/calculable (ADR-025).
+ */
+output_tokens: (number | null)
+/**
+ *  null: no observado/calculable (ADR-025).
+ */
+cost_usd: (number | null)
 latency_s: number
 files_exposed: number
 files_modified: number
@@ -761,7 +773,10 @@ exposure_precision: (number | null)
 exposure_recall: (number | null)
 out_of_scope_edits: number
 errors: number
-retries: number
+/**
+ *  null: no observado/calculable (ADR-025).
+ */
+retries: (number | null)
 tests_passed: number
 /**
  * Informativo; solo en el brazo foker.
