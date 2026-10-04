@@ -41,7 +41,7 @@ Inicializa Foker en un repositorio (o crea uno desde plantilla) y ejecuta sync
 |---|---|---|---|
 | --template | string | "" | Plantilla (nextjs-turbo) |
 | --from-spec | string | "" | Lee nombre, descripción y plantilla del frontmatter de foker.md |
-| --targets | string | "" | Anfitriones separados por comas (claude-code, opencode, antigravity); por defecto los detectados o todos |
+| --targets | string | "" | Anfitriones separados por comas (claude-code, opencode, antigravity, codex); por defecto los detectados o todos |
 | --force | boolean | false | Sobrescribe archivos de la plantilla o config/reglas; conserva archivos ajenos |
 
 ## foker map
@@ -252,7 +252,7 @@ Genera o actualiza la configuración de los agentes anfitriones
 
 | Flag | Tipo | Default | Descripción |
 |---|---|---|---|
-| --target | string | "" | Anfitriones separados por comas (claude-code, opencode, antigravity) |
+| --target | string | "" | Anfitriones separados por comas (claude-code, opencode, antigravity, codex) |
 | --check | boolean | false | Sale con 1 si los archivos difieren de lo que generaría; no escribe |
 | --force | boolean | false | Sobrescribe contenido gestionado editado a mano |
 

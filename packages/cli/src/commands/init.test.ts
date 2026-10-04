@@ -103,3 +103,9 @@ it('--force --dry-run planea con la config propuesta aunque la existente sea inv
   const real = await run('init', '--force', '--targets', 'claude-code');
   expect(preview.output.data.synced).toEqual(real.output.data.synced);
 });
+
+it('init acepta codex y genera su configuración y skills', async () => {
+  expect((await run('init', '--targets', 'codex')).exit).toBe(0);
+  expect(await readFile(join(root, '.codex/config.toml'), 'utf8')).toContain('[mcp_servers.foker]');
+  expect(await readFile(join(root, '.agents/skills/foker-workflow/SKILL.md'), 'utf8')).toContain('foker-workflow');
+});

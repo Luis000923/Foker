@@ -1,10 +1,10 @@
 # Estado de Foker
 
-Última actualización: 2026-10-03 · Rama actual: main · Desarrollo con Codex (implementación y `codex review`) + verificación propia
+Última actualización: 2026-10-04 · Rama actual: main · Desarrollo con Codex (implementación y `codex review`) + verificación propia
 
 ## Hito actual
 
-M0, M2, M3, M4 y E6 completos en local; M1 con todo lo que no gasta API (manifiesto, Fixture A, ctx-gold, evaluador, arnés en contenedor, análisis). Bloqueado por decisiones humanas: ejecución del benchmark (PREGUNTA-2), Fixture B (PREGUNTA-6), publicación (PREGUNTA-3) y verificación manual de anfitriones (FKR-070).
+M0, M2, M3, M4 y E6 completos en local; M1 con todo lo que no gasta API (manifiesto, Fixture A, ctx-gold, evaluador, arnés en contenedor, análisis). Bloqueado por decisiones humanas: ejecución del benchmark (autenticación por suscripción pendiente), Fixture B (PREGUNTA-6), publicación (PREGUNTA-3) y verificación manual de anfitriones (FKR-070).
 
 ## Issues
 
@@ -48,6 +48,26 @@ M0, M2, M3, M4 y E6 completos en local; M1 con todo lo que no gasta API (manifie
 | FKR-081/082 | Nightly, SECURITY.md | hecho | feat/FKR-081-082-nightly-security | |
 | FKR-060 | Esqueleto de CLI | hecho | feat/FKR-060-cli | Codex; `docs/cli.md` generado (REQ-DOC-001) |
 
+## Trabajo 2026-10-04
+
+- **Sin claves API (ADR-027)**: requisito del usuario. Foker no llama a LLMs; con una sola
+  suscripción (Claude Code, Codex/ChatGPT o Antigravity) se usan las mismas reglas, contexto,
+  skills, roles y gates. Nuevo target `codex` (`AGENTS.md`, `.agents/skills/`, MCP y roles en
+  `.codex/config.toml`); test de paridad entre los 4 targets (catálogo MCP real, hash normativo,
+  skills, roles, ningún `*_API_KEY`); doctor comprueba CLI y sesión sin leer credenciales.
+  Codex 0.159.3 carga reglas y skills del proyecto (`codex debug prompt-input`); MCP y roles con
+  sesión real: PENDIENTE FKR-070.
+- **REQ-SEC-001 (ADR-026)**: jobs Linux en `rust:1.98.0-bookworm` (contenedor condicional en
+  matrices mixtas); macOS/Windows en runner alojado efímero sin secretos, `contents: read`,
+  `persist-credentials: false`, sin self-hosted. Matrices completas de FKR-002/006/081 intactas.
+  `scripts/check-ci-sandbox.mjs` lo impone (18 tests). Pendiente ejecución real en GitHub.
+- **Cobertura ≥ 80 % (§19.2)**: foker-map 91,04 %, foker-context 95,59 %, @foker/policy 91,67 %,
+  @foker/engine 95,89 %; umbrales V8, `pnpm coverage:rs` / `coverage:ts`, job nightly.
+- **ctx-gold 60 casos** con split estratificado 30/30; calibrate usa solo `calibration`.
+  Recall (presupuesto 8000): calibration 0,622 · validation 0,600 · total 0,611 (TARGET 0,80).
+- Verificación local completa: 115 tests Rust (2 omitidos), 534 TS, clippy, Biome, tsc,
+  check:deps, generate:check.
+
 ## Verificado localmente
 
 Sesión 2026-10-03 (usuario luis):
@@ -66,7 +86,7 @@ Sesión 2026-10-03 (usuario luis):
 ## PENDIENTES y preguntas para el usuario
 
 - spec/ es una reconstrucción; contratos reescritos por decisión del usuario (ADR-019).
-- PREGUNTA-2 (presupuesto/modelo del benchmark) y PREGUNTA-6 (repos reales) bloquean M1.
+- PREGUNTA-2: modelo `claude-sonnet-5-5` y 2 USD/ejecución fijados; sin API key, el benchmark pasará a suscripción (ADR-027). PREGUNTA-6 (repos reales) bloquea Fixture B.
 - Restos de un test en la raíz del repo (`.claude/agents`, `.claude/skills`, `.claude/settings.json`,
   `.mcp.json`, `foker.config.yaml`, `foker/`): el permiso de borrado me fue denegado; los debe borrar la
   persona. Mientras tanto, los commits añaden rutas explícitas (no `git add -A`).
@@ -77,4 +97,7 @@ Sesión 2026-10-03 (usuario luis):
 
 ## Siguiente paso
 
-Con PREGUNTA-2 resuelta: smoke del benchmark (3 tareas × 2 brazos) y línea base FKR-015. Sin ella: mejoras de recall del Context Engine propuestas en ADR-024, cobertura (§19.2) y checks en contenedor en CI (REQ-SEC-001).
+1. Recall del Context Engine (ADR-024) calibrando con ctx-gold `calibration` y midiendo en `validation`.
+2. Arnés del benchmark por suscripción: `CLAUDE_CODE_OAUTH_TOKEN` (`claude setup-token`) y brazo
+   Codex con login ChatGPT; coste como equivalente API. El smoke consume cuota: requiere permiso.
+3. FKR-070: verificación manual de los cuatro anfitriones (incluido Codex).

@@ -1,7 +1,7 @@
 import type { Json } from './json.js';
 
 /** Anfitriones soportados (FOKER-SPEC §14.2). */
-export const HOST_IDS = ['claude-code', 'opencode', 'antigravity'] as const;
+export const HOST_IDS = ['claude-code', 'opencode', 'antigravity', 'codex'] as const;
 export type HostId = (typeof HOST_IDS)[number];
 
 /** Archivo de una skill, relativo a su directorio (`SKILL.md`, `references/x.md`…). */
@@ -40,7 +40,7 @@ export interface SyncInput {
 /** Lo que un adaptador quiere que exista en el proyecto. */
 export type Desired =
   | { kind: 'file'; path: string; content: string | Uint8Array }
-  | { kind: 'block'; path: string; body: string; header?: string }
+  | { kind: 'block'; path: string; body: string; header?: string; syntax?: 'toml' }
   | {
       kind: 'json';
       path: string;

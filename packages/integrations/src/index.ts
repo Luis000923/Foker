@@ -3,6 +3,7 @@ export const PACKAGE_NAME = '@foker/integrations';
 
 export { antigravity, RULE_MAX_BYTES } from './adapters/antigravity.js';
 export { claudeCode, claudeDenyRules } from './adapters/claude-code.js';
+export { codex } from './adapters/codex.js';
 export { opencode } from './adapters/opencode.js';
 export { agentsBlock, MCP_ARGS } from './content.js';
 export { findBlock, removeBlock, upsertBlock } from './markdown.js';

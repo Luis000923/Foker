@@ -586,7 +586,7 @@ skills?: {
 disabled?: Name[]
 }
 integrations?: {
-targets?: ("claude-code" | "opencode" | "antigravity")[]
+targets?: ("claude-code" | "opencode" | "antigravity" | "codex")[]
 }
 }
 /**

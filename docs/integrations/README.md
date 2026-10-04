@@ -3,20 +3,34 @@
 Resumen de FOKER-SPEC §14. `foker sync` genera la configuración nativa de cada anfitrión de forma
 determinista; `foker sync --check` falla (exit 1) si algo difiere, útil en CI.
 
-| Elemento | Claude Code | OpenCode | Google Antigravity |
-|---|---|---|---|
-| Instrucciones | `CLAUDE.md` (`@AGENTS.md` + bloque) y bloque en `AGENTS.md` | bloque en `AGENTS.md` | bloque en `AGENTS.md` + `.agents/rules/foker.md` (`trigger: always_on`) |
-| MCP | `.mcp.json` → `mcpServers.foker` | `opencode.json` → `mcp.foker` (timeout 600 s) | `.agents/mcp_config.json` → `mcpServers.foker` |
-| Skills | `.claude/skills/<name>/` | `.agents/skills/<name>/` | `.agents/skills/<name>/` |
-| Roles | `.claude/agents/foker-implementer.md`, `foker-reviewer.md` | `.opencode/agents/…` (`mode: subagent`) | reglas `trigger: model_decision` en `.agents/rules/` |
-| Permisos (C1) | `.claude/settings.json` `permissions.deny` | `opencode.json` `permission` | no hay mecanismo declarativo verificado (R-11) |
-| Hooks | `PreToolUse` (Edit/Write/Bash) y `Stop` → `foker policy check --hook claude-code` | — | — |
-| Soporte MVP | completo | completo sin hooks | básico |
+Ninguna clave API de IA es obligatoria. Usa la sesión de tu suscripción del anfitrión;
+Foker no llama a LLMs. La paridad cubre infraestructura y contenido normativo;
+los resultados y límites del modelo dependen del anfitrión y la suscripción.
+
+```sh
+pnpm exec foker init --targets codex
+pnpm exec foker sync --target codex
+pnpm exec foker doctor
+```
+
+| Elemento | Claude Code | OpenCode | Google Antigravity | Codex CLI |
+|---|---|---|---|---|
+| Reglas normativas | bloque `AGENTS.md`, importado por `CLAUDE.md` | bloque `AGENTS.md` | bloque `AGENTS.md` y regla always_on | bloque `AGENTS.md` |
+| MCP: mismo catálogo completo de Foker | `.mcp.json` | `opencode.json` | `.agents/mcp_config.json` | `.codex/config.toml`, `[mcp_servers.foker]` |
+| Mismas skills | `.claude/skills/` | `.agents/skills/` | `.agents/skills/` | `.agents/skills/` |
+| Mismos cuerpos de roles | `.claude/agents/` | `.opencode/agents/` | reglas model_decision | `.codex/agents/*.toml`, registrados en `[agents."<rol>"]` |
+| Claves API exigidas por Foker | ninguna | ninguna | ninguna | ninguna |
+| Sesión en doctor | `claude auth status` si disponible | manual | manual | `codex login status` |
+| Permisos C1 | permissions.deny | permission | sin mecanismo verificado | sandbox por rol; ejecución pendiente |
+| Hooks | PreToolUse y Stop | — | — | — |
+| Flujo real por suscripción | PENDIENTE FKR-070 | PENDIENTE FKR-070 | PENDIENTE FKR-070 | PENDIENTE FKR-070 |
 
 ## Qué toca `sync` y qué no
 
 - Markdown: solo el contenido entre `<!-- foker:begin v1 -->` y `<!-- foker:end -->`; el resto del
   archivo se conserva byte a byte (REQ-PRJ-002).
+- TOML de Codex: solo el bloque `# foker:begin v1` … `# foker:end`; conserva el texto externo.
+  Las tablas de Foker fuera del bloque producen conflicto incluso con `--force`.
 - JSON: solo las claves y elementos de lista que generó; el resto se conserva. Las reescribe con
   formato estable (2 espacios). `opencode.json` con comentarios no se toca: se informa conflicto.
 - Archivos generados (skills, roles, reglas): llevan `<!-- generado por foker sync; no editar -->`.
@@ -27,6 +41,10 @@ determinista; `foker sync --check` falla (exit 1) si algo difiere, útil en CI.
 
 ## Notas por anfitrión
 
+- **Codex**: CLI 0.159.3 comprobado sin red. Abre el proyecto como confiable para cargar
+  `.codex/config.toml`. Los roles usan `description`/`config_file`, con `developer_instructions`
+  y `sandbox_mode` en cada archivo. No se fija modelo ni se habilitan features automáticamente.
+  La invocación real de subagentes sigue pendiente; consulta el checklist.
 - **Claude Code**: los hooks llaman a `npx --no-install foker policy check --hook claude-code`; con
   `PreToolUse` niega ediciones de rutas protegidas, rutas fuera del proyecto y comandos git
   destructivos; con `Stop` recuerda enviar las tareas `RUNNING` (una sola vez por parada).

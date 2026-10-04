@@ -15,7 +15,7 @@ import {
 const roles = await loadRoles();
 
 const input = (overrides: Partial<SyncInput> = {}): SyncInput => ({
-  targets: ['antigravity', 'claude-code', 'opencode'],
+  targets: ['antigravity', 'claude-code', 'opencode', 'codex'],
   skills: [
     {
       name: 'foker-workflow',
@@ -58,7 +58,7 @@ describe('roles', () => {
 });
 
 describe('planSync', () => {
-  it('genera los archivos de los 3 anfitriones (snapshot)', () => {
+  it('genera los archivos de los 4 anfitriones (snapshot)', () => {
     const disk = fs();
     const plan = planSync(input(), disk.io);
     expect(plan.conflicts).toEqual([]);

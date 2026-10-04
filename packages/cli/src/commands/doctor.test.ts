@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 import { main } from '../main.js';
-import { fallbackIgnored, runDoctor } from './doctor.js';
+import { checkHost, fallbackIgnored, runDoctor } from './doctor.js';
 
 let root: string;
 beforeEach(async () => {
@@ -111,4 +111,28 @@ it('sin git evalúa patrones y negaciones en orden', () => {
   expect(fallbackIgnored('.foker/\n!.foker/\n/.foker/\n')).toBe(true);
   expect(fallbackIgnored('.foker/*\n!.foker/x\n')).toBe(false);
   expect(fallbackIgnored('# .foker/\nnode_modules/\n')).toBe(false);
+});
+
+it('doctor comprueba cada CLI y la sesión sin exponer salida ni exigir secretos', async () => {
+  for (const target of ['codex', 'claude-code', 'opencode', 'antigravity'] as const) {
+    const calls: [string, string[]][] = [];
+    const checks = await checkHost(target, root, {}, async (command, args) => {
+      calls.push([command, args]);
+    });
+    expect(checks[0]?.status).toBe('ok');
+    expect(calls[0]).toEqual([target === 'claude-code' ? 'claude' : target, ['--version']]);
+    expect(checks[1]?.status).toBe(target === 'codex' || target === 'claude-code' ? 'ok' : 'warn');
+    if (target === 'codex') expect(calls[1]).toEqual(['codex', ['login', 'status']]);
+    expect(JSON.stringify(checks)).not.toContain('API_KEY');
+  }
+  const missing = await checkHost('codex', root, {}, async () => {
+    throw new Error('credencial privada');
+  });
+  expect(missing[0]?.status).toBe('warn');
+  expect(JSON.stringify(missing)).not.toContain('credencial privada');
+  const loggedOut = await checkHost('codex', root, {}, async (_, args) => {
+    if (args[0] === 'login') throw new Error('secreto');
+  });
+  expect(loggedOut[1]?.status).toBe('warn');
+  expect(JSON.stringify(loggedOut)).not.toContain('secreto');
 });

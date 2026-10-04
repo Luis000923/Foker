@@ -11,8 +11,11 @@ el LLM y sus subagentes; Foker guarda estado y evidencia por `task_id`.
 | Planner | PENDIENTE V0.2 (§12.2; sin issue FKR asignado en el backlog): propone tareas PENDING y alcance para revisión. |
 | Architect | PENDIENTE V0.2 (§12.2; sin issue FKR asignado): propone ADRs/estructura desde foker.md, con aprobación humana. |
 
-Sync exporta los dos roles MVP: subagentes en Claude Code/OpenCode y reglas en Antigravity.
+Sync exporta los dos roles MVP: subagentes en Claude Code/OpenCode/Codex y reglas en Antigravity.
 Su comportamiento real depende del anfitrión: **PENDIENTE FKR-070**, ver [integraciones](integrations/README.md).
+Codex registra `config_file` por rol en `.codex/config.toml` y genera instrucciones TOML
+en `.codex/agents/`. El anfitrión decide cuándo delegar; la ejecución real de estos roles
+sigue pendiente de verificación. Ninguna clave API de IA es obligatoria.
 El handoff usa `task_id` y ledger, no memoria privada del agente.
 
 ## Máquina de estados

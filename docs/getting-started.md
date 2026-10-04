@@ -1,7 +1,8 @@
 # Primeros pasos
 
 Foker aporta contexto y validación; el bucle LLM pertenece al anfitrión. Necesita Node ≥ 22.14
-y el addon nativo de la plataforma. **PENDIENTE FKR-080**: publicación npm y reserva de nombres
+y el addon nativo de la plataforma. Ninguna clave API de IA es obligatoria: usa la sesión
+de tu suscripción del anfitrión (Claude Code, Codex/ChatGPT o Antigravity). Foker no llama a LLMs. **PENDIENTE FKR-080**: publicación npm y reserva de nombres
 (PREGUNTA-3). La instalación prevista en el proyecto es `pnpm add -D foker`; los comandos de esta
 guía usan ese paquete local. Hoy, para desarrollar Foker, sigue [development.md](development.md)
 y compila TS y el addon; la CLI compilada está en `packages/cli/dist/bin.js`.
@@ -11,7 +12,7 @@ y compila TS y el addon; la CLI compilada está en `packages/cli/dist/bin.js`.
 En un repositorio existente, con el paquete disponible:
 
 ```sh
-pnpm exec foker init --targets claude-code
+pnpm exec foker init --targets codex
 ```
 
 Crea `foker.config.yaml` y `foker/rules.md`, añade `.foker/` al gitignore y ejecuta sync (que
@@ -22,7 +23,7 @@ escáner de secretos); init no inventa comandos que tu repo no tenga. Revísalos
 Para crear otro proyecto:
 
 ```sh
-pnpm exec foker init mi-proyecto --template nextjs-turbo --targets claude-code
+pnpm exec foker init mi-proyecto --template nextjs-turbo --targets codex
 cd mi-proyecto
 pnpm install
 ```
@@ -35,15 +36,19 @@ Consulta [templates.md](templates.md) para límites y comprobaciones de la plant
 ```sh
 pnpm exec foker trust
 pnpm exec foker map
-pnpm exec foker sync --target claude-code
+pnpm exec foker sync --target codex
 pnpm exec foker doctor
 ```
 
 Lee los argv que muestra trust antes de confirmar en TTY. Cambiar comandos, perfiles o allowlist
-invalida la confianza; MCP no puede otorgarla. Sync admite también opencode y antigravity;
-configura el cliente y vuelve a cargarlo según su interfaz. La verificación manual de los tres
+invalida la confianza; MCP no puede otorgarla. Sync admite también claude-code, opencode y antigravity;
+configura el cliente y vuelve a cargarlo según su interfaz. La verificación manual de los cuatro
 anfitriones es **PENDIENTE FKR-070**: [integrations/verification.md](integrations/verification.md).
-Doctor comprueba entorno, addon, confianza, integraciones y avisa sobre sandbox; no certifica aislamiento.
+En Codex, inicia sesión con `codex login`, abre el proyecto y revisa que sea confiable
+para cargar `.codex/config.toml`. Las skills se generan en `.agents/skills/`; los roles
+se registran en el TOML y sus definiciones viven en `.codex/agents/`. Su ejecución
+real sigue pendiente de la comprobación manual.
+Doctor comprueba CLI y sesión del anfitrión cuando puede, además de entorno, addon, confianza, integraciones y avisa sobre sandbox; no certifica aislamiento.
 
 ## Primera tarea desde el anfitrión
 

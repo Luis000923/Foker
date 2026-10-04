@@ -29,3 +29,4 @@ Copia de `spec/adr/`. Una decisión nueva o modificada exige un ADR nuevo con n�
 | [ADR-023](ADR-023-estimacion-tokens-skills.md) | `estimateTokens` en la API nativa para validar Skills | Aceptada |
 | [ADR-024](ADR-024-calibracion-context-engine.md) | Calibración del Context Engine con ctx-gold | Rechazada (cambio de defaults) |
 | [ADR-025](ADR-025-benchmark-metricas-desconocidas.md) | Null para métricas no observadas del benchmark | Aceptada (amplía ADR-018) |
+| [ADR-026](ADR-026-aislamiento-ci-multiplataforma.md) | Aislamiento multiplataforma en GitHub Actions | Aceptado |

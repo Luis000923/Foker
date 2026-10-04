@@ -91,7 +91,7 @@ export const syncCommand: Command = {
   description: 'Genera o actualiza la configuración de los agentes anfitriones',
   maxArgs: 0,
   flags: [
-    flag('target', 'string', 'Anfitriones separados por comas (claude-code, opencode, antigravity)'),
+    flag('target', 'string', 'Anfitriones separados por comas (claude-code, opencode, antigravity, codex)'),
     flag('check', 'boolean', 'Sale con 1 si los archivos difieren de lo que generaría; no escribe'),
     flag('force', 'boolean', 'Sobrescribe contenido gestionado editado a mano'),
   ],

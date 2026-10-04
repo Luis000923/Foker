@@ -126,7 +126,7 @@ Los defaults de objetos resumen la configuración efectiva sin archivo. `<nombre
 |---|---|---|---|
 | integrations | object | {"targets":[]} | Opcional. |
 | integrations.targets | array | [] | Anfitriones para generar integraciones mediante sync. Opcional. |
-| integrations.targets[] | "claude-code" / "opencode" / "antigravity" | Sin default | Opcional. Valores: ["claude-code","opencode","antigravity"]. |
+| integrations.targets[] | "claude-code" / "opencode" / "antigravity" / "codex" | Sin default | Opcional. Valores: ["claude-code","opencode","antigravity","codex"]. |
 
 ## Fusión de política (REQ-POL-001)
 
@@ -250,6 +250,7 @@ integrations:
     - claude-code
     - opencode
     - antigravity
+    - codex
 map:
   include: []
   exclude: []

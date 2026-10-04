@@ -1,9 +1,11 @@
 import { antigravity } from './adapters/antigravity.js';
 import { claudeCode } from './adapters/claude-code.js';
+import { codex } from './adapters/codex.js';
 import { opencode } from './adapters/opencode.js';
 import { deleteAt, formatJson, getAt, isObject, type Json, type JsonObject, pointerString, setAt } from './json.js';
 import { findBlock, removeBlock, upsertBlock } from './markdown.js';
 import { canonical, hashText } from './text.js';
+import { tomlBlockText, tomlConflict, tomlText } from './toml.js';
 import type { Desired, HostAdapter, HostId, SyncInput } from './types.js';
 
 /** Ruta del manifiesto versionado (REQ-PRJ-002). */
@@ -13,6 +15,7 @@ export const ADAPTERS: Record<HostId, HostAdapter> = {
   'claude-code': claudeCode,
   opencode,
   antigravity,
+  codex,
 };
 
 /** Qué generó `sync` en cada archivo, para poder actualizarlo o retirarlo sin tocar lo del usuario. */
@@ -135,13 +138,22 @@ function planBlock(
   old: ManifestEntry | undefined,
   force: boolean,
 ) {
+  const isToml = item.syntax === 'toml';
+  const original = current;
+  if (isToml && current !== undefined) {
+    current = tomlBlockText(current);
+    const outside = removeBlock(current);
+    const conflict = tomlConflict(original ?? '', outside);
+    if (conflict) return { content: undefined, entry: old, conflict };
+  }
   const entry: ManifestEntry = { kind: 'block', hash: hashText(item.body) };
   const found = current === undefined ? null : findBlock(current);
   if (found && old?.kind === 'block' && hashText(found.body) !== old.hash && !force) {
     return { content: undefined, entry: old, conflict: 'bloque gestionado modificado a mano' };
   }
-  const next = upsertBlock(current, item.body, item.header);
-  return { content: next === current ? undefined : next, entry, conflict: undefined };
+  const block = upsertBlock(current, item.body, item.header);
+  const next = isToml ? tomlText(block) : block;
+  return { content: next === original ? undefined : next, entry, conflict: undefined };
 }
 
 function planJson(
@@ -246,12 +258,15 @@ function planRemoval(path: string, current: string | Uint8Array | undefined, old
   }
   current = asText(current) ?? '';
   if (old.kind === 'block') {
+    const isToml = path === '.codex/config.toml';
+    if (isToml) current = tomlBlockText(current);
     const found = findBlock(current);
     if (!found) return { content: undefined, conflict: undefined };
     if (hashText(found.body) !== old.hash && !force) {
       return { content: undefined, conflict: 'bloque gestionado modificado a mano' };
     }
-    const next = removeBlock(current);
+    const removed = removeBlock(current);
+    const next = isToml ? tomlText(removed) : removed;
     return { content: next.trim().length === 0 ? null : next, conflict: undefined };
   }
   const result = planJson({ kind: 'json', path, set: [], arrays: [] }, current, old, force);

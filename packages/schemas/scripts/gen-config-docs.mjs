@@ -153,7 +153,7 @@ const example = {
     },
   },
   policy: { ...defaults.policy, overrides: [] },
-  integrations: { targets: ['claude-code', 'opencode', 'antigravity'] },
+  integrations: { targets: ['claude-code', 'opencode', 'antigravity', 'codex'] },
 };
 const markdown =
   '# Configuración de Foker\n\n' +

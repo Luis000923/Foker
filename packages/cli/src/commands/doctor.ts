@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { estimateTokens, versionInfo } from '@foker/core';
 import { FokerError, isTrusted, loadConfig, matchGlobs } from '@foker/engine';
-import { MANIFEST_PATH } from '@foker/integrations';
+import { type HostId, MANIFEST_PATH } from '@foker/integrations';
 import { type Command, flag } from '../types.js';
 import { runSync } from './sync.js';
 
@@ -30,6 +30,47 @@ export interface Check {
   status: 'ok' | 'warn' | 'fail';
   message: string;
   hint?: string;
+}
+
+/** Consulta únicamente el código de salida: nunca incorpora la salida de autenticación. */
+export async function checkHost(
+  target: HostId,
+  root: string,
+  env: NodeJS.ProcessEnv,
+  probe: (command: string, args: string[]) => Promise<void> = async (command, args) => {
+    await exec(command, args, { cwd: root, env, timeout: 5000, maxBuffer: 64 * 1024 });
+  },
+): Promise<Check[]> {
+  const command = target === 'claude-code' ? 'claude' : target;
+  const id = `host:${target}`;
+  try {
+    await probe(command, ['--version']);
+  } catch {
+    return [{ id, status: 'warn', message: `${command} no disponible`, hint: `Instala ${command} y abre una sesión` }];
+  }
+  const checks: Check[] = [{ id, status: 'ok', message: `${command} disponible` }];
+  const args = target === 'codex' ? ['login', 'status'] : target === 'claude-code' ? ['auth', 'status'] : undefined;
+  if (!args) {
+    checks.push({
+      id: `${id}:session`,
+      status: 'warn',
+      message: 'Sesión PENDIENTE de verificación manual',
+      hint: `Comprueba la sesión en ${command}`,
+    });
+    return checks;
+  }
+  try {
+    await probe(command, args);
+    checks.push({ id: `${id}:session`, status: 'ok', message: 'Sesión disponible' });
+  } catch {
+    checks.push({
+      id: `${id}:session`,
+      status: 'warn',
+      message: 'No se pudo confirmar la sesión',
+      hint: `Inicia sesión en ${command}; si el comando no existe, verifica manualmente`,
+    });
+  }
+  return checks;
 }
 
 /** Límite de tokens de `foker/rules.md` (FOKER-SPEC §9.8). */
@@ -130,6 +171,9 @@ export async function runDoctor(
   }
 
   if (loaded) {
+    for (const target of loaded.config.integrations.targets ?? []) {
+      for (const check of await checkHost(target, root, env)) add(check);
+    }
     const trusted = await isTrusted(root, loaded.commandsHash, options.trustBaseDir).catch(() => false);
     const hasChecks = Object.keys(loaded.config.validation.checks).length > 0;
     add(
