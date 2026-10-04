@@ -229,10 +229,10 @@ describe('herramientas MCP', () => {
 });
 
 describe('códigos de error (FOKER-SPEC §18)', () => {
-  it('contiene los 30 códigos con formato válido y sin duplicados', () => {
+  it('contiene los 32 códigos con formato válido y sin duplicados', () => {
     const codes = errorCodes().map((c) => c.code);
-    expect(codes).toHaveLength(30);
-    expect(new Set(codes).size).toBe(30);
+    expect(codes).toHaveLength(32);
+    expect(new Set(codes).size).toBe(32);
     for (const code of codes) expectValid('common#/$defs/errorCode', code);
   });
 

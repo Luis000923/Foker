@@ -3,7 +3,10 @@
 //! Descubre archivos, los parsea con tree-sitter, resuelve imports, construye el
 //! grafo de dependencias, calcula el PageRank global y persiste el mapa.
 
+pub mod config;
+pub mod discover;
 pub mod error;
+pub mod glob;
 pub mod path;
 
 pub use error::FokerCode;

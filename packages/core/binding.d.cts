@@ -10,6 +10,12 @@
 export declare const __napiBindingTarget: 'native' | 'wasm32-wasi' | 'wasm32-wasip1'
 
 /**
+ * `true` si algún glob casa con el id (misma semántica que el motor). Lanza `FKR-INP-001` si un
+ * glob es inválido.
+ */
+export declare function matchGlobs(id: string, globs: Array<string>): boolean
+
+/**
  * Normaliza `input` respecto al root absoluto `root` (REQ-XPLAT-001…003).
  * Lanza `FKR-POL-001` si la ruta es inválida o sale del root.
  */

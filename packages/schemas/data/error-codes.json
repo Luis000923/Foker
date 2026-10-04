@@ -74,6 +74,22 @@
       "mcp": null
     },
     {
+      "code": "FKR-MAP-102",
+      "description": "Archivo omitido por tamaño (> map.max_file_bytes); entra en el mapa como skipped",
+      "recoverable": "diagnostic",
+      "action": "Diagnóstico",
+      "exit": null,
+      "mcp": null
+    },
+    {
+      "code": "FKR-MAP-103",
+      "description": "Entrada omitida (symlink fuera del root o roto, nombre no UTF-8, ruta no válida)",
+      "recoverable": "diagnostic",
+      "action": "Diagnóstico",
+      "exit": null,
+      "mcp": null
+    },
+    {
       "code": "FKR-MAP-104",
       "description": "Import no resuelto",
       "recoverable": "diagnostic",
