@@ -82,6 +82,10 @@ M0, M2, M3, M4 y E6 completos en local; M1 con todo lo que no gasta API (manifie
   El control no puede ejecutar tests por Bash en `-p`: revisar equidad antes de la línea base.
 - ADR-030: respuestas MCP compactas (`dirty_files` ≤ 20 rutas con totales, sin node_modules;
   `output_tail` solo en checks no superados y sin ANSI) y node_modules excluido del git del fixture.
+- **Smoke tras ADR-030** (`bench-smoke-4`): task_begin ~9.100 → ~250 tokens, submit ~4.400 → ~220.
+  Coste Foker −40–50 % (a-01 0,170 → 0,100; a-15 0,149 → 0,071; a-09 0,198 → 0,105 USD equiv.), mismo
+  éxito 2/3 por brazo. Sigue ~2,4–3x el control: el flujo obligatorio suma turnos (9–15 frente a 4) y cada
+  turno relee el contexto en caché; en tareas de un archivo el coste fijo de Foker domina.
 - Verificación local completa: 120 tests Rust (2 omitidos), 542 TS, clippy, Biome, tsc,
   check:deps, generate:check.
 
