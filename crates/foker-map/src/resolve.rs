@@ -143,6 +143,16 @@ fn base_options(aliases: Vec<(String, Vec<AliasValue>)>) -> ResolveOptions {
     }
 }
 
+/// Quita el prefijo verbatim `\\?\` de Windows (`\\?\C:\x` → `C:\x`) que añade `canonicalize`;
+/// `oxc_resolver` y los `tsconfig` trabajan con rutas normales.
+pub fn simplify_verbatim(path: &Path) -> PathBuf {
+    let text = path.to_string_lossy();
+    match text.strip_prefix(r"\\?\") {
+        Some(rest) if rest.as_bytes().get(1) == Some(&b':') => PathBuf::from(rest),
+        _ => path.to_path_buf(),
+    }
+}
+
 /// Resolutores por tsconfig, cada uno con su caché.
 pub struct ResolverSet {
     root: PathBuf,
@@ -176,7 +186,7 @@ impl ResolverSet {
                         .map_or(String::new(), |(d, _)| d.to_owned());
                 let mut options = base_options(workspace_aliases(root, workspace));
                 options.tsconfig = Some(TsconfigDiscovery::Manual(TsconfigOptions {
-                    config_file: m.path.clone(),
+                    config_file: simplify_verbatim(&m.path),
                     references: TsconfigReferences::Auto,
                 }));
                 // Caché propia: compartirla entre opciones distintas (tsconfig) da resultados que dependen
@@ -203,6 +213,7 @@ impl ResolverSet {
     }
 
     fn to_id(&self, path: &Path) -> Option<String> {
+        let path = simplify_verbatim(path);
         let relative = path.strip_prefix(&self.root).ok()?;
         normalize_lexical(relative.to_str()?).ok()
     }
@@ -279,6 +290,22 @@ pub fn resolve_all<'a>(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn simplifies_windows_verbatim_paths() {
+        assert_eq!(
+            simplify_verbatim(Path::new(r"\\?\C:\repo")),
+            PathBuf::from(r"C:\repo")
+        );
+        assert_eq!(
+            simplify_verbatim(Path::new(r"\\?\UNC\server\x")),
+            PathBuf::from(r"\\?\UNC\server\x")
+        );
+        assert_eq!(
+            simplify_verbatim(Path::new("/repo")),
+            PathBuf::from("/repo")
+        );
+    }
 
     #[test]
     fn package_names() {
