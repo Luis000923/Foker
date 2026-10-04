@@ -16,7 +16,8 @@
     "test": "pnpm run test:rust && pnpm run test:ts",
     "test:rust": "cargo nextest run --workspace",
     "test:ts": "vitest run",
-    "clean": "node scripts/clean.mjs"
+    "clean": "node scripts/clean.mjs",
+    "check:deps": "node scripts/check-deps.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",
