@@ -1,0 +1,16 @@
+# Artefactos de build y dependencias
+target/
+node_modules/
+dist/
+coverage/
+*.node
+
+# Estado local de Foker
+.foker/
+
+# Sistema
+.DS_Store
+
+# Material de trabajo previo, fuera del repo (decisión del usuario 2026-10-03)
+/foker-vault/
+/*.txt
