@@ -10,7 +10,7 @@ M0 · Fundaciones — criterio de salida (spec/ROADMAP-BACKLOG.md §2)
 
 | ID | Título | Estado | Rama | Notas |
 |---|---|---|---|---|
-| FKR-001 | (pendiente de leer en spec/) | bloqueado | — | Falta spec/ |
+| FKR-001 | (leer en spec/ROADMAP-BACKLOG.md §4, E0) | pendiente | — | |
 | FKR-002 | (pendiente de leer en spec/) | pendiente | — | |
 | FKR-003 | (pendiente de leer en spec/) | pendiente | — | |
 | FKR-004 | (pendiente de leer en spec/) | pendiente | — | |
@@ -37,9 +37,9 @@ Sesión 2026-10-03:
 
 ## PENDIENTES y preguntas para el usuario
 
-- **BLOQUEANTE:** falta `spec/` (copia sin modificar de `foker-spec/`). No existe
-  `foker-spec/` en el equipo; `foker-vault/` es una bóveda derivada que no incluye
-  `api/foker-core.d.ts` ni `schemas/*.json`. Sin spec/ no se puede empezar FKR-001.
+- **spec/ es una RECONSTRUCCIÓN, no la original** (ver spec/RECONSTRUCCION.md). Faltan
+  `api/foker-core.d.ts` y `schemas/*.json`; FKR-004 (contratos/schemas) y FKR-005
+  (versionInfo/addon) dependen de ellos. Pedir la copia original antes de esos issues.
 - Herramientas que faltan (instalar cuando un issue las necesite):
   `cargo install cargo-nextest --locked`, `cargo install cargo-deny --locked`,
   `sudo pacman -S actionlint`.
@@ -48,5 +48,4 @@ Sesión 2026-10-03:
 
 ## Siguiente paso
 
-Cuando spec/ esté en la carpeta: commit "chore: añadir especificación v0.2.0", leer la
-spec en el orden del prompt maestro y planificar FKR-001 en `feat/FKR-001-monorepo`.
+Leer spec/ en el orden del prompt maestro y planificar FKR-001 en `feat/FKR-001-monorepo`.
