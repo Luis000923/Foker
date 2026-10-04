@@ -60,3 +60,14 @@ la reconstrucción inicial (ADR-019); esta decisión actualiza el resumen de FOK
   los campos añadidos; quien use directamente el addon debe reconocer el prefijo de errores async.
 - (−) La medición de 24 ms es local, no una garantía universal; se revisará si aparecen necesidades
   de rendimiento que justifiquen otro mecanismo incremental.
+
+## Ampliación FKR-041
+Se añade `hashCanonicalJson(json: string): string`, que devuelve `blake3:<64 hex>`.
+El addon delega canonicalización y hash a `foker_map::canonical`; JSON inválido produce
+`FKR-INP-001`. Engine calcula el hash de { validation, env_allowlist } efectivos; policy recibe el hash y
+no depende del addon. Es una ampliación compatible de la API nativa v1.
+
+## Ampliación FKR-040: configuración de contexto
+Se añade `ContextRequest.coreFiles?: number`, con default 15. El addon lo transmite a
+`ContextInputs.core_files`; cero desactiva los archivos de la sección core. La CLI pasa
+`context.core_files` efectivo sin reemplazar cero por el default.

@@ -12,6 +12,7 @@ export const PACKAGE_NAME = '@foker/core';
 
 /** Superficie del addon nativo que usa este paquete. */
 export interface NativeBinding {
+  hashCanonicalJson?(json: string): string;
   versionInfo(): VersionInfo;
   normalizePath(root: string, input: string): string;
   matchGlobs(id: string, globs: string[]): boolean;
@@ -104,4 +105,15 @@ export function matchGlobs(id: string, globs: string[]): boolean {
 /** Abre el motor del Project Map para un root absoluto con el addon de la plataforma. */
 export function openEngine(root: string, config?: EngineConfig): Promise<Engine> {
   return Engine.open(native().FokerEngine, root, config);
+}
+
+/** BLAKE3 del JSON canónico del núcleo. */
+export function hashCanonicalJson(json: string): string {
+  try {
+    const hash = native().hashCanonicalJson;
+    if (!hash) throw new FokerError('FKR-INT-002', 'El addon no expone hashCanonicalJson');
+    return hash(json);
+  } catch (error) {
+    throw FokerError.fromNative(error);
+  }
 }

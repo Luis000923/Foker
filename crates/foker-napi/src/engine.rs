@@ -361,6 +361,8 @@ pub struct ContextRequest {
     pub intent: Option<String>,
     /// Campo budget_tokens.
     pub budget_tokens: Option<u32>,
+    /// Número máximo de archivos core; por defecto 15.
+    pub core_files: Option<u32>,
     /// Campo explain.
     pub explain: Option<bool>,
     /// Campo rules.
@@ -603,8 +605,11 @@ impl FokerEngine {
                     paths: s.paths,
                     checks: s.checks,
                 }),
+                core_files: request
+                    .core_files
+                    .map(|v| v as usize)
+                    .unwrap_or_else(|| foker_context::ContextInputs::default().core_files),
                 dirty_files: request.dirty_files.unwrap_or_default(),
-                ..Default::default()
             };
             let state = engine
                 .state()

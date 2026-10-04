@@ -9,6 +9,8 @@ export interface IO {
   stdout(text: string): void;
   stderr(text: string): void;
   isTTY: boolean;
+  confirm?: (message: string) => Promise<boolean>;
+  trustBaseDir?: string;
 }
 const version = (createRequire(import.meta.url)('../package.json') as { version: string }).version;
 export async function main(argv: string[], env: NodeJS.ProcessEnv, io: IO): Promise<number> {
@@ -69,6 +71,10 @@ export async function main(argv: string[], env: NodeJS.ProcessEnv, io: IO): Prom
         flags[f.name] = Array.isArray(value) ? value.map(String) : value;
       }
       result = await command.run({
+        env,
+        ...(io.confirm ? { confirm: io.confirm } : {}),
+        ...(io.trustBaseDir ? { trustBaseDir: io.trustBaseDir } : {}),
+        display: io.stderr,
         cwd: resolve(String(flags['cwd'] || process.cwd())),
         flags,
         args,
@@ -83,7 +89,9 @@ export async function main(argv: string[], env: NodeJS.ProcessEnv, io: IO): Prom
     const failure =
       error instanceof FokerError
         ? error
-        : new FokerError('FKR-INT-001', error instanceof Error ? error.message : String(error));
+        : error instanceof Error && 'code' in error && typeof error.code === 'string' && error.code.startsWith('FKR-')
+          ? new FokerError(error.code as ConstructorParameters<typeof FokerError>[0], error.message)
+          : new FokerError('FKR-INT-001', error instanceof Error ? error.message : String(error));
     result.exitCode = errorCode(failure.code)?.exit ?? 10;
     errors.push({ code: failure.code, message: failure.message });
     if (debug) io.stderr(`${failure.stack ?? failure.message}\n`);

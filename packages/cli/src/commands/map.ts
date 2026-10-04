@@ -1,6 +1,7 @@
 import { writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { FokerError, normalizePath, openEngine } from '@foker/core';
+import { loadConfig } from '@foker/engine';
 import { type Command, flag } from '../types.js';
 export const mapCommand: Command = {
   name: 'map',
@@ -14,15 +15,16 @@ export const mapCommand: Command = {
     flag('dry-run', 'boolean', 'Previsualiza exportación sin escribir (requiere --export)'),
   ],
   async run(ctx) {
-    // Hasta FKR-040 no hay carga de foker.config.yaml: mejor rechazar que ignorar en silencio.
-    if (ctx.flags['config'])
-      throw new FokerError('FKR-INP-001', '--config todavía no está soportado por map (llega con FKR-040).');
     if (ctx.flags['check'] && ctx.flags['export'])
       throw new FokerError('FKR-INP-001', '--check no escribe archivos: no se puede combinar con --export.');
     if (ctx.flags['dry-run'] && !ctx.flags['export'])
       throw new FokerError('FKR-INP-001', '--dry-run requiere --export.');
     const exportPath = ctx.flags['export'] ? normalizePath(ctx.cwd, String(ctx.flags['export'])) : undefined;
-    const engine = await openEngine(ctx.cwd, { readOnly: Boolean(ctx.flags['check'] || ctx.flags['dry-run']) });
+    const loaded = await loadConfig(ctx.cwd, ctx.flags['config'] ? { configPath: String(ctx.flags['config']) } : {});
+    const engine = await openEngine(ctx.cwd, {
+      ...loaded.mapConfig,
+      readOnly: Boolean(ctx.flags['check'] || ctx.flags['dry-run']),
+    });
     const before = engine.status().contentHash;
     const staleFiles = await engine.checkStale();
     const report = await engine.refresh({ full: Boolean(ctx.flags['full']) });

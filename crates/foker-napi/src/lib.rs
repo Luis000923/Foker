@@ -87,3 +87,12 @@ pub fn match_globs(id: String, globs: Vec<String>) -> napi::Result<bool, FokerCo
             .map_err(|e| napi::Error::new(FokerCode::Inp001, e.to_string()))
     })
 }
+
+/// BLAKE3 de JSON canónico; la canonicalización pertenece a foker-map.
+#[napi]
+pub fn hash_canonical_json(json: String) -> napi::Result<String, FokerCode> {
+    guard(|| {
+        foker_map::canonical::hash_canonical_json(&json)
+            .map_err(|e| napi::Error::new(FokerCode::Inp001, e.to_string()))
+    })
+}

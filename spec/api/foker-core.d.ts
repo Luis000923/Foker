@@ -211,6 +211,8 @@ export interface ContextRequest {
   anchors?: { files?: string[]; symbols?: string[] };
   intent?: Intent;
   budgetTokens?: number;
+  /** Máximo de archivos core; default 15, cero desactiva su selección. */
+  coreFiles?: number;
   /** Cuerpo de SKILL.md sin frontmatter; lo lee @foker/engine. */
   skill?: { name: string; body: string; requiredFiles: string[]; requiredSymbols: string[] };
   /** Contenido de foker/rules.md; lo lee @foker/engine. */
@@ -286,3 +288,6 @@ export declare function estimateTokens(text: string): number;
 
 /** Misma semántica de globs que el motor, para que la política en TS no la reimplemente. */
 export declare function matchGlobs(id: string, globs: string[]): boolean;
+
+/** BLAKE3 del JSON canónico; JSON inválido: FKR-INP-001. */
+export declare function hashCanonicalJson(json: string): string;

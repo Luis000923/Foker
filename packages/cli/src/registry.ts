@@ -1,8 +1,14 @@
 import { contextCommand } from './commands/context.js';
 import { mapCommand } from './commands/map.js';
 import { pendingCommands } from './commands/pending.js';
+import { trustCommand } from './commands/trust.js';
 import { flag } from './types.js';
-export const commands = [...pendingCommands.slice(0, 1), mapCommand, contextCommand, ...pendingCommands.slice(1)];
+export const commands = [
+  ...pendingCommands.slice(0, 1),
+  mapCommand,
+  contextCommand,
+  ...pendingCommands.slice(1).map((c) => (c.name === 'trust' ? trustCommand : c)),
+];
 export const globalFlags = [
   flag('cwd', 'string', 'Directorio de trabajo'),
   flag('config', 'string', 'Ruta de configuración'),

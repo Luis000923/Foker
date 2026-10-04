@@ -55,6 +55,12 @@ pub fn round12(x: f64) -> f64 {
     if r == 0.0 { 0.0 } else { r }
 }
 
+/// Parse y hash de JSON para consumidores de la API nativa.
+pub fn hash_canonical_json(json: &str) -> Result<String, serde_json::Error> {
+    let value = serde_json::from_str(json)?;
+    Ok(hash_bytes(to_canonical_string(&value).as_bytes()))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

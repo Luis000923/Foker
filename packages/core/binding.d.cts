@@ -103,6 +103,8 @@ export interface ContextRequest {
   intent?: 'fix' | 'add' | 'modify' | 'refactor' | 'test' | 'explain'
   /** Campo budget_tokens. */
   budgetTokens?: number
+  /** Número máximo de archivos core; por defecto 15. */
+  coreFiles?: number
   /** Campo explain. */
   explain?: boolean
   /** Campo rules. */
@@ -200,6 +202,9 @@ export interface FileInfo {
   /** Símbolos declarados. */
   symbols: Array<string>
 }
+
+/** BLAKE3 de JSON canónico; la canonicalización pertenece a foker-map. */
+export declare function hashCanonicalJson(json: string): string
 
 /** Nodo alcanzado. */
 export interface ImpactNode {
