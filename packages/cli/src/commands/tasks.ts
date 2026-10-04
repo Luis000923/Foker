@@ -1,6 +1,15 @@
 import { userInfo } from 'node:os';
 import { FokerError } from '@foker/core';
-import { loadConfig, submitTask, TaskStore, validateProfile, verifyTask } from '@foker/engine';
+import {
+  assertUnprotectedScope,
+  loadConfig,
+  openEngine,
+  submitTask,
+  TaskStore,
+  validateProfile,
+  verifyTask,
+} from '@foker/engine';
+import type { ProjectMap } from '@foker/schemas';
 import { type Command, type Context, flag } from '../types.js';
 
 const list = (value: boolean | string | string[] | undefined) =>
@@ -85,6 +94,10 @@ export const taskCommands: Command[] = [
       code = action === 'reject' ? 1 : exit((data as { state: string }).state);
     } else if (action === 'begin') {
       const loaded = await loadConfig(ctx.cwd, ctx.flags['config'] ? { configPath: String(ctx.flags['config']) } : {});
+      const engine = await openEngine(ctx.cwd, { ...loaded.mapConfig, readOnly: true });
+      await engine.refresh();
+      const project = JSON.parse(await engine.exportMapJson()) as ProjectMap;
+      assertUnprotectedScope(scope, loaded.policy.protected_paths, Object.keys(project.files));
       data = await new TaskStore(ctx.cwd, {
         actor: `cli:${userInfo().username}`,
         maxActive: loaded.policy.tasks.max_active ?? 5,

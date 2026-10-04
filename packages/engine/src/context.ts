@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { type ContextRequest, FokerError } from '@foker/core';
+import { type ContextRequest, FokerError, normalizePath } from '@foker/core';
 import { parse as parseYaml } from 'yaml';
 
 import { gitDirtyFiles } from './git.js';
@@ -19,13 +19,12 @@ export async function gatherContextInputs(
   root: string,
   options: { skill?: string } = {},
 ): Promise<Pick<ContextRequest, 'rules' | 'skill' | 'dirtyFiles'>> {
-  const rules = await optionalFile(join(root, 'foker/rules.md'));
+  const rules = await optionalFile(join(root, normalizePath(root, 'foker/rules.md')));
   let skill: ContextRequest['skill'];
   if (options.skill !== undefined) {
     const name = options.skill;
     if (!/^[\w-]+$/.test(name)) throw new FokerError('FKR-SKL-001', `Skill inexistente: ${name}`);
-    const directory = join(root, 'foker/skills', name);
-    const source = await optionalFile(join(directory, 'SKILL.md'));
+    const source = await optionalFile(join(root, normalizePath(root, `foker/skills/${name}/SKILL.md`)));
     if (source === undefined) throw new FokerError('FKR-SKL-001', `Skill inexistente: ${name}`);
     skill = {
       name,
@@ -33,7 +32,7 @@ export async function gatherContextInputs(
       requiredFiles: [],
       requiredSymbols: [],
     };
-    const manifest = await optionalFile(join(directory, 'foker.skill.yaml'));
+    const manifest = await optionalFile(join(root, normalizePath(root, `foker/skills/${name}/foker.skill.yaml`)));
     if (manifest !== undefined) {
       const parsed = parseYaml(manifest) as { required_context?: { files?: unknown; symbols?: unknown } } | null;
       const strings = (value: unknown): string[] =>

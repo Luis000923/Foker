@@ -21,6 +21,12 @@
     "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@foker/engine": "workspace:*"
+    "@foker/engine": "workspace:*",
+    "@modelcontextprotocol/server": "2.3.0",
+    "@foker/schemas": "workspace:*"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/client": "2.3.0",
+    "@modelcontextprotocol/sdk": "1.32.0"
   }
 }

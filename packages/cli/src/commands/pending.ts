@@ -29,7 +29,6 @@ export const pendingCommands: Command[] = [
     ],
     1,
   ),
-  pending('mcp', 'Arranca MCP stdio', 'FKR-050', [s('root', 'Raíz')]),
   pending('validate', 'Ejecuta checks', 'FKR-048', [
     s('profile', 'Perfil'),
     s('checks', 'Checks'),
