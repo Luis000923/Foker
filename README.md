@@ -4,7 +4,9 @@ Foker es infraestructura determinista para que agentes de IA (Claude Code, OpenC
 Antigravity u otro cliente MCP) desarrollen software en monorepos TypeScript con menos contexto y
 más seguridad.
 
-> **Estado**: en desarrollo (hito M0). No hay versión publicada. La especificación normativa está en
+> **Estado**: MVP implementado en local: mapa, contexto, políticas, tareas, MCP, CLI,
+> integraciones y plantilla. No hay versión publicada (PENDIENTE FKR-080); faltan benchmark
+> (FKR-010…018/037) y verificación manual de anfitriones (FKR-070). La especificación normativa está en
 > [`spec/FOKER-SPEC.md`](spec/FOKER-SPEC.md).
 
 ## Qué aporta
@@ -26,9 +28,9 @@ servidor MCP y de los archivos que genera `foker sync`.
 - **H2**: con Foker, la precisión del contexto es mayor y se modifican menos archivos fuera de alcance.
 
 El benchmark (FOKER-SPEC §20) confirma o refuta ambas. La cifra "18:1" de la investigación previa
-no es un objetivo de Foker.
+es una hipótesis informativa de compresión, no un criterio de éxito.
 
-## CLI prevista (MVP)
+## CLI implementada (MVP)
 
 | Comando | Función |
 |---|---|
@@ -42,11 +44,21 @@ no es un objetivo de Foker.
 | `foker sync` | Genera la configuración de cada agente anfitrión |
 | `foker doctor` | Diagnóstico del entorno |
 
-Detalle completo: FOKER-SPEC §16.
+Detalle completo: [referencia CLI](docs/cli.md) y FOKER-SPEC §16.
 
 ## Documentación
 
+- [Primeros pasos](docs/getting-started.md)
 - [Arquitectura](docs/architecture.md)
+- [Configuración (generada)](docs/configuration.md) y [trust/checks](docs/config-trust-exec.md)
+- [CLI (generada)](docs/cli.md)
+- [Project Map](docs/project-map.md) y [Context Engine](docs/context-engine.md)
+- [Agentes](docs/agents.md), [tareas](docs/tasks.md) y [skills](docs/skills.md)
+- [MCP](docs/mcp.md)
+- [Integraciones](docs/integrations/README.md) y [verificación manual](docs/integrations/verification.md)
+- [Plantilla nextjs-turbo](docs/templates.md)
+- [Seguridad](docs/security.md), [hallazgos y secretos](docs/findings-secrets.md) y [divulgación](SECURITY.md)
+- [Tests](docs/testing.md) y [benchmark (diseño y pendientes)](docs/benchmark.md)
 - [Desarrollo](docs/development.md)
 - [Roadmap](docs/roadmap.md)
 - [ADRs](docs/adr/README.md)

@@ -1,5 +1,5 @@
 import { type ContextRequest, FokerError, openEngine } from '@foker/core';
-import { gatherContextInputs, loadConfig } from '@foker/engine';
+import { gatherContextInputs, loadConfig, TaskStore } from '@foker/engine';
 import { type Command, flag } from '../types.js';
 
 export const contextCommand: Command = {
@@ -12,9 +12,10 @@ export const contextCommand: Command = {
     flag('explain', 'boolean', 'Explica selección'),
   ],
   async run(ctx) {
-    if (ctx.flags['task']) throw new FokerError('FKR-INP-001', '--task requiere FKR-045.');
-    const task = ctx.args[0];
-    if (!task) throw new FokerError('FKR-INP-001', 'Indica una tarea.');
+    // --task enlaza el pack con una tarea del ledger: añade su alcance como anclas débiles (§9.5).
+    const record = ctx.flags['task'] ? await new TaskStore(ctx.cwd).get(String(ctx.flags['task'])) : undefined;
+    const task = ctx.args[0] ?? record?.description;
+    if (!task) throw new FokerError('FKR-INP-001', 'Indica una tarea o --task <task_id>.');
     const format = ctx.flags['format'] || 'md';
     if (format !== 'md' && format !== 'json') throw new FokerError('FKR-INP-001', '--format debe ser md o json.');
     const budget = ctx.flags['budget'] ? Number(ctx.flags['budget']) : undefined;
@@ -24,8 +25,9 @@ export const contextCommand: Command = {
     if (intent && !['fix', 'add', 'modify', 'refactor', 'test', 'explain'].includes(intent))
       throw new FokerError('FKR-INP-001', '--intent inválido.');
     const anchors = ctx.flags['anchor'] as string[];
+    const skill = ctx.flags['skill'] ? String(ctx.flags['skill']) : (record?.skill ?? undefined);
     const inputs = await gatherContextInputs(ctx.cwd, {
-      ...(ctx.flags['skill'] ? { skill: String(ctx.flags['skill']) } : {}),
+      ...(skill ? { skill } : {}),
       ...(ctx.flags['config'] ? { configPath: String(ctx.flags['config']) } : {}),
     });
     const loaded = await loadConfig(ctx.cwd, ctx.flags['config'] ? { configPath: String(ctx.flags['config']) } : {});
@@ -38,6 +40,16 @@ export const contextCommand: Command = {
         symbols: anchors.filter((a) => a.includes('#') || (!a.includes('/') && !/\.[\w]+$/.test(a))),
       },
       coreFiles: loaded.config.context.core_files,
+      ...(record
+        ? {
+            taskScope: {
+              taskId: record.task_id,
+              description: record.description,
+              paths: record.scope.paths,
+              checks: loaded.config.validation.profiles[record.profile]?.checks ?? [],
+            },
+          }
+        : {}),
       budgetTokens: budget ?? loaded.config.context.default_budget_tokens,
       ...(intent ? { intent: intent as NonNullable<ContextRequest['intent']> } : {}),
       explain: Boolean(ctx.flags['explain']),
