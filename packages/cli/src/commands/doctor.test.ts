@@ -1,9 +1,11 @@
+import { execFile } from 'node:child_process';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { promisify } from 'node:util';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 import { main } from '../main.js';
-import { runDoctor } from './doctor.js';
+import { fallbackIgnored, runDoctor } from './doctor.js';
 
 let root: string;
 beforeEach(async () => {
@@ -70,4 +72,43 @@ it('config inválida es un fallo con exit 1', async () => {
   await writeFile(join(root, 'foker.config.yaml'), 'version: 2\n');
   const io = { stdout: () => {}, stderr: () => {}, isTTY: false };
   expect(await main(['--cwd', root, 'doctor'], {}, io)).toBe(1);
+});
+
+it('respeta --config y --dry-run y devuelve reparaciones propuestas', async () => {
+  await writeFile(join(root, 'foker.config.yaml'), 'version: 1\n');
+  await writeFile(join(root, 'custom.yaml'), 'version: 2\n');
+  let out = '';
+  const io = { stdout: (s: string) => (out += s), stderr: () => {}, isTTY: false };
+  expect(await main(['--cwd', root, '--json', '--config', 'custom.yaml', '--dry-run', 'doctor', '--fix'], {}, io)).toBe(
+    1,
+  );
+  expect(JSON.parse(out).data.fixed).toEqual([]);
+  expect(JSON.parse(out).data.proposed).toEqual(['.foker/', '.gitignore']);
+  for (const path of ['.foker', '.gitignore'])
+    await expect(readFile(join(root, path))).rejects.toMatchObject({ code: 'ENOENT' });
+  await writeFile(join(root, 'custom.yaml'), 'version: 1\nintegrations: {targets: [claude-code]}\n');
+  const { checks } = await runDoctor(root, {}, { configPath: 'custom.yaml' });
+  expect(checks.find((c) => c.id === 'sync')?.message).toBe('Integraciones sin generar');
+});
+
+it('repara negaciones posteriores en .gitignore', async () => {
+  await writeFile(join(root, '.gitignore'), '.foker/\n!.foker/\n');
+  expect(byId((await runDoctor(root, {}, {})).checks)['gitignore']).toBe('warn');
+  expect((await runDoctor(root, {}, { fix: true })).fixed).toContain('.gitignore');
+  expect(byId((await runDoctor(root, {}, {})).checks)['gitignore']).toBe('ok');
+});
+
+it('consulta las reglas efectivas con git y permite reparar una negación', async () => {
+  await promisify(execFile)('git', ['init', '--quiet'], { cwd: root });
+  await writeFile(join(root, '.gitignore'), '.foker/\n!.foker/\n');
+  expect(byId((await runDoctor(root, {}, {})).checks)['gitignore']).toBe('warn');
+  await runDoctor(root, {}, { fix: true });
+  expect(byId((await runDoctor(root, {}, {})).checks)['gitignore']).toBe('ok');
+});
+
+it('sin git evalúa patrones y negaciones en orden', () => {
+  expect(fallbackIgnored('.foker/\n!.foker/\n')).toBe(false);
+  expect(fallbackIgnored('.foker/\n!.foker/\n/.foker/\n')).toBe(true);
+  expect(fallbackIgnored('.foker/*\n!.foker/x\n')).toBe(false);
+  expect(fallbackIgnored('# .foker/\nnode_modules/\n')).toBe(false);
 });

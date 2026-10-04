@@ -110,3 +110,13 @@ it('new no sobrescribe y dry-run no escribe', async () => {
   await expect(newSkill(f.root, 'demo')).rejects.toMatchObject({ code: 'FKR-INP-001' });
   await expect(newSkill(f.root, '../bad')).rejects.toMatchObject({ code: 'FKR-INP-001' });
 });
+
+it('acepta workflow sin fragmento también al cargar la skill para gates', async () => {
+  const f = await fixture();
+  await newSkill(f.root, 'demo');
+  await writeFile(
+    join(f.root, 'foker/skills/demo/foker.skill.yaml'),
+    stringify({ ...f.manifest, workflow_ref: 'SKILL.md' }),
+  );
+  expect((await loadSkill(f.root, 'demo')).manifest.workflow_ref).toBe('SKILL.md');
+});

@@ -1,9 +1,9 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { basename, join, resolve } from 'node:path';
-import { FokerError, normalizePath } from '@foker/engine';
+import { FokerError, normalizePath, resolveConfig } from '@foker/engine';
 import { detectHosts, HOST_IDS } from '@foker/integrations';
-import { type FokerMdFrontmatter, formatIssues, validate } from '@foker/schemas';
+import { type FokerConfig, type FokerMdFrontmatter, formatIssues, validate } from '@foker/schemas';
 import { parse, stringify } from 'yaml';
 import { type Command, flag } from '../types.js';
 import { runSync } from './sync.js';
@@ -132,7 +132,12 @@ export const initCommand: Command = {
     const unknown = targets.filter((t) => !(HOST_IDS as readonly string[]).includes(t));
     if (unknown.length) throw new FokerError('FKR-INP-001', `Anfitrión desconocido: ${unknown.join(', ')}`);
 
-    const config = { ...initialConfig(root, name, spec?.description), integrations: { targets: [...targets].sort() } };
+    const config = {
+      ...initialConfig(root, name, spec?.description),
+      integrations: { targets: [...new Set(targets)].sort() },
+    };
+    const result = validate<FokerConfig>('foker-config', config);
+    if (!result.ok) throw new FokerError('FKR-CFG-001', formatIssues(result.issues));
     const configText = `# Generado por foker init. Referencia: FOKER-SPEC §15.2.\n${stringify(config)}`;
     const gitignorePath = join(root, '.gitignore');
     const gitignore = existsSync(gitignorePath) ? readFileSync(gitignorePath, 'utf8') : '';
@@ -156,7 +161,7 @@ export const initCommand: Command = {
       if (needsIgnore)
         await writeFile(gitignorePath, `${gitignore}${gitignore && !gitignore.endsWith('\n') ? '\n' : ''}.foker/\n`);
     }
-    const { plan, applied } = await runSync(root, { targets: targets.join(','), dryRun });
+    const { plan, applied } = await runSync(root, { dryRun, config: resolveConfig(result.value).config });
     if (plan.conflicts.length) {
       return {
         data: { root, files, conflicts: plan.conflicts },
@@ -173,6 +178,11 @@ export const initCommand: Command = {
     const human = `${dryRun ? 'Se crearían o modificarían' : 'Foker inicializado. Archivos'}:\n${[...files, ...synced]
       .map((f) => `  ${f}`)
       .join('\n')}\n${dryRun ? '' : '\nSiguiente: revisa foker.config.yaml y ejecuta foker trust y foker map.\n'}`;
-    return { data: { root, targets, files, synced, applied }, warnings: [], human, exitCode: 0 };
+    return {
+      data: { root, targets: [...new Set(targets)].sort(), files, synced, applied },
+      warnings: [],
+      human,
+      exitCode: 0,
+    };
   },
 };

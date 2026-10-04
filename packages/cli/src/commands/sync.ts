@@ -14,7 +14,10 @@ async function skillFiles(dir: string, prefix = ''): Promise<SkillInput['files']
     if (entry.name.startsWith('.')) continue;
     const rel = prefix ? `${prefix}/${entry.name}` : entry.name;
     if (entry.isDirectory()) out.push(...(await skillFiles(dir, rel)));
-    else if (entry.isFile()) out.push({ path: rel, content: await readFile(join(dir, rel), 'utf8') });
+    else if (entry.isFile()) {
+      const bytes = await readFile(join(dir, rel));
+      out.push({ path: rel, content: /\.(md|yaml|txt)$/i.test(rel) ? bytes.toString('utf8') : bytes });
+    }
   }
   return out;
 }
@@ -34,12 +37,20 @@ function parseTargets(value: string | undefined, configured: string[]): HostId[]
 /** Ejecuta `foker sync` y devuelve el plan aplicado (lo reutiliza `foker init`). */
 export async function runSync(
   root: string,
-  options: { targets?: string; check?: boolean; dryRun?: boolean; force?: boolean; configPath?: string },
+  options: {
+    targets?: string;
+    check?: boolean;
+    dryRun?: boolean;
+    force?: boolean;
+    configPath?: string;
+    config?: Awaited<ReturnType<typeof loadConfig>>['config'];
+  },
 ) {
-  const { config } = await loadConfig(root, options.configPath ? { configPath: options.configPath } : {});
+  const config =
+    options.config ?? (await loadConfig(root, options.configPath ? { configPath: options.configPath } : {})).config;
   const targets = parseTargets(options.targets, config.integrations.targets ?? []);
   const skills: SkillInput[] = [];
-  for (const entry of await listSkills(root, options.configPath ? { configPath: options.configPath } : {})) {
+  for (const entry of await listSkills(root, { config })) {
     skills.push({ name: entry.name, files: await skillFiles(entry.dir) });
   }
   const plan = planSync(
@@ -53,7 +64,7 @@ export async function runSync(
     {
       read: (path) => {
         try {
-          return readFileSync(join(root, normalizePath(root, path)), 'utf8');
+          return readFileSync(join(root, normalizePath(root, path)));
         } catch {
           return undefined;
         }

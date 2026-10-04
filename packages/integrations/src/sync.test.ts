@@ -41,7 +41,7 @@ function fs(initial: Record<string, string> = {}) {
     apply(plan: ReturnType<typeof planSync>) {
       for (const w of plan.writes) {
         if (w.content === null) files.delete(w.path);
-        else files.set(w.path, w.content);
+        else files.set(w.path, typeof w.content === 'string' ? w.content : Buffer.from(w.content).toString('utf8'));
       }
     },
   };
@@ -192,4 +192,28 @@ describe('upsertBlock', () => {
     expect(upsertBlock(once, 'x\n')).toBe(once);
     expect(once.startsWith('A\r\nB')).toBe(true);
   });
+});
+
+it('conserva reglas y hooks preexistentes al retirar el anfitrión', () => {
+  const first = planSync(input({ targets: ['claude-code'] }), fs().io);
+  const hooks = JSON.parse(first.writes.find((w) => w.path === '.claude/settings.json')?.content as string).hooks;
+  const user = { permissions: { deny: ['Bash(git push *)'] }, hooks };
+  const disk = fs({ '.claude/settings.json': JSON.stringify(user) });
+  disk.apply(planSync(input({ targets: ['claude-code'] }), disk.io));
+  expect(planSync(input({ targets: ['claude-code'] }), disk.io).writes).toEqual([]);
+  disk.apply(planSync(input({ targets: [] }), disk.io));
+  expect(JSON.parse(disk.files.get('.claude/settings.json') ?? '{}')).toEqual(user);
+});
+
+it('informa conflicto si no puede insertar arrays bajo un escalar', () => {
+  const disk = fs({ '.claude/settings.json': '{"hooks":"bad"}' });
+  for (const force of [false, true]) {
+    const plan = planSync(input({ targets: ['claude-code'] }), disk.io, { force });
+    expect(plan.conflicts).toContainEqual({
+      path: '.claude/settings.json',
+      reason: expect.stringContaining('intermedio'),
+    });
+    expect(plan.writes.some((w) => w.path === '.claude/settings.json')).toBe(false);
+    expect(plan.manifest.files['.claude/settings.json']).toBeUndefined();
+  }
 });

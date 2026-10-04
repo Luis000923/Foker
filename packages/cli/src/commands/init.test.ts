@@ -79,3 +79,27 @@ it('--from-spec valida el frontmatter de foker.md', async () => {
   expect(bad.output.errors[0].code).toBe('FKR-CFG-001');
   expect((await run('init', '--force', '--template', 'otra')).exit).toBe(2);
 });
+
+it('deduplica targets antes de escribir una configuración válida', async () => {
+  expect((await run('init', '--targets', 'claude-code,claude-code')).exit).toBe(0);
+  expect((await loadConfig(root)).config.integrations.targets).toEqual(['claude-code']);
+  expect((await run('sync', '--check')).exit).toBe(0);
+});
+
+it('--force --dry-run planea con la config propuesta aunque la existente sea inválida o distinta', async () => {
+  for (const old of [
+    'version: 2\n',
+    'version: 1\nskills: {disabled: [foker-workflow]}\nintegrations: {targets: []}\n',
+  ]) {
+    await writeFile(join(root, 'foker.config.yaml'), old);
+    const before = (await readdir(root)).sort();
+    const preview = await run('--dry-run', 'init', '--force', '--targets', 'claude-code');
+    expect(preview.exit).toBe(0);
+    expect(preview.output.data.synced).toContain('.claude/skills/foker-workflow/SKILL.md');
+    expect(await readFile(join(root, 'foker.config.yaml'), 'utf8')).toBe(old);
+    expect((await readdir(root)).sort()).toEqual(before);
+  }
+  const preview = await run('--dry-run', 'init', '--force', '--targets', 'claude-code');
+  const real = await run('init', '--force', '--targets', 'claude-code');
+  expect(preview.output.data.synced).toEqual(real.output.data.synced);
+});

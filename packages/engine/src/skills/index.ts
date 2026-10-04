@@ -68,7 +68,8 @@ export async function validateSkill(dir: string, options: { strict?: boolean } =
       if (manifest.name !== name) errors.push('name del contrato distinto al directorio');
       const anchor = manifest.workflow_ref.split('#')[1];
       const headings = [...body.matchAll(/^ {0,3}#{1,6}\s+(.+?)\s*#*\s*$/gm)].map((m) => headingSlug(m[1] ?? ''));
-      if (!anchor || !headings.includes(anchor)) errors.push('workflow_ref debe apuntar a un encabezado existente');
+      if (anchor !== undefined && !headings.includes(anchor))
+        errors.push('workflow_ref debe apuntar a un encabezado existente');
     }
     if (markdown.split(/\r?\n/).length > 500) warnings.push('SKILL.md supera 500 líneas');
     if (estimateTokens(markdown) > 5000) warnings.push('SKILL.md supera 5000 tokens');
@@ -104,8 +105,11 @@ async function directories(path: string) {
     throw error;
   }
 }
-export async function listSkills(root: string, options: { configPath?: string } = {}) {
-  const { config } = await loadConfig(root, options);
+export async function listSkills(
+  root: string,
+  options: { configPath?: string; config?: Awaited<ReturnType<typeof loadConfig>>['config'] } = {},
+) {
+  const config = options.config ?? (await loadConfig(root, options)).config;
   const included = (await directories(packaged)).length ? packaged : development;
   const entries = new Map<string, { name: string; dir: string; source: string }>();
   for (const [base, source] of [
