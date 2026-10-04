@@ -1,7 +1,6 @@
 import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { FokerError, hashBytes, hashCanonicalJson, matchGlobs, normalizePath } from '@foker/core';
-import { DEFAULT_POLICY } from '@foker/policy';
 import type { TaskBaseline, TaskChange, TaskRecord } from '@foker/schemas';
 import { gitDirtyFiles, gitRead } from '../git.js';
 import { atomicJson } from './storage.js';
@@ -16,15 +15,14 @@ export class BaselineTamperedError extends Error {
   }
 }
 const hash = (value: unknown) => hashCanonicalJson(JSON.stringify(value));
-/** Recorre archivos regulares sin seguir enlaces; excluye estado interno y secretos. */
-async function treeSnapshot(root: string): Promise<Record<string, string>> {
+/** Recorre archivos regulares sin seguir enlaces; excluye estado interno. */
+export async function treeSnapshot(root: string): Promise<Record<string, string>> {
   const tree: Record<string, string> = {};
   let count = 0;
   async function walk(directory: string) {
     for (const entry of await readdir(join(root, directory), { withFileTypes: true })) {
       if (['.git', '.foker', 'node_modules'].includes(entry.name)) continue;
       const path = directory ? `${directory}/${entry.name}` : entry.name;
-      if (matchGlobs(path, DEFAULT_POLICY.secret_globs)) continue;
       if (entry.isDirectory()) await walk(path);
       else if (entry.isFile()) {
         if (count++ >= 50000) throw new FokerError('FKR-MAP-003', 'Baseline supera 50000 archivos');

@@ -1,4 +1,4 @@
-# Tareas: ledger y baseline (FKR-045, FKR-046)
+# Tareas: ledger, baseline y gates (FKR-045–FKR-048)
 
 `TaskStore` de `@foker/engine` recibe un root absoluto y ofrece `begin`, `get`, `list`,
 `touch`, `cancel`, `submit`, `finishValidation`, `approve`, `reject`, `unblock`,
@@ -42,8 +42,7 @@ Decisiones de implementación que la especificación no fija:
 - Se reutiliza un helper de git con execFile, timeout de 5 s y sin shell. Baseline consulta
   status y diff de HEAD, pero la comparación de hashes del árbol decide el cambio real.
   Sin HEAD (incluido un repo git vacío) `git_head` es null. Un fallo de git usa el recorrido TS.
-- El recorrido TS excluye node_modules, .git, .foker y los globs de secretos de la política
-  predeterminada; no sigue enlaces simbólicos. Incluye archivos ignorados por .gitignore:
+- El recorrido TS excluye node_modules, .git y .foker; no sigue enlaces simbólicos. Incluye archivos ignorados por .gitignore:
   no se expone listFiles ni se reimplementa el lenguaje de gitignore. Límite de 50.000 archivos
   (FKR-MAP-003); los hashes binarios delegan en `@foker/core.hashBytes` → Rust BLAKE3.
 - Las escrituras de evento, registro y ancla son secuenciales bajo lock, no una transacción
@@ -52,3 +51,51 @@ Decisiones de implementación que la especificación no fija:
 
 Los tests cubren toda la matriz de transiciones, 500 secuencias con semilla, evidencia,
 aprobaciones, reintentos, idempotencia, concurrencia, lease, corrupción y baseline con/sin git.
+
+
+`submitTask(root, taskId, { summary?, trustBaseDir?, configPath? })` reserva VALIDATING,
+ejecuta scope → policy → map → checks → skill y entrega evidencia inmutable a la FSM.
+G1 intersecta los globs del alcance con `permissions.write_paths` de la skill. Los
+borrados fuera de alcance pueden exigir aprobación. G2 bloquea rutas protegidas,
+baselines manipuladas y secretos añadidos; enumera cambios sensibles y de dependencias
+que requieren aprobación. G3 refresca el mapa y rechaza archivos con parse_status failed.
+G4 y G5 ejecutan secuencialmente los checks declarados, con trust ligado a su hash y
+hallazgos estructurados. FKR-POL-010 y FKR-VAL-004 bloquean sin consumir intento.
+
+El resultado de submit contiene `task_id`, `state`, `attempt`, `gates`, `evidence` (ruta
+relativa) y `next_action`. `state` describe el intento: puede ser REJECTED mientras el
+registro ya está RUNNING en el siguiente intento; al agotar intentos se devuelve FAILED.
+`summary` no determina el resultado ni se añade al contrato de evidencia.
+
+`validateProfile(root, { profile, checks?, packages?, changed?, trustBaseDir?, configPath? })`
+ejecuta los mismos checks sin mutar tareas y escribe checks.json en `.foker/runs/adhoc/`.
+Un perfil o check desconocido produce FKR-VAL-001; falta de trust produce FKR-POL-010.
+`verifyTask(root, id, options?)` reejecuta los gates y devuelve `matches` y evidencia actual,
+sin renovar el lease ni escribir eventos. Compara cambios, hash del mapa, resultado y
+hallazgos/checks, excluyendo timestamps y duration_ms. Una aprobación posterior a la
+última evidencia puede hacer que el resultado actual difiera de ella.
+
+Decisiones adicionales que la especificación no fija:
+
+- `.foker/validate.lock` se adquiere inmediatamente con wx: un lock existente da
+  FKR-VAL-003. Cubre submit, validate y verify, incluso entre procesos.
+- Baseline solo conserva hashes. Para archivos inicialmente limpios se usa git diff
+  --no-color -U0 contra su HEAD inicial; para archivos nuevos, sucios al comenzar o sin
+  git se escanean todas las líneas conservadoramente. Dependencias se comparan con git
+  show cuando está disponible; un package.json modificado/borrado sin contenido anterior
+  requiere aprobación conservadora. Los cambios exclusivos de metadatos con baseline
+  limpia no la requieren. Los archivos de secretos también participan mediante hashes.
+- Se repite impact dependents en lotes de 20 hasta cubrir dependientes transitivos.
+  Los nombres npm se pasan como --filter, sin prefijo pkg:. Un workspace single no
+  recibe filtros.
+- approve/reject/unblock piden confirmación por TTY; --yes no evita esta confirmación.
+  La excepción no interactiva exige simultáneamente --ci explícito y CI=true. Un rechazo
+  de confirmación sale con 6 y no modifica el ledger. unblock --scope registra el nuevo
+  alcance en la aprobación humana. approve satisface solo las rutas enumeradas en los
+  hallazgos de aprobación de la última validación; no autoriza archivos nuevos arbitrarios.
+
+La suite E2E usa un agente simulado, checks portables con process.execPath, repositorios
+git temporales y un TrustStore aislado. Comprueba reintento, scope, secretos, dependencias,
+aprobación TTY/CI, rutas protegidas, trust, binario inexistente, baseline alterada, skills,
+impacto, timeout, evidencia conforme al esquema y verifyLedger. El estado nativo de parseo
+failed se simula: un error de sintaxis ordinario es partial, según el núcleo.

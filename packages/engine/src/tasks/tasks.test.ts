@@ -239,15 +239,18 @@ it('infraestructura no ejecutable conserva intento y razón al desbloquear', asy
   task = await store.unblock(task.task_id, 'cli:test');
   expect(task.attempt).toBe(1);
 });
-it('los hashes de archivos incluyen binarios; excluye secretos y estado interno', async () => {
+it('los hashes incluyen binarios y secretos sin contenido; excluye estado interno', async () => {
   const { root, store } = await fixture();
   await writeFile(join(root, 'binary.txt'), Buffer.from([0, 255, 1]));
   await writeFile(join(root, '.env'), 'secret');
   const task = await store.begin(input);
   await writeFile(join(root, '.env'), 'secret changed');
-  expect(await store.diffSinceBaseline(task)).toEqual([]);
+  expect(await store.diffSinceBaseline(task)).toEqual([{ path: '.env', change: 'modified' }]);
   await writeFile(join(root, 'binary.txt'), Buffer.from([0, 255, 2]));
-  expect(await store.diffSinceBaseline(task)).toEqual([{ path: 'binary.txt', change: 'modified' }]);
+  expect(await store.diffSinceBaseline(task)).toEqual([
+    { path: '.env', change: 'modified' },
+    { path: 'binary.txt', change: 'modified' },
+  ]);
 });
 it('BLOCKED → unblock → submit conserva evidencias y hashes en el mismo intento', async () => {
   const { root, store } = await fixture();
