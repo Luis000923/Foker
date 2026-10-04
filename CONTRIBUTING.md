@@ -52,6 +52,7 @@ Cada bug corregido añade un caso de regresión.
 | Workflow | Disparador | Qué hace |
 |---|---|---|
 | `ci.yml` | PR y push a `main` | `lint` (fmt, clippy, deny, biome, tsc, regla de dependencias) → `test` en 4 runners |
+| `release.yml` | Manual y PR que toca el addon | `build` del addon en 6 targets → `smoke` de cada artefacto empaquetado en su runner nativo. Todavía no publica (FKR-080) |
 
-`nightly.yml`, `release.yml` y `benchmark.yml` llegan con sus issues (FOKER-SPEC §21.2). Todas las
+`nightly.yml` y `benchmark.yml` llegan con sus issues (FOKER-SPEC §21.2). Todas las
 Actions se fijan por SHA y cada job tiene permisos mínimos.
