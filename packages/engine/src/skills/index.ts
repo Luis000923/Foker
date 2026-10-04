@@ -115,7 +115,7 @@ export async function listSkills(root: string, options: { configPath?: string } 
     for (const name of await directories(base)) entries.set(name, { name, dir: join(base, name), source });
   return [...entries.values()]
     .filter((e) => !config.skills.disabled.includes(e.name))
-    .sort((a, b) => a.name.localeCompare(b.name));
+    .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
 }
 export async function loadSkill(root: string, name: string, options: { configPath?: string } = {}) {
   if (!validSkillName(name)) throw new FokerError('FKR-SKL-001', `Skill inexistente: ${name}`);

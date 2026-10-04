@@ -12,15 +12,20 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "roles"
   ],
   "engines": {
     "node": ">=22.14.0"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json"
+    "build": "node ../../scripts/copy-data.mjs roles packages/integrations/roles && tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@foker/schemas": "workspace:*"
+    "@foker/schemas": "workspace:*",
+    "yaml": "2.9.1"
+  },
+  "devDependencies": {
+    "ajv": "8.20.0"
   }
 }

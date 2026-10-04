@@ -17,3 +17,4 @@ coverage/
 /packages/core/npm/
 
 /packages/engine/skills/
+/packages/integrations/roles/

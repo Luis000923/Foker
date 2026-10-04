@@ -79,16 +79,6 @@ Arranca MCP stdio
 |---|---|---|---|
 | --root | string | "" | Raíz |
 
-## foker sync
-
-Genera integraciones
-
-| Flag | Tipo | Default | Descripción |
-|---|---|---|---|
-| --target | string | "" | Anfitriones |
-| --check | boolean | false | Comprueba diferencias |
-| --dry-run | boolean | false | Previsualiza archivos |
-
 ## foker doctor
 
 Diagnostica el entorno
@@ -104,16 +94,6 @@ Confía en el workspace
 | Flag | Tipo | Default | Descripción |
 |---|---|---|---|
 | --yes | boolean | false | Confirma confianza |
-
-## foker policy check
-
-Evalúa una acción contra la política
-
-| Flag | Tipo | Default | Descripción |
-|---|---|---|---|
-| --hook | string | "" | Anfitrión del hook |
-| --path | string | "" | Ruta |
-| --command | string | "" | Comando |
 
 ## foker validate
 
@@ -274,6 +254,27 @@ Skills: new
 | Flag | Tipo | Default | Descripción |
 |---|---|---|---|
 | --strict | boolean | false | Validación estricta |
+
+## foker sync
+
+Genera o actualiza la configuración de los agentes anfitriones
+
+| Flag | Tipo | Default | Descripción |
+|---|---|---|---|
+| --target | string | "" | Anfitriones separados por comas (claude-code, opencode, antigravity) |
+| --check | boolean | false | Sale con 1 si los archivos difieren de lo que generaría; no escribe |
+| --force | boolean | false | Sobrescribe contenido gestionado editado a mano |
+
+## foker policy check
+
+Evalúa una acción contra la política (lo usan los hooks generados por sync)
+
+| Flag | Tipo | Default | Descripción |
+|---|---|---|---|
+| --hook | string | "" | Formato del anfitrión que llama (claude-code); lee el JSON del hook por stdin |
+| --event | string | "" | Evento del hook (stop) |
+| --path | string | "" | Ruta a evaluar |
+| --command | string | "" | Comando de shell a evaluar |
 
 ## Datos de context
 

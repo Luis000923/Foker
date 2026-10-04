@@ -11,6 +11,7 @@ export interface IO {
   isTTY: boolean;
   confirm?: (message: string) => Promise<boolean>;
   trustBaseDir?: string;
+  stdin?: () => Promise<string>;
 }
 const version = (createRequire(import.meta.url)('../package.json') as { version: string }).version;
 export async function main(argv: string[], env: NodeJS.ProcessEnv, io: IO): Promise<number> {
@@ -94,6 +95,7 @@ export async function main(argv: string[], env: NodeJS.ProcessEnv, io: IO): Prom
         env,
         ...(io.confirm ? { confirm: io.confirm } : {}),
         ...(io.trustBaseDir ? { trustBaseDir: io.trustBaseDir } : {}),
+        ...(io.stdin ? { stdin: io.stdin } : {}),
         display: io.stderr,
         cwd: resolve(String(flags['cwd'] || process.cwd())),
         flags,
