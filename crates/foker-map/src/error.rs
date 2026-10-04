@@ -88,8 +88,14 @@ mod tests {
             assert_eq!(parts.len(), 3, "{text}");
             assert_eq!(parts[0], "FKR");
             assert!(parts[1].chars().all(|c| c.is_ascii_uppercase()), "{text}");
-            assert!(parts[2].len() == 3 && parts[2].chars().all(|c| c.is_ascii_digit()), "{text}");
-            assert!(!parts[2].starts_with('1'), "los 1xx son diagnósticos: {text}");
+            assert!(
+                parts[2].len() == 3 && parts[2].chars().all(|c| c.is_ascii_digit()),
+                "{text}"
+            );
+            assert!(
+                !parts[2].starts_with('1'),
+                "los 1xx son diagnósticos: {text}"
+            );
             assert!(seen.insert(text), "duplicado: {text}");
             assert_eq!(code.to_string(), text);
             assert_eq!(code.as_ref(), text);

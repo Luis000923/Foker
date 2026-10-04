@@ -63,3 +63,13 @@ pub fn version_info() -> napi::Result<VersionInfo, FokerCode> {
         })
     })
 }
+
+/// Normaliza `input` respecto al root absoluto `root` (REQ-XPLAT-001…003).
+/// Lanza `FKR-POL-001` si la ruta es inválida o sale del root.
+#[napi]
+pub fn normalize_path(root: String, input: String) -> napi::Result<String, FokerCode> {
+    guard(|| {
+        foker_map::path::normalize_path(std::path::Path::new(&root), &input)
+            .map_err(|e| napi::Error::new(e.code(), e.to_string()))
+    })
+}

@@ -12,6 +12,22 @@ publish = false
 [workspace.dependencies]
 foker-map = { path = "crates/foker-map" }
 foker-context = { path = "crates/foker-context" }
+blake3 = "1.8.7"
+fd-lock = "4.0.4"
+globset = "0.4.20"
+ignore = "0.4.33"
+insta = { version = "1.49.0", features = ["json"] }
+oxc_resolver = "11.24.3"
+proptest = "1.11.0"
+rayon = "1.12.0"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+tempfile = "3.27.0"
+thiserror = "2.0.21"
+tree-sitter = "0.27.0"
+tree-sitter-javascript = "0.25.0"
+tree-sitter-typescript = "0.23.2"
+unicode-normalization = "0.1.25"
 
 [workspace.lints.rust]
 unsafe_code = "deny"
