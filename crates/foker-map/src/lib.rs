@@ -3,10 +3,14 @@
 //! Descubre archivos, los parsea con tree-sitter, resuelve imports, construye el
 //! grafo de dependencias, calcula el PageRank global y persiste el mapa.
 
+pub mod build;
+pub mod canonical;
 pub mod config;
 pub mod discover;
 pub mod error;
 pub mod glob;
+pub mod model;
+pub mod pagerank;
 pub mod parse;
 pub mod path;
 pub mod project;

@@ -18,7 +18,9 @@ pub const MAX_DOC_CHARS: usize = 300;
 const BINARY_SNIFF_BYTES: usize = 8000;
 
 /// Estado del parseo (`files[].parse_status`).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
+)]
 pub enum ParseStatus {
     /// Sin errores de sintaxis.
     Ok,
@@ -43,7 +45,9 @@ impl ParseStatus {
 }
 
 /// Tipo de símbolo (`symbols[].kind`).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
+)]
 pub enum SymbolKind {
     /// Función o firma de función.
     Function,
@@ -83,7 +87,9 @@ impl SymbolKind {
 }
 
 /// Estado de exportación (`symbols[].exported`).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
+)]
 pub enum Exported {
     /// No exportado.
     None,
@@ -108,7 +114,9 @@ impl Exported {
 }
 
 /// Posición base 0; columna en bytes UTF-8.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
+)]
 pub struct Position {
     /// Línea.
     pub line: u32,
@@ -117,7 +125,9 @@ pub struct Position {
 }
 
 /// Rango de un símbolo.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
+)]
 pub struct Range {
     /// Inicio.
     pub start: Position,
@@ -126,7 +136,7 @@ pub struct Range {
 }
 
 /// Símbolo declarado en un archivo.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Symbol {
     /// Nombre calificado único en el archivo (`Cart.add`, `f~2`, `default`).
     pub qualified: String,
@@ -135,7 +145,9 @@ pub struct Symbol {
     /// Tipo.
     pub kind: SymbolKind,
     /// Etiquetas heurísticas, ordenadas.
-    pub tags: Vec<&'static str>,
+    pub tags: Vec<String>,
+    /// Clases o interfaces de las que hereda (`extends`) o que implementa.
+    pub heritage: Vec<Heritage>,
     /// Estado de exportación.
     pub exported: Exported,
     /// Firma sin cuerpo.
@@ -148,8 +160,32 @@ pub struct Symbol {
     pub parent: Option<String>,
 }
 
+/// Relación de herencia.
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
+)]
+pub enum Relation {
+    /// `extends`.
+    Extends,
+    /// `implements`.
+    Implements,
+}
+
+/// Cláusula de herencia: nombre tal como aparece (`Base`, `React.Component`).
+#[derive(
+    Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
+)]
+pub struct Heritage {
+    /// Relación.
+    pub relation: Relation,
+    /// Nombre, posiblemente calificado con puntos.
+    pub name: String,
+}
+
 /// Qué importa un binding.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(
+    Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
+)]
 pub enum Imported {
     /// `import x from`.
     Default,
@@ -160,7 +196,9 @@ pub enum Imported {
 }
 
 /// Binding de un import.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(
+    Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
+)]
 pub struct ImportBinding {
     /// Qué se importa.
     pub imported: Imported,
@@ -171,7 +209,9 @@ pub struct ImportBinding {
 }
 
 /// Forma sintáctica del import.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
+)]
 pub enum ImportKind {
     /// `import … from 'x'` o `import 'x'`.
     Static,
@@ -186,7 +226,9 @@ pub enum ImportKind {
 }
 
 /// Import o reexportación de un módulo.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(
+    Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
+)]
 pub struct Import {
     /// Especificador literal.
     pub specifier: String,
@@ -201,7 +243,9 @@ pub struct Import {
 }
 
 /// Entrada de la tabla de exports del módulo.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(
+    Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
+)]
 pub struct ExportEntry {
     /// Nombre exportado: `default`, un nombre, o `*` para `export * from`.
     pub exported: String,
@@ -214,7 +258,7 @@ pub struct ExportEntry {
 }
 
 /// Resultado de parsear un archivo.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ParsedFile {
     /// Estado.
     pub status: ParseStatus,
@@ -434,6 +478,8 @@ struct Decl<'n> {
     is_async: bool,
     /// Valor de una variable (para la heurística de componentes y hooks).
     value_kind: Option<&'n str>,
+    /// Herencia (clases e interfaces).
+    heritage: Vec<Heritage>,
 }
 
 impl<'a> Extractor<'a> {
@@ -518,7 +564,7 @@ impl<'a> Extractor<'a> {
         }
     }
 
-    fn tags(&self, decl: &Decl) -> Vec<&'static str> {
+    fn tags(&self, decl: &Decl) -> Vec<String> {
         let mut tags = BTreeSet::new();
         if decl.is_async {
             tags.insert("async");
@@ -555,7 +601,7 @@ impl<'a> Extractor<'a> {
                 tags.insert("next_route");
             }
         }
-        tags.into_iter().collect()
+        tags.into_iter().map(String::from).collect()
     }
 
     fn push(&mut self, decl: Decl) {
@@ -567,12 +613,56 @@ impl<'a> Extractor<'a> {
             name: decl.name,
             kind: decl.kind,
             tags,
+            heritage: decl.heritage,
             exported: decl.exported,
             signature: decl.signature,
             doc,
             range: range_of(decl.outer),
             parent: decl.parent,
         });
+    }
+
+    /// `extends`/`implements` de una clase o interfaz, con nombres como `Base` o `React.Component`.
+    fn heritage(&self, node: Node) -> Vec<Heritage> {
+        let mut out = Vec::new();
+        let mut add = |relation: Relation, target: Node| {
+            let named = match target.kind() {
+                "generic_type" => target.child_by_field_name("name").unwrap_or(target),
+                _ => target,
+            };
+            if matches!(
+                named.kind(),
+                "identifier" | "type_identifier" | "member_expression" | "nested_type_identifier"
+            ) {
+                out.push(Heritage {
+                    relation,
+                    name: collapse(self.text(named)).replace(' ', ""),
+                });
+            }
+        };
+        for child in named_children(node) {
+            match child.kind() {
+                "class_heritage" => {
+                    for clause in named_children(child) {
+                        let relation = if clause.kind() == "implements_clause" {
+                            Relation::Implements
+                        } else {
+                            Relation::Extends
+                        };
+                        for target in named_children(clause) {
+                            add(relation, target);
+                        }
+                    }
+                }
+                "extends_type_clause" => {
+                    for target in named_children(child) {
+                        add(Relation::Extends, target);
+                    }
+                }
+                _ => {}
+            }
+        }
+        out
     }
 
     /// Recorre las sentencias de un programa o bloque.
@@ -747,6 +837,7 @@ impl<'a> Extractor<'a> {
                         parent: None,
                         is_async,
                         value_kind: None,
+                        heritage: Vec::new(),
                     });
                 }
                 _ => {
@@ -760,6 +851,7 @@ impl<'a> Extractor<'a> {
                         parent: None,
                         is_async: false,
                         value_kind: Some(value.kind()),
+                        heritage: Vec::new(),
                     });
                 }
             }
@@ -918,6 +1010,7 @@ impl<'a> Extractor<'a> {
                     parent: None,
                     is_async,
                     value_kind: None,
+                    heritage: Vec::new(),
                 });
             }
             _ => {}
@@ -941,6 +1034,7 @@ impl<'a> Extractor<'a> {
                     parent: parent.map(String::from),
                     is_async: has_token(node, "async"),
                     value_kind: None,
+                    heritage: Vec::new(),
                 });
             }
             "class_declaration" | "abstract_class_declaration" | "class" => {
@@ -949,6 +1043,7 @@ impl<'a> Extractor<'a> {
                     .map_or_else(|| "default".to_owned(), |n| self.text(n).to_owned());
                 let body = node.child_by_field_name("body");
                 let signature = self.header(outer, body);
+                let heritage = self.heritage(node);
                 let decl = Decl {
                     name: name.clone(),
                     kind: SymbolKind::Class,
@@ -958,6 +1053,7 @@ impl<'a> Extractor<'a> {
                     parent: parent.map(String::from),
                     is_async: false,
                     value_kind: None,
+                    heritage,
                 };
                 self.push(decl);
                 let qualified = self
@@ -979,6 +1075,7 @@ impl<'a> Extractor<'a> {
                     _ => SymbolKind::Enum,
                 };
                 let signature = self.full(outer);
+                let heritage = self.heritage(node);
                 self.push(Decl {
                     name: self.text(name).to_owned(),
                     kind,
@@ -988,6 +1085,7 @@ impl<'a> Extractor<'a> {
                     parent: parent.map(String::from),
                     is_async: false,
                     value_kind: None,
+                    heritage,
                 });
             }
             "lexical_declaration" | "variable_declaration" => {
@@ -1009,6 +1107,7 @@ impl<'a> Extractor<'a> {
                     parent: parent.map(String::from),
                     is_async: false,
                     value_kind: None,
+                    heritage: Vec::new(),
                 });
                 let qualified = self
                     .symbols
@@ -1097,6 +1196,7 @@ impl<'a> Extractor<'a> {
                 parent: parent.map(String::from),
                 is_async,
                 value_kind: value.map(|v| v.kind()),
+                heritage: Vec::new(),
             };
             self.push(decl);
         }
@@ -1141,6 +1241,7 @@ impl<'a> Extractor<'a> {
                 parent: Some(class.to_owned()),
                 is_async: has_token(member, "async"),
                 value_kind: None,
+                heritage: Vec::new(),
             });
         }
     }
@@ -1217,8 +1318,8 @@ impl<'a> Extractor<'a> {
                 let route = symbol.exported == Exported::Default
                     || (symbol.exported == Exported::Named
                         && HTTP_METHODS.contains(&symbol.name.as_str()));
-                if route && !symbol.tags.contains(&"next_route") {
-                    symbol.tags.push("next_route");
+                if route && !symbol.tags.iter().any(|t| t == "next_route") {
+                    symbol.tags.push("next_route".to_owned());
                     symbol.tags.sort_unstable();
                 }
             }
@@ -1404,10 +1505,10 @@ mod tests {
             "apps/web/src/app/api/route.tsx",
             "export async function GET() {}\nexport const useThing = () => 1;\nexport const Widget = () => <div />;\nexport function helper() {}\n",
         );
-        let tags: Vec<_> = file
+        let tags: Vec<(&str, Vec<&str>)> = file
             .symbols
             .iter()
-            .map(|s| (s.name.as_str(), s.tags.clone()))
+            .map(|s| (s.name.as_str(), s.tags.iter().map(String::as_str).collect()))
             .collect();
         assert_eq!(
             tags,
@@ -1416,6 +1517,36 @@ mod tests {
                 ("useThing", vec!["react_hook"]),
                 ("Widget", vec!["react_component"]),
                 ("helper", vec![]),
+            ]
+        );
+    }
+
+    #[test]
+    fn heritage() {
+        let file = parse(
+            "src/a.ts",
+            "class A extends Base implements I, ns.J<T> {}\ninterface K extends L, M.N {}\nclass B extends mixin(C) {}\n",
+        );
+        let found: Vec<Vec<(Relation, &str)>> = file
+            .symbols
+            .iter()
+            .map(|s| {
+                s.heritage
+                    .iter()
+                    .map(|h| (h.relation, h.name.as_str()))
+                    .collect()
+            })
+            .collect();
+        assert_eq!(
+            found,
+            [
+                vec![
+                    (Relation::Extends, "Base"),
+                    (Relation::Implements, "I"),
+                    (Relation::Implements, "ns.J")
+                ],
+                vec![(Relation::Extends, "L"), (Relation::Extends, "M.N")],
+                vec![],
             ]
         );
     }
