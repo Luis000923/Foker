@@ -51,8 +51,9 @@ Cada bug corregido añade un caso de regresión.
 
 | Workflow | Disparador | Qué hace |
 |---|---|---|
+| `nightly.yml` | Diario (cron) y manual | Matriz completa (incl. `windows-11-arm`, `macos-15-intel`, Node 22/24/26), `PROPTEST_CASES=1000`, rendimiento `large-10k` contra `benchmarks/perf-baseline.json`; regresión > 20 % abre issue |
 | `ci.yml` | PR y push a `main` | `lint` (fmt, clippy, deny, biome, tsc, regla de dependencias) → `test` en 4 runners |
 | `release.yml` | Manual y PR que toca el addon | `build` del addon en 6 targets → `smoke` de cada artefacto empaquetado en su runner nativo. Todavía no publica (FKR-080) |
 
-`nightly.yml` y `benchmark.yml` llegan con sus issues (FOKER-SPEC §21.2). Todas las
+`benchmark.yml` llega con su issue (FOKER-SPEC §21.2). Todas las
 Actions se fijan por SHA y cada job tiene permisos mínimos.

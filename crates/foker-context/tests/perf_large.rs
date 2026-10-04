@@ -32,5 +32,10 @@ fn build_context_large_10k() {
         "buildContext large-10k: p95={p95:.2} ms, mediana={:.2} ms, muestras=20, TARGET <300 ms",
         samples[9]
     );
+    // Línea JSON que lee scripts/perf-check.mjs en nightly.
+    println!(
+        "{{\"build_context_p95_ms\":{p95:.2},\"build_context_median_ms\":{:.2}}}",
+        samples[9]
+    );
     // TARGET informativo: no es un gate del MVP.
 }

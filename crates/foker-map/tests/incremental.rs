@@ -110,7 +110,7 @@ fn apply(root: &Path, op: &Op, tick: &mut u64) {
 }
 
 proptest! {
-    #![proptest_config(ProptestConfig { cases: 24, ..ProptestConfig::default() })]
+    #![proptest_config(ProptestConfig { cases: std::env::var("PROPTEST_CASES").ok().and_then(|v| v.parse().ok()).unwrap_or(24), ..ProptestConfig::default() })]
 
     #[test]
     fn incremental_equals_full_rebuild(ops in prop::collection::vec(op(), 1..12)) {
