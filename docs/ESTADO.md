@@ -4,7 +4,7 @@
 
 ## Hito actual
 
-M0, M2, M3 (salvo FKR-037) y M4 completos en local. Siguiente: E6 (skills, integraciones, sync, init, plantilla, doctor). M1 y FKR-037 bloqueados por PREGUNTA-2/6.
+M0, M2, M3 (salvo FKR-037), M4 y E6 (salvo FKR-070, manual) completos en local. Siguiente: docs generadas (REQ-DOC-001) y partes de M1 sin coste de API (FKR-010, 012, 013, 017). FKR-011/014/015/016/018 y FKR-037 dependen de PREGUNTA-2/6; FKR-080 de PREGUNTA-3.
 
 ## Issues
 
@@ -35,6 +35,13 @@ M0, M2, M3 (salvo FKR-037) y M4 completos en local. Siguiente: E6 (skills, integ
 | FKR-045/046 | Ledger + FSM, baseline | hecho | feat/FKR-045-ledger-baseline | Evidencia inmutable, baseline autenticada |
 | FKR-047/048 | Gates G1–G5, `foker task`/`validate` | hecho | feat/FKR-047-gates-cli | REQ-TSK-001 E2E con agente simulado |
 | FKR-050…055 | Servidor MCP | hecho | feat/FKR-050-mcp | SDK v2 2.3.0; E2E 2026-07-28 y 2025-11-25 |
+| FKR-061/062 | Skills y 6 skills incluidas | hecho | feat/FKR-061-skills | ADR-023 |
+| FKR-063…066 | Adaptadores y `foker sync` | hecho | feat/FKR-063-sync | REQ-PRJ-001…003, REQ-INT-001 (esquema OpenCode) |
+| FKR-067 | `foker init` | hecho | feat/FKR-067-init | |
+| FKR-068 | Plantilla `nextjs-turbo` | hecho | feat/FKR-068-plantilla | Probada con install, validate y build reales |
+| FKR-069 | `foker doctor` | hecho | feat/FKR-069-doctor | |
+| FKR-070 | Verificación manual de anfitriones | pendiente (humano) | — | Checklist en docs/integrations/verification.md |
+| FKR-081/082 | Nightly, SECURITY.md | hecho | feat/FKR-081-082-nightly-security | |
 | FKR-060 | Esqueleto de CLI | hecho | feat/FKR-060-cli | Codex; `docs/cli.md` generado (REQ-DOC-001) |
 
 ## Verificado localmente
@@ -56,6 +63,9 @@ Sesión 2026-10-03 (usuario luis):
 
 - spec/ es una reconstrucción; contratos reescritos por decisión del usuario (ADR-019).
 - PREGUNTA-2 (presupuesto/modelo del benchmark) y PREGUNTA-6 (repos reales) bloquean M1.
+- Restos de un test en la raíz del repo (`.claude/agents`, `.claude/skills`, `.claude/settings.json`,
+  `.mcp.json`, `foker.config.yaml`, `foker/`): el permiso de borrado me fue denegado; los debe borrar la
+  persona. Mientras tanto, los commits añaden rutas explícitas (no `git add -A`).
 - Otra sesión trabaja en el worktree `../Foker-agentes` (rama `chore/sistema-agentes`).
 - El sandbox de Codex no tiene red: no puede ejecutar `pnpm` (descarga la versión fijada); se le
   pide usar `./node_modules/.bin/*` y yo ejecuto `pnpm verify` antes de cada merge.
@@ -63,4 +73,4 @@ Sesión 2026-10-03 (usuario luis):
 
 ## Siguiente paso
 
-E6: FKR-061/062 (skills) → FKR-063…066 (adaptadores y `sync`) → FKR-067/068 (`init`, plantilla) → FKR-069 (`doctor`).
+`docs/configuration.md` generado desde el esquema (REQ-DOC-001) y docs de §23; luego FKR-010/012/013/017.
