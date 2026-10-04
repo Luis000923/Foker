@@ -1,10 +1,12 @@
 //! Modelo del Project Map y su serialización conforme a `project-map.schema.json` (FKR-024/025).
 
+use std::collections::BTreeMap;
+
 use serde_json::{Map, Value, json};
 
 use crate::canonical::{hash_bytes, to_canonical_string};
 use crate::discover::Language;
-use crate::parse::{Exported, ParseStatus, Range, SymbolKind};
+use crate::parse::{Exported, ParseStatus, Position, Range, SymbolKind};
 
 /// `schema_version` del mapa.
 pub use crate::MAP_SCHEMA_VERSION;
@@ -28,6 +30,19 @@ pub enum FileKind {
 }
 
 impl FileKind {
+    /// Interpreta el valor del esquema.
+    pub fn parse(value: &str) -> Option<Self> {
+        [
+            FileKind::Source,
+            FileKind::Test,
+            FileKind::Declaration,
+            FileKind::Config,
+            FileKind::Generated,
+        ]
+        .into_iter()
+        .find(|k| k.as_str() == value)
+    }
+
     /// Valor en el esquema.
     pub fn as_str(self) -> &'static str {
         match self {
@@ -62,6 +77,23 @@ pub enum EdgeKind {
 }
 
 impl EdgeKind {
+    /// Todas las variantes.
+    pub const ALL: [EdgeKind; 8] = [
+        EdgeKind::Extends,
+        EdgeKind::Implements,
+        EdgeKind::Imports,
+        EdgeKind::ImportsExternal,
+        EdgeKind::ImportsType,
+        EdgeKind::PackageDepends,
+        EdgeKind::Reexports,
+        EdgeKind::UsesSymbol,
+    ];
+
+    /// Interpreta el valor del esquema.
+    pub fn parse(value: &str) -> Option<Self> {
+        EdgeKind::ALL.into_iter().find(|k| k.as_str() == value)
+    }
+
     /// Valor en el esquema. El orden de las variantes coincide con el orden alfabético de este valor.
     pub fn as_str(self) -> &'static str {
         match self {
@@ -89,6 +121,17 @@ pub enum Confidence {
 }
 
 impl Confidence {
+    /// Interpreta el valor del esquema.
+    pub fn parse(value: &str) -> Option<Self> {
+        [
+            Confidence::Resolved,
+            Confidence::Heuristic,
+            Confidence::Declared,
+        ]
+        .into_iter()
+        .find(|c| c.as_str() == value)
+    }
+
     /// Valor en el esquema.
     pub fn as_str(self) -> &'static str {
         match self {
@@ -220,7 +263,7 @@ pub struct ProjectMap {
     /// Versión de Foker.
     pub foker_version: String,
     /// Gramática → versión.
-    pub parsers: std::collections::BTreeMap<String, String>,
+    pub parsers: BTreeMap<String, String>,
     /// Fecha de generación (excluida del hash).
     pub generated_at: String,
     /// Hash del contenido.
@@ -379,5 +422,278 @@ impl ProjectMap {
     /// JSON canónico completo (lo que se persiste y lo que devuelve `exportMapJson`).
     pub fn to_canonical_json(&self) -> String {
         to_canonical_string(&self.to_value(false))
+    }
+}
+
+/// Error al leer un mapa persistido: el llamador lo trata como caché inválida (`FKR-MAP-005`).
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+#[error("mapa inválido: {0}")]
+pub struct InvalidMap(pub String);
+
+fn field<'a>(value: &'a Value, key: &str) -> Result<&'a Value, InvalidMap> {
+    value
+        .get(key)
+        .ok_or_else(|| InvalidMap(format!("falta {key}")))
+}
+
+fn string(value: &Value, key: &str) -> Result<String, InvalidMap> {
+    field(value, key)?
+        .as_str()
+        .map(String::from)
+        .ok_or_else(|| InvalidMap(format!("{key} no es texto")))
+}
+
+fn opt_string(value: &Value, key: &str) -> Option<String> {
+    value.get(key).and_then(Value::as_str).map(String::from)
+}
+
+fn uint(value: &Value, key: &str) -> Result<u64, InvalidMap> {
+    field(value, key)?
+        .as_u64()
+        .ok_or_else(|| InvalidMap(format!("{key} no es entero")))
+}
+
+fn u32_of(value: &Value, key: &str) -> Result<u32, InvalidMap> {
+    u32::try_from(uint(value, key)?).map_err(|_| InvalidMap(format!("{key} fuera de rango")))
+}
+
+fn usize_of(value: &Value, key: &str) -> Result<usize, InvalidMap> {
+    usize::try_from(uint(value, key)?).map_err(|_| InvalidMap(format!("{key} fuera de rango")))
+}
+
+fn array<'a>(value: &'a Value, key: &str) -> Result<&'a Vec<Value>, InvalidMap> {
+    field(value, key)?
+        .as_array()
+        .ok_or_else(|| InvalidMap(format!("{key} no es una lista")))
+}
+
+fn strings(value: &Value, key: &str) -> Result<Vec<String>, InvalidMap> {
+    array(value, key)?
+        .iter()
+        .map(|v| {
+            v.as_str()
+                .map(String::from)
+                .ok_or_else(|| InvalidMap(format!("{key} contiene no-texto")))
+        })
+        .collect()
+}
+
+fn position_of(value: &Value) -> Result<Position, InvalidMap> {
+    Ok(Position {
+        line: u32_of(value, "line")?,
+        col: u32_of(value, "col")?,
+    })
+}
+
+fn enum_of<T>(
+    value: &Value,
+    key: &str,
+    parse: impl Fn(&str) -> Option<T>,
+) -> Result<T, InvalidMap> {
+    let text = string(value, key)?;
+    parse(&text).ok_or_else(|| InvalidMap(format!("{key} desconocido: {text}")))
+}
+
+fn language_of(text: &str) -> Option<Language> {
+    [
+        Language::TypeScript,
+        Language::Tsx,
+        Language::JavaScript,
+        Language::Jsx,
+    ]
+    .into_iter()
+    .find(|l| l.as_str() == text)
+}
+
+fn status_of(text: &str) -> Option<ParseStatus> {
+    [
+        ParseStatus::Ok,
+        ParseStatus::Partial,
+        ParseStatus::Failed,
+        ParseStatus::Skipped,
+    ]
+    .into_iter()
+    .find(|s| s.as_str() == text)
+}
+
+fn symbol_kind_of(text: &str) -> Option<SymbolKind> {
+    [
+        SymbolKind::Function,
+        SymbolKind::Class,
+        SymbolKind::Method,
+        SymbolKind::Property,
+        SymbolKind::Interface,
+        SymbolKind::TypeAlias,
+        SymbolKind::Enum,
+        SymbolKind::Variable,
+        SymbolKind::Namespace,
+    ]
+    .into_iter()
+    .find(|k| k.as_str() == text)
+}
+
+fn exported_of(text: &str) -> Option<Exported> {
+    [
+        Exported::None,
+        Exported::Named,
+        Exported::Default,
+        Exported::Reexport,
+    ]
+    .into_iter()
+    .find(|e| e.as_str() == text)
+}
+
+/// Quita del documento los campos excluidos de `content_hash`.
+pub fn strip_volatile(doc: &mut Value) {
+    if let Some(obj) = doc.as_object_mut() {
+        obj.remove("generated_at");
+        obj.remove("content_hash");
+        if let Some(stats) = obj.get_mut("stats").and_then(Value::as_object_mut) {
+            stats.remove("duration_ms");
+        }
+        if let Some(files) = obj.get_mut("files").and_then(Value::as_array_mut) {
+            for file in files {
+                if let Some(file) = file.as_object_mut() {
+                    file.remove("mtime_ns");
+                }
+            }
+        }
+    }
+}
+
+impl ProjectMap {
+    /// Lee un documento persistido. Comprueba `schema_version` y que `content_hash` coincida con el
+    /// contenido (FOKER-SPEC §8.6). Los campos desconocidos se ignoran.
+    pub fn from_value(doc: &Value) -> Result<Self, InvalidMap> {
+        if doc.get("schema_version").and_then(Value::as_u64) != Some(u64::from(MAP_SCHEMA_VERSION))
+        {
+            return Err(InvalidMap("schema_version incompatible".into()));
+        }
+        let stored_hash = string(doc, "content_hash")?;
+        let mut hashed = doc.clone();
+        strip_volatile(&mut hashed);
+        if hash_bytes(to_canonical_string(&hashed).as_bytes()) != stored_hash {
+            return Err(InvalidMap(
+                "content_hash no coincide con el contenido".into(),
+            ));
+        }
+        let generator = field(doc, "generator")?;
+        let parsers = field(generator, "parsers")?
+            .as_object()
+            .ok_or_else(|| InvalidMap("generator.parsers".into()))?
+            .iter()
+            .map(|(k, v)| (k.clone(), v.as_str().unwrap_or_default().to_owned()))
+            .collect();
+        let project = field(doc, "project")?;
+        let packages = array(project, "packages")?
+            .iter()
+            .map(|p| {
+                Ok(MapPackage {
+                    id: string(p, "id")?,
+                    name: string(p, "name")?,
+                    path: string(p, "path")?,
+                    version: opt_string(p, "version"),
+                })
+            })
+            .collect::<Result<_, InvalidMap>>()?;
+        let files = array(doc, "files")?
+            .iter()
+            .map(|f| {
+                Ok(MapFile {
+                    id: string(f, "id")?,
+                    package: opt_string(f, "package"),
+                    language: enum_of(f, "language", language_of)?,
+                    kind: enum_of(f, "kind", FileKind::parse)?,
+                    hash: string(f, "hash")?,
+                    size_bytes: uint(f, "size_bytes")?,
+                    lines: u32_of(f, "lines")?,
+                    mtime_ns: f.get("mtime_ns").and_then(Value::as_u64).unwrap_or(0),
+                    parse_status: enum_of(f, "parse_status", status_of)?,
+                    rank_global: field(field(f, "rank")?, "global")?
+                        .as_f64()
+                        .ok_or_else(|| InvalidMap("rank.global".into()))?,
+                    exports: strings(f, "exports")?,
+                })
+            })
+            .collect::<Result<_, InvalidMap>>()?;
+        let symbols = array(doc, "symbols")?
+            .iter()
+            .map(|s| {
+                let range = field(s, "range")?;
+                Ok(MapSymbol {
+                    id: string(s, "id")?,
+                    name: string(s, "name")?,
+                    kind: enum_of(s, "kind", symbol_kind_of)?,
+                    tags: strings(s, "tags")?,
+                    exported: enum_of(s, "exported", exported_of)?,
+                    signature: string(s, "signature")?,
+                    doc: opt_string(s, "doc"),
+                    range: Range {
+                        start: position_of(field(range, "start")?)?,
+                        end: position_of(field(range, "end")?)?,
+                    },
+                    parent: opt_string(s, "parent"),
+                })
+            })
+            .collect::<Result<_, InvalidMap>>()?;
+        let edges = array(doc, "edges")?
+            .iter()
+            .map(|e| {
+                Ok(MapEdge {
+                    kind: enum_of(e, "kind", EdgeKind::parse)?,
+                    from: string(e, "from")?,
+                    to: string(e, "to")?,
+                    confidence: enum_of(e, "confidence", Confidence::parse)?,
+                    weight: e
+                        .get("weight")
+                        .and_then(Value::as_u64)
+                        .and_then(|w| u32::try_from(w).ok()),
+                })
+            })
+            .collect::<Result<_, InvalidMap>>()?;
+        let diagnostics = array(doc, "diagnostics")?
+            .iter()
+            .map(|d| {
+                Ok(MapDiagnostic {
+                    file: opt_string(d, "file"),
+                    code: string(d, "code")?,
+                    subject: opt_string(d, "subject"),
+                    message: string(d, "message")?,
+                })
+            })
+            .collect::<Result<_, InvalidMap>>()?;
+        let stats = field(doc, "stats")?;
+        Ok(ProjectMap {
+            foker_version: string(doc, "foker_version")?,
+            parsers,
+            generated_at: string(doc, "generated_at")?,
+            content_hash: stored_hash,
+            config_hash: string(doc, "config_hash")?,
+            project_name: string(project, "name")?,
+            workspace_kind: string(project, "workspace_kind")?,
+            packages,
+            files,
+            symbols,
+            edges,
+            external_modules: strings(doc, "external_modules")?,
+            diagnostics,
+            stats: MapStats {
+                files: usize_of(stats, "files")?,
+                symbols: usize_of(stats, "symbols")?,
+                edges: usize_of(stats, "edges")?,
+                parse_errors: stats
+                    .get("parse_errors")
+                    .and_then(Value::as_u64)
+                    .unwrap_or(0) as usize,
+                unresolved_imports: stats
+                    .get("unresolved_imports")
+                    .and_then(Value::as_u64)
+                    .unwrap_or(0) as usize,
+                duration_ms: stats
+                    .get("duration_ms")
+                    .and_then(Value::as_u64)
+                    .unwrap_or(0),
+            },
+        })
     }
 }
