@@ -3,7 +3,7 @@ import type { VersionInfo } from '../binding.cjs';
 import { FokerError } from './errors.js';
 
 export type { VersionInfo } from '../binding.cjs';
-export { type CoreErrorCode, FokerError } from './errors.js';
+export { FokerError, type FokerErrorCode } from './errors.js';
 
 /** Nombre del paquete npm. */
 export const PACKAGE_NAME = '@foker/core';

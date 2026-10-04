@@ -1,0 +1,245 @@
+{
+  "$comment": "Tabla de FOKER-SPEC §18. Fuente única de códigos de error; generate.mjs deriva de aquí la tabla de @foker/core.",
+  "codes": [
+    {
+      "code": "FKR-CFG-001",
+      "description": "Configuración inválida (esquema)",
+      "recoverable": "no",
+      "action": "Humano corrige",
+      "exit": 3,
+      "mcp": "isError"
+    },
+    {
+      "code": "FKR-CFG-002",
+      "description": "Root inexistente o no es directorio",
+      "recoverable": "no",
+      "action": null,
+      "exit": 3,
+      "mcp": "protocol error al arrancar"
+    },
+    {
+      "code": "FKR-INP-001",
+      "description": "Entrada inválida (esquema/límites)",
+      "recoverable": "yes",
+      "action": "Corregir argumentos",
+      "exit": 2,
+      "mcp": "isError"
+    },
+    {
+      "code": "FKR-MAP-001",
+      "description": "Error de E/S al leer el árbol",
+      "recoverable": "partial",
+      "action": "Reintentar",
+      "exit": 4,
+      "mcp": "isError"
+    },
+    {
+      "code": "FKR-MAP-003",
+      "description": "Límite `max_files` excedido",
+      "recoverable": "no",
+      "action": "Ajustar `include/exclude`",
+      "exit": 4,
+      "mcp": "isError"
+    },
+    {
+      "code": "FKR-MAP-004",
+      "description": "No se pudo guardar el mapa",
+      "recoverable": "yes",
+      "action": "Reintento automático ×3",
+      "exit": 4,
+      "mcp": "isError"
+    },
+    {
+      "code": "FKR-MAP-005",
+      "description": "Mapa corrupto o incompatible",
+      "recoverable": "automatic",
+      "action": "Reconstrucción",
+      "exit": null,
+      "mcp": "aviso"
+    },
+    {
+      "code": "FKR-MAP-006",
+      "description": "Lock ocupado",
+      "recoverable": "yes",
+      "action": "Reintentar",
+      "exit": 7,
+      "mcp": "isError"
+    },
+    {
+      "code": "FKR-MAP-101",
+      "description": "Archivo con errores de sintaxis (`partial`)",
+      "recoverable": "diagnostic",
+      "action": "Diagnóstico",
+      "exit": null,
+      "mcp": null
+    },
+    {
+      "code": "FKR-MAP-104",
+      "description": "Import no resuelto",
+      "recoverable": "diagnostic",
+      "action": "Diagnóstico",
+      "exit": null,
+      "mcp": null
+    },
+    {
+      "code": "FKR-CTX-001",
+      "description": "Presupuesto insuficiente para contexto obligatorio",
+      "recoverable": "yes",
+      "action": "Subir presupuesto o quitar anclas",
+      "exit": 1,
+      "mcp": "isError"
+    },
+    {
+      "code": "FKR-CTX-101",
+      "description": "Sin semillas; contexto genérico",
+      "recoverable": "diagnostic",
+      "action": "Aportar anclas",
+      "exit": null,
+      "mcp": "diagnóstico"
+    },
+    {
+      "code": "FKR-CTX-102",
+      "description": "Ancla no encontrada",
+      "recoverable": "diagnostic",
+      "action": "Revisar ruta/símbolo (`foker_search`)",
+      "exit": null,
+      "mcp": "diagnóstico"
+    },
+    {
+      "code": "FKR-MCP-002",
+      "description": "Rate limit",
+      "recoverable": "yes",
+      "action": "Esperar `retry_after_ms`",
+      "exit": null,
+      "mcp": "isError"
+    },
+    {
+      "code": "FKR-POL-001",
+      "description": "Ruta inválida o fuera del root",
+      "recoverable": "yes",
+      "action": null,
+      "exit": 5,
+      "mcp": "isError"
+    },
+    {
+      "code": "FKR-POL-002",
+      "description": "Alcance incluye rutas protegidas",
+      "recoverable": "yes",
+      "action": "Reducir alcance o pedir humano",
+      "exit": 5,
+      "mcp": "isError"
+    },
+    {
+      "code": "FKR-POL-010",
+      "description": "Workspace no confiado",
+      "recoverable": "no",
+      "action": "`foker trust` (humano)",
+      "exit": 6,
+      "mcp": "isError"
+    },
+    {
+      "code": "FKR-TSK-001",
+      "description": "Tarea inexistente",
+      "recoverable": "yes",
+      "action": null,
+      "exit": 2,
+      "mcp": "isError"
+    },
+    {
+      "code": "FKR-TSK-002",
+      "description": "Transición no permitida",
+      "recoverable": "yes",
+      "action": "Consultar `foker_task_get`",
+      "exit": 1,
+      "mcp": "isError"
+    },
+    {
+      "code": "FKR-TSK-005",
+      "description": "Demasiadas tareas activas",
+      "recoverable": "yes",
+      "action": "Cerrar/cancelar",
+      "exit": 1,
+      "mcp": "isError"
+    },
+    {
+      "code": "FKR-VAL-001",
+      "description": "Perfil o check inexistente",
+      "recoverable": "no",
+      "action": "Humano corrige config",
+      "exit": 3,
+      "mcp": "isError"
+    },
+    {
+      "code": "FKR-VAL-002",
+      "description": "Check con timeout",
+      "recoverable": "yes",
+      "action": "Optimizar o reintentar",
+      "exit": 7,
+      "mcp": "resultado con `status: timeout`"
+    },
+    {
+      "code": "FKR-VAL-003",
+      "description": "Validación ya en curso",
+      "recoverable": "yes",
+      "action": "Reintentar",
+      "exit": 1,
+      "mcp": "isError"
+    },
+    {
+      "code": "FKR-VAL-004",
+      "description": "Check no ejecutable (binario no encontrado)",
+      "recoverable": "no",
+      "action": "Humano instala dependencias",
+      "exit": 6,
+      "mcp": "isError"
+    },
+    {
+      "code": "FKR-SKL-001",
+      "description": "Skill inexistente",
+      "recoverable": "yes",
+      "action": "`foker_search`/listar",
+      "exit": 2,
+      "mcp": "isError"
+    },
+    {
+      "code": "FKR-SKL-002",
+      "description": "Skill inválida",
+      "recoverable": "no",
+      "action": "Humano corrige",
+      "exit": 3,
+      "mcp": "isError"
+    },
+    {
+      "code": "FKR-SYN-001",
+      "description": "Conflicto: archivo de integración modificado manualmente dentro del bloque gestionado",
+      "recoverable": "no",
+      "action": "`sync --force` o revisión",
+      "exit": 1,
+      "mcp": null
+    },
+    {
+      "code": "FKR-INT-001",
+      "description": "Error interno",
+      "recoverable": "no",
+      "action": "Reportar bug",
+      "exit": 10,
+      "mcp": "protocol error"
+    },
+    {
+      "code": "FKR-INT-002",
+      "description": "Versión del addon nativo no coincide",
+      "recoverable": "no",
+      "action": "Reinstalar",
+      "exit": 10,
+      "mcp": "protocol error"
+    },
+    {
+      "code": "FKR-INT-003",
+      "description": "Addon nativo no disponible para la plataforma",
+      "recoverable": "no",
+      "action": "Ver plataformas soportadas",
+      "exit": 10,
+      "mcp": "protocol error"
+    }
+  ]
+}

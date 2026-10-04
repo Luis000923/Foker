@@ -1,0 +1,11 @@
+{
+  "ts": "2026-10-04T10:12:00Z",
+  "task_id": "tsk_01J9Z3K8Q4M7V2N5X8B1C6D0EF",
+  "from": "VALIDATING",
+  "to": "REJECTED",
+  "actor": "foker",
+  "reason": "gate checks: fail",
+  "evidence_ref": ".foker/runs/tsk_01J9Z3K8Q4M7V2N5X8B1C6D0EF/1/evidence.json",
+  "evidence_hash": "blake3:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "prev_hash": "blake3:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+}

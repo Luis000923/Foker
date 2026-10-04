@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "task_id": "tsk_01J9Z3K8Q4M7V2N5X8B1C6D0EF",
+  "state": "REJECTED",
+  "description": "Añadir la variante danger al botón",
+  "scope": { "paths": ["packages/ui/src/**"] },
+  "profile": "default",
+  "skill": "react-component",
+  "attempt": 1,
+  "max_attempts": 3,
+  "client_token": null,
+  "created_at": "2026-10-04T10:00:00Z",
+  "updated_at": "2026-10-04T10:12:00Z",
+  "last_activity_at": "2026-10-04T10:12:00Z",
+  "created_by": "mcp:claude-code",
+  "baseline": {
+    "git_head": "8467f3d1f797efc0b933d3ff20182607a9154b04",
+    "dirty_files": [],
+    "snapshot_hash": "blake3:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "approvals": [],
+  "last_gates": [
+    { "gate": "scope", "status": "pass", "findings": [] },
+    { "gate": "policy", "status": "pass", "findings": [] },
+    { "gate": "map", "status": "pass", "findings": [] },
+    {
+      "gate": "checks",
+      "status": "fail",
+      "findings": [
+        {
+          "rule": "tsc/TS2322",
+          "file": "packages/ui/src/button.tsx",
+          "line": 12,
+          "col": 5,
+          "code": "TS2322",
+          "severity": "error",
+          "message": "Type '\"danger\"' is not assignable to type '\"primary\" | \"ghost\"'."
+        }
+      ],
+      "checks": [
+        {
+          "check": "typecheck",
+          "status": "fail",
+          "exit_code": 2,
+          "duration_ms": 4210,
+          "findings": [],
+          "output_tail": "Found 1 error."
+        }
+      ]
+    },
+    { "gate": "skill", "status": "skipped", "findings": [] }
+  ],
+  "next_action": "fix_and_resubmit",
+  "blocked_reason": null
+}

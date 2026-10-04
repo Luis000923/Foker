@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://foker.dev/schemas/benchmark-result/v1.json",
+  "title": "Resultado de una ejecución del benchmark",
+  "description": "Una línea JSONL por ejecución (tarea × brazo × repetición). FOKER-SPEC §20.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "run_id",
+    "manifest_hash",
+    "task_id",
+    "repo",
+    "arm",
+    "repetition",
+    "host",
+    "model",
+    "foker_version",
+    "started_at",
+    "metrics",
+    "success",
+    "success_breakdown"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "run_id": { "type": "string", "minLength": 1 },
+    "manifest_hash": { "$ref": "../common/v1.json#/$defs/hash" },
+    "task_id": { "type": "string", "minLength": 1 },
+    "task_type": { "enum": ["fix", "feature", "refactor", "test"] },
+    "repo": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "commit"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "commit": { "type": "string", "pattern": "^[0-9a-f]{40,64}$" }
+      }
+    },
+    "arm": { "enum": ["control", "foker"] },
+    "repetition": { "type": "integer", "minimum": 1 },
+    "host": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version"],
+      "properties": {
+        "name": { "enum": ["claude-code", "opencode"] },
+        "version": { "type": "string", "minLength": 1 }
+      }
+    },
+    "model": { "description": "Id exacto del modelo (no alias).", "type": "string", "minLength": 1 },
+    "foker_version": {
+      "description": "null en el brazo control.",
+      "anyOf": [{ "$ref": "../common/v1.json#/$defs/semver" }, { "type": "null" }]
+    },
+    "started_at": { "$ref": "../common/v1.json#/$defs/timestamp" },
+    "limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "max_turns": { "type": "integer", "minimum": 1 },
+        "max_minutes": { "type": "number", "exclusiveMinimum": 0 },
+        "max_cost_usd": { "type": "number", "exclusiveMinimum": 0 }
+      }
+    },
+    "metrics": {
+      "description": "FOKER-SPEC §20.5.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "input_tokens_total",
+        "cached_tokens",
+        "cache_write_tokens",
+        "output_tokens",
+        "cost_usd",
+        "latency_s",
+        "files_exposed",
+        "files_modified",
+        "exposure_precision",
+        "exposure_recall",
+        "out_of_scope_edits",
+        "errors",
+        "retries",
+        "tests_passed"
+      ],
+      "properties": {
+        "input_tokens_total": {
+          "description": "input_tokens + cache_read_input_tokens + cache_creation_input_tokens.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "cached_tokens": { "type": "integer", "minimum": 0 },
+        "cache_write_tokens": { "type": "integer", "minimum": 0 },
+        "output_tokens": { "type": "integer", "minimum": 0 },
+        "cost_usd": { "type": "number", "minimum": 0 },
+        "latency_s": { "type": "number", "minimum": 0 },
+        "files_exposed": { "type": "integer", "minimum": 0 },
+        "files_modified": { "type": "integer", "minimum": 0 },
+        "exposure_precision": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+        "exposure_recall": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+        "out_of_scope_edits": { "type": "integer", "minimum": 0 },
+        "errors": { "type": "integer", "minimum": 0 },
+        "retries": { "type": "integer", "minimum": 0 },
+        "tests_passed": { "type": "number", "minimum": 0, "maximum": 1 },
+        "ccr_relevante": {
+          "description": "Informativo; solo en el brazo foker.",
+          "type": ["number", "null"],
+          "minimum": 0
+        }
+      }
+    },
+    "success": { "type": "boolean" },
+    "success_breakdown": {
+      "description": "Los 5 criterios de FOKER-SPEC §20.4.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fail_to_pass", "pass_to_pass", "typecheck_lint", "protected_untouched", "within_limits"],
+      "properties": {
+        "fail_to_pass": { "type": "boolean" },
+        "pass_to_pass": { "type": "boolean" },
+        "typecheck_lint": { "type": "boolean" },
+        "protected_untouched": { "type": "boolean" },
+        "within_limits": { "type": "boolean" }
+      }
+    },
+    "notes": { "type": "string" }
+  }
+}

@@ -50,6 +50,8 @@ jobs:
         run: pnpm typecheck
       - name: Regla de dependencias (REQ-REPO-001)
         run: pnpm check:deps
+      - name: Artefactos generados desde los esquemas al día
+        run: pnpm --filter @foker/schemas run generate:check
 
   test:
     name: test (${{ matrix.os }})

@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "task_id": "tsk_01J9Z3K8Q4M7V2N5X8B1C6D0EF",
+  "attempt": 1,
+  "foker_version": "0.1.0",
+  "started_at": "2026-10-04T10:11:50Z",
+  "finished_at": "2026-10-04T10:12:00Z",
+  "map_hash": "blake3:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+  "changes": [{ "path": "packages/ui/src/button.tsx", "change": "modified" }],
+  "gates": [{ "gate": "scope", "status": "pass", "findings": [] }],
+  "result": "REJECTED"
+}

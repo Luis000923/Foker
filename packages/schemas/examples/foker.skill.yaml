@@ -1,0 +1,25 @@
+# FOKER-SPEC §13.1
+schema_version: 1
+name: secure-form            # igual a SKILL.md y al directorio
+version: 1.0.0               # semver de la skill
+purpose: "Formularios con validación en cliente y servidor"
+triggers:
+  keywords: [formulario, form, input, validación]
+  paths: ["apps/**/app/**/page.tsx", "apps/**/components/**/*.tsx"]
+inputs:
+  - { name: target, type: path, required: true }
+constraints:
+  - "Prohibido any"
+  - "Prohibido dangerouslySetInnerHTML"
+required_context:
+  files: ["packages/ui/src/form.tsx"]
+  symbols: []
+tools: [foker_context, foker_check, foker_task_submit]
+workflow_ref: SKILL.md#procedimiento
+validation:
+  checks: [typecheck, lint, test]
+outputs:
+  - { kind: modified_files, within_scope: true }
+permissions:
+  write_paths: ["apps/**"]     # solo puede RESTRINGIR el alcance de la tarea
+  network: false

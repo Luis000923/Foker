@@ -1,0 +1,10 @@
+{
+  "schema": "foker.cli/v1",
+  "command": "map",
+  "ok": false,
+  "exit_code": 4,
+  "data": {},
+  "warnings": [{ "code": "FKR-MAP-101", "message": "1 archivo con errores de sintaxis" }],
+  "errors": [{ "code": "FKR-MAP-003", "message": "Límite max_files excedido", "hint": "Ajusta map.include/exclude" }],
+  "duration_ms": 412
+}
