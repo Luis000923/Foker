@@ -271,6 +271,14 @@ name = "foker-context"
 version = "0.0.0"
 dependencies = [
  "foker-map",
+ "insta",
+ "libm",
+ "proptest",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror",
+ "unicode-normalization",
 ]
 
 [[package]]

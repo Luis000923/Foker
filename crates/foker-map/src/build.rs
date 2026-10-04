@@ -1,6 +1,6 @@
 //! Construcción del Project Map (FOKER-SPEC §8.3; FKR-024/025).
 
-use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashSet};
 use std::fs;
 use std::path::Path;
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
@@ -16,7 +16,7 @@ use crate::model::{
     Confidence, EdgeKind, FileKind, MapDiagnostic, MapEdge, MapFile, MapPackage, MapStats,
     MapSymbol, ProjectMap,
 };
-use crate::pagerank::{WeightedGraph, ln_1p};
+use crate::pagerank::WeightedGraph;
 use crate::parse::{
     Exported, ImportKind, Imported, ParseStatus, ParsedFile, Relation, count_lines,
     grammar_versions, parse_source,
@@ -608,28 +608,8 @@ pub fn build(
 
     // PageRank global sobre archivos (FOKER-SPEC §8.5).
     let ids: Vec<&String> = parsed.keys().collect();
-    let position: HashMap<&str, usize> = ids
-        .iter()
-        .enumerate()
-        .map(|(i, id)| (id.as_str(), i))
-        .collect();
-    let mut graph = WeightedGraph::new(ids.len());
-    for e in &edges {
-        let file_of = |s: &str| s.split_once('#').map_or(s, |(f, _)| f).to_owned();
-        let weight = match e.kind {
-            EdgeKind::Imports => 1.0,
-            EdgeKind::Reexports | EdgeKind::ImportsType => 0.5,
-            EdgeKind::UsesSymbol => ln_1p(f64::from(e.weight.unwrap_or(1))),
-            _ => continue,
-        };
-        let (Some(&from), Some(&to)) = (
-            position.get(e.from.as_str()),
-            position.get(file_of(&e.to).as_str()),
-        ) else {
-            continue;
-        };
-        graph.add(from, to, weight);
-    }
+    let file_ids: Vec<&str> = ids.iter().map(|id| id.as_str()).collect();
+    let graph = WeightedGraph::from_map_edges(&file_ids, &edges, 0.0);
     let ranks = graph.pagerank(None);
 
     let files: Vec<MapFile> = discovery

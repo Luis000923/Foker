@@ -33,6 +33,29 @@ impl WeightedGraph {
         }
     }
 
+    /// Construye el grafo de archivos de §8.5; `reverse` pondera las aristas inversas de §9.6.
+    /// `ids` fija el orden de nodos y debe estar ordenado por id.
+    pub fn from_map_edges(ids: &[&str], edges: &[crate::model::MapEdge], reverse: f64) -> Self {
+        let mut graph = Self::new(ids.len());
+        for edge in edges {
+            let weight = match edge.kind {
+                crate::model::EdgeKind::Imports => 1.0,
+                crate::model::EdgeKind::ImportsType | crate::model::EdgeKind::Reexports => 0.5,
+                crate::model::EdgeKind::UsesSymbol => ln_1p(f64::from(edge.weight.unwrap_or(1))),
+                _ => continue,
+            };
+            let file = |id: &str| id.split('#').next().unwrap_or(id).to_owned();
+            if let (Ok(from), Ok(to)) = (
+                ids.binary_search(&file(&edge.from).as_str()),
+                ids.binary_search(&file(&edge.to).as_str()),
+            ) {
+                graph.add(from, to, weight);
+                graph.add(to, from, weight * reverse);
+            }
+        }
+        graph
+    }
+
     fn normalized(&self) -> Vec<(usize, usize, f64)> {
         let mut edges = self.edges.clone();
         edges.sort_by_key(|a| (a.0, a.1));
