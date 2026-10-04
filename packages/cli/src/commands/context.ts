@@ -1,5 +1,5 @@
 import { type ContextRequest, FokerError, openEngine } from '@foker/core';
-import { gatherContextInputs } from '@foker/engine';
+import { gatherContextInputs, loadConfig } from '@foker/engine';
 import { type Command, flag } from '../types.js';
 
 export const contextCommand: Command = {
@@ -13,7 +13,6 @@ export const contextCommand: Command = {
   ],
   async run(ctx) {
     if (ctx.flags['task']) throw new FokerError('FKR-INP-001', '--task requiere FKR-045.');
-    if (ctx.flags['config']) throw new FokerError('FKR-INP-001', '--config requiere FKR-040.');
     const task = ctx.args[0];
     if (!task) throw new FokerError('FKR-INP-001', 'Indica una tarea.');
     const format = ctx.flags['format'] || 'md';
@@ -26,7 +25,8 @@ export const contextCommand: Command = {
       throw new FokerError('FKR-INP-001', '--intent inválido.');
     const anchors = ctx.flags['anchor'] as string[];
     const inputs = await gatherContextInputs(ctx.cwd, ctx.flags['skill'] ? { skill: String(ctx.flags['skill']) } : {});
-    const engine = await openEngine(ctx.cwd, { readOnly: true });
+    const loaded = await loadConfig(ctx.cwd, ctx.flags['config'] ? { configPath: String(ctx.flags['config']) } : {});
+    const engine = await openEngine(ctx.cwd, { ...loaded.mapConfig, readOnly: true });
     const pack = await engine.buildContext({
       task,
       ...inputs,
@@ -34,7 +34,8 @@ export const contextCommand: Command = {
         files: anchors.filter((a) => !a.includes('#') && (a.includes('/') || /\.[\w]+$/.test(a))),
         symbols: anchors.filter((a) => a.includes('#') || (!a.includes('/') && !/\.[\w]+$/.test(a))),
       },
-      ...(budget === undefined ? {} : { budgetTokens: budget }),
+      coreFiles: loaded.config.context.core_files,
+      budgetTokens: budget ?? loaded.config.context.default_budget_tokens,
       ...(intent ? { intent: intent as NonNullable<ContextRequest['intent']> } : {}),
       explain: Boolean(ctx.flags['explain']),
     });

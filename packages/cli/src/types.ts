@@ -11,6 +11,10 @@ export interface Message {
   hint?: string;
 }
 export interface Context {
+  env: NodeJS.ProcessEnv;
+  confirm?: (message: string) => Promise<boolean>;
+  trustBaseDir?: string;
+  display(message: string): void;
   cwd: string;
   flags: Record<string, boolean | string | string[]>;
   args: string[];
