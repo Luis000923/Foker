@@ -30,3 +30,10 @@ coverage/
 !/benchmarks/reports/ctx-gold-diagnostico.md
 # JSON de calibración generado; el informe Markdown conserva la tabla versionada.
 /benchmarks/reports/calibracion-*.json
+
+/benchmarks/results/
+/benchmarks/reports/*.md
+!/benchmarks/reports/ctx-gold-example.md
+!/benchmarks/reports/ctx-gold-diagnostico.md
+/benchmarks/docker/compiled/
+/benchmarks/dist/

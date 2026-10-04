@@ -1,9 +1,10 @@
-// Ejecuta las herramientas desde fuente con Node 22, sin build ni instalación del workspace.
-import { existsSync, readFileSync } from 'node:fs';
-import { registerHooks, stripTypeScriptTypes } from 'node:module';
+// Ejecuta las herramientas de benchmark compiladas (pnpm build compila benchmarks/src a dist/).
+import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const commands = new Set([
+  'bench-run',
+  'bench-report',
   'diagnose',
   'calibrate',
   'ctx-gold',
@@ -13,26 +14,10 @@ const commands = new Set([
 ]);
 const command = process.argv[2];
 if (!commands.has(command)) throw new Error('Comando de benchmark desconocido');
-registerHooks({
-  load(url, context, nextLoad) {
-    if (url.startsWith('file:') && url.endsWith('.ts')) {
-      return {
-        format: 'module',
-        source: stripTypeScriptTypes(readFileSync(fileURLToPath(url), 'utf8'), { mode: 'transform', sourceUrl: url }),
-        shortCircuit: true,
-      };
-    }
-    return nextLoad(url, context);
-  },
-  resolve(specifier, context, nextResolve) {
-    const match = /^@foker\/(core|engine|policy|schemas)$/.exec(specifier);
-    if (match) return nextResolve(new URL(`../packages/${match[1]}/src/index.ts`, import.meta.url).href, context);
-    if (specifier.startsWith('.') && specifier.endsWith('.js') && context.parentURL?.endsWith('.ts')) {
-      const source = new URL(`${specifier.slice(0, -3)}.ts`, context.parentURL);
-      if (existsSync(fileURLToPath(source))) return nextResolve(source.href, context);
-    }
-    return nextResolve(specifier, context);
-  },
-});
-const tool = await import(`./src/${command}.ts`);
+// Node 26 ya no transforma TypeScript (solo elimina tipos): se ejecuta el código compilado.
+const compiled = new URL(`./dist/${command}.js`, import.meta.url);
+if (!existsSync(fileURLToPath(compiled))) {
+  throw new Error('Falta benchmarks/dist: ejecuta pnpm build (o pnpm --filter @foker/benchmarks run build)');
+}
+const tool = await import(compiled.href);
 await tool.main(process.argv.slice(3));

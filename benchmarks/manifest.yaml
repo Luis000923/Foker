@@ -43,7 +43,7 @@
         }
       },
       "gold_modified": [
-        "packages/catalog/src/inStock.ts"
+        "packages/catalog/src/policy-1.ts"
       ]
     },
     {
@@ -115,7 +115,7 @@
         }
       },
       "gold_modified": [
-        "packages/pricing/src/discount.ts"
+        "packages/pricing/src/policy-3.ts"
       ]
     },
     {
@@ -151,7 +151,7 @@
         }
       },
       "gold_modified": [
-        "packages/users/src/normalizeEmail.ts"
+        "packages/users/src/policy-4.ts"
       ]
     },
     {
@@ -259,7 +259,7 @@
         }
       },
       "gold_modified": [
-        "packages/cart/src/remainingQuantity.ts"
+        "packages/cart/src/policy-7.ts"
       ]
     },
     {
@@ -295,7 +295,7 @@
         }
       },
       "gold_modified": [
-        "packages/pricing/src/shippingCost.ts"
+        "packages/pricing/src/policy-8.ts"
       ]
     },
     {
@@ -331,7 +331,8 @@
         }
       },
       "gold_modified": [
-        "packages/catalog/src/skuMatches.ts"
+        "packages/catalog/src/skuMatches.ts",
+        "packages/ui/src/referenceSearch.ts"
       ]
     },
     {
@@ -367,7 +368,8 @@
         }
       },
       "gold_modified": [
-        "packages/cart/src/cartWeight.ts"
+        "packages/cart/src/cartWeight.ts",
+        "packages/orders/src/parcelWeight.ts"
       ]
     },
     {
@@ -403,6 +405,7 @@
         }
       },
       "gold_modified": [
+        "packages/orders/src/checkoutTax.ts",
         "packages/pricing/src/taxAmount.ts"
       ]
     },
@@ -439,6 +442,7 @@
         }
       },
       "gold_modified": [
+        "packages/orders/src/customerLabel.ts",
         "packages/users/src/displayName.ts"
       ]
     },
@@ -475,7 +479,8 @@
         }
       },
       "gold_modified": [
-        "packages/orders/src/trackingUrl.ts"
+        "packages/orders/src/trackingUrl.ts",
+        "packages/ui/src/deliveryLink.ts"
       ]
     },
     {
@@ -511,6 +516,7 @@
         }
       },
       "gold_modified": [
+        "packages/ui/src/basketCaption.ts",
         "packages/ui/src/itemLabel.ts"
       ]
     },
@@ -547,6 +553,8 @@
         }
       },
       "gold_modified": [
+        "packages/cart/src/inventoryAmount.ts",
+        "packages/catalog/src/moneyPolicy.ts",
         "packages/catalog/src/stockValue.ts"
       ]
     },
@@ -583,6 +591,8 @@
         }
       },
       "gold_modified": [
+        "packages/orders/src/payableAmount.ts",
+        "packages/pricing/src/moneyPolicy.ts",
         "packages/pricing/src/netPrice.ts"
       ]
     },
@@ -619,6 +629,8 @@
         }
       },
       "gold_modified": [
+        "packages/orders/src/staffAccess.ts",
+        "packages/users/src/accessPolicy.ts",
         "packages/users/src/isAdmin.ts"
       ]
     },
@@ -655,7 +667,9 @@
         }
       },
       "gold_modified": [
-        "packages/orders/src/orderTotal.ts"
+        "packages/orders/src/moneyPolicy.ts",
+        "packages/orders/src/orderTotal.ts",
+        "packages/ui/src/receiptAmount.ts"
       ]
     },
     {
@@ -691,7 +705,8 @@
         }
       },
       "gold_modified": [
-        "packages/catalog/src/isPositiveQuantity.test.ts"
+        "packages/catalog/src/isPositiveQuantity.test.ts",
+        "packages/catalog/src/isPositiveQuantity.ts"
       ]
     },
     {
@@ -727,7 +742,8 @@
         }
       },
       "gold_modified": [
-        "packages/users/src/isValidEmail.test.ts"
+        "packages/users/src/isValidEmail.test.ts",
+        "packages/users/src/isValidEmail.ts"
       ]
     }
   ],
