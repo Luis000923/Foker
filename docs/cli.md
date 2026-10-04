@@ -35,15 +35,14 @@ Generado desde el registro de comandos. Regenerar con `UPDATE_SNAPSHOTS=1 ./node
 
 ## foker init
 
-Inicializa Foker
+Inicializa Foker en un repositorio (o crea uno desde plantilla) y ejecuta sync
 
 | Flag | Tipo | Default | Descripción |
 |---|---|---|---|
-| --template | string | "" | Plantilla |
-| --from-spec | string | "" | Especificación |
-| --targets | string | "" | Anfitriones |
-| --dry-run | boolean | false | Previsualiza archivos |
-| --force | boolean | false | Fuerza inicialización |
+| --template | string | "" | Plantilla (nextjs-turbo) |
+| --from-spec | string | "" | Lee nombre, descripción y plantilla del frontmatter de foker.md |
+| --targets | string | "" | Anfitriones separados por comas (claude-code, opencode, antigravity); por defecto los detectados o todos |
+| --force | boolean | false | Sobrescribe foker.config.yaml y foker/rules.md si existen |
 
 ## foker map
 

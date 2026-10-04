@@ -1,5 +1,6 @@
 import { contextCommand } from './commands/context.js';
 import { doctorCommand } from './commands/doctor.js';
+import { initCommand } from './commands/init.js';
 import { mapCommand } from './commands/map.js';
 import { mcpCommand } from './commands/mcp.js';
 import { pendingCommands } from './commands/pending.js';
@@ -10,12 +11,11 @@ import { taskCommands, validateCommand } from './commands/tasks.js';
 import { trustCommand } from './commands/trust.js';
 import { flag } from './types.js';
 export const commands = [
-  ...pendingCommands.slice(0, 1),
+  initCommand,
   mapCommand,
   contextCommand,
   mcpCommand,
   ...pendingCommands
-    .slice(1)
     .filter((c) => c.name !== 'validate' && !c.name.startsWith('task') && !c.name.startsWith('skill'))
     .map((c) => (c.name === 'trust' ? trustCommand : c)),
   validateCommand,

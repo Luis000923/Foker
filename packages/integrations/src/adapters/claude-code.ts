@@ -42,6 +42,7 @@ export const claudeCode: HostAdapter = {
         kind: 'json',
         path: '.mcp.json',
         set: [
+          // biome-ignore lint/suspicious/noTemplateCurlyInString: Claude Code expande ${CLAUDE_PROJECT_DIR} literal.
           { pointer: ['mcpServers', 'foker'], value: { command: 'npx', args: [...MCP_ARGS, '${CLAUDE_PROJECT_DIR}'] } },
         ],
         arrays: [],

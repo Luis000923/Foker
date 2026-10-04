@@ -16,19 +16,6 @@ const b = (name: string, description: string) => flag(name, 'boolean', descripti
 const s = (name: string, description: string) => flag(name, 'string', description);
 const taskFlags = [s('scope', 'Ámbito'), s('profile', 'Perfil'), s('skill', 'Skill'), s('reason', 'Razón')];
 export const pendingCommands: Command[] = [
-  pending(
-    'init',
-    'Inicializa Foker',
-    'FKR-067',
-    [
-      s('template', 'Plantilla'),
-      s('from-spec', 'Especificación'),
-      s('targets', 'Anfitriones'),
-      b('dry-run', 'Previsualiza archivos'),
-      b('force', 'Fuerza inicialización'),
-    ],
-    1,
-  ),
   pending('validate', 'Ejecuta checks', 'FKR-048', [
     s('profile', 'Perfil'),
     s('checks', 'Checks'),

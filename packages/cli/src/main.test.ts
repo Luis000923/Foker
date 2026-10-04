@@ -40,7 +40,8 @@ it('argumentos inválidos y comandos pendientes usan FKR-INP-001, exit 2', async
     ['task', 'unknown'],
     ['map', '--dry-run'],
     ['map', '--check', '--export', '.foker/project-map.json'],
-    ['init'],
+    // Nunca ejecutes comandos que escriben sin --cwd temporal: este test corre en la raíz del repo.
+    ['init', '--template', 'inexistente'],
   ]) {
     const result = await run([...args, '--json']);
     expect(result.exit).toBe(2);
@@ -52,8 +53,8 @@ it('argumentos inválidos y comandos pendientes usan FKR-INP-001, exit 2', async
 });
 it('CI activa JSON en errores, tanto por flag como entorno', async () => {
   for (const [args, env] of [
-    [['--ci', 'init'], {}],
-    [['init'], { CI: 'true' }],
+    [['--ci', 'init', '--template', 'inexistente'], {}],
+    [['init', '--template', 'inexistente'], { CI: 'true' }],
   ] as const) {
     expect(envelope((await run([...args], env)).stdout).exit_code).toBe(2);
   }
