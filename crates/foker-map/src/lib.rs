@@ -7,6 +7,7 @@ pub mod build;
 pub mod canonical;
 pub mod config;
 pub mod discover;
+pub mod engine;
 pub mod error;
 pub mod glob;
 pub mod model;

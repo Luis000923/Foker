@@ -115,6 +115,8 @@ pub struct MapState {
     pub outcomes: BTreeMap<(String, String), Outcome>,
     /// Workspace.
     pub workspace: Workspace,
+    /// Descubrimiento usado (tamaños y mtimes de entrada, para comprobar frescura).
+    pub discovery: crate::discover::Discovery,
 }
 
 struct Kinds {
@@ -718,6 +720,7 @@ pub fn build(
         parsed,
         outcomes,
         workspace,
+        discovery,
     })
 }
 
