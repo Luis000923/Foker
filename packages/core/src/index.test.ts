@@ -19,6 +19,7 @@ const fake = (coreVersion: string) => ({
   versionInfo: () => fakeInfo(coreVersion),
   normalizePath: (_r: string, i: string) => i,
   matchGlobs: () => false,
+  FokerEngine: { open: () => Promise.reject(new Error('fake')) },
 });
 
 describe(PACKAGE_NAME, () => {
@@ -60,6 +61,7 @@ describe(PACKAGE_NAME, () => {
     const failing = {
       normalizePath: (_r: string, i: string) => i,
       matchGlobs: () => false,
+      FokerEngine: { open: () => Promise.reject(new Error('fake')) },
       versionInfo: () => {
         throw Object.assign(new Error('pánico'), { code: 'FKR-INT-001' });
       },

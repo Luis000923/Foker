@@ -1,8 +1,10 @@
 import { createRequire } from 'node:module';
 import type { VersionInfo } from '../binding.cjs';
+import { Engine, type EngineConfig, type NativeEngineClass } from './engine.js';
 import { FokerError } from './errors.js';
 
 export type { VersionInfo } from '../binding.cjs';
+export * from './engine.js';
 export { FokerError, type FokerErrorCode } from './errors.js';
 
 /** Nombre del paquete npm. */
@@ -13,6 +15,7 @@ export interface NativeBinding {
   versionInfo(): VersionInfo;
   normalizePath(root: string, input: string): string;
   matchGlobs(id: string, globs: string[]): boolean;
+  FokerEngine: NativeEngineClass;
 }
 
 const require = createRequire(import.meta.url);
@@ -96,4 +99,9 @@ export function matchGlobs(id: string, globs: string[]): boolean {
   } catch (error) {
     throw FokerError.fromNative(error);
   }
+}
+
+/** Abre el motor del Project Map para un root absoluto con el addon de la plataforma. */
+export function openEngine(root: string, config?: EngineConfig): Promise<Engine> {
+  return Engine.open(native().FokerEngine, root, config);
 }

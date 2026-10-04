@@ -22,7 +22,10 @@ export type FokerErrorCode =
   | 'FKR-POL-001'
   | 'FKR-INT-001';
 
-/** Error lanzado por el addon: un `Error` de JS con `code`. */
+/**
+ * Error lanzado por el addon: un `Error` de JS con `code`. Las funciones async no pueden fijar
+ * `code`; el código llega como prefijo `[FKR-…] ` del mensaje y `@foker/core` lo normaliza.
+ */
 export interface FokerNativeError extends Error {
   code: FokerErrorCode;
 }
@@ -46,17 +49,19 @@ export type FileKind = 'source' | 'test' | 'declaration' | 'config' | 'generated
 
 export type ParseStatus = 'ok' | 'partial' | 'failed' | 'skipped';
 
-/** Sección `map` efectiva de foker.config.yaml, ya fusionada con los defaults por @foker/engine. */
+/**
+ * Sección `map` efectiva de foker.config.yaml más los globs de secretos de la política.
+ * Los campos omitidos toman los defaults de Foker (FOKER-SPEC §8.3, §11.3).
+ */
 export interface EngineConfig {
-  include: string[];
-  exclude: string[];
-  tsconfig: string[];
+  include?: string[];
+  exclude?: string[];
+  tsconfig?: string[];
   /** Globs de secretos: nunca se leen ni entran en el mapa. */
-  secretGlobs: string[];
-  maxFileBytes: number;
-  maxFiles: number;
-  kinds: { test: string[]; declaration: string[]; config: string[]; generated: string[] };
-  context: ContextConfig;
+  secretGlobs?: string[];
+  maxFileBytes?: number;
+  maxFiles?: number;
+  kinds?: { test?: string[]; declaration?: string[]; config?: string[]; generated?: string[] };
 }
 
 export interface ContextConfig {
@@ -65,10 +70,8 @@ export interface ContextConfig {
 }
 
 export interface RefreshOptions {
-  /** Reconstrucción completa ignorando el mapa previo. */
+  /** Reconstrucción completa ignorando la caché de parseo. */
   full?: boolean;
-  /** Limitar la comprobación a estos ids (p. ej. archivos que el anfitrión dice haber editado). */
-  paths?: string[];
 }
 
 export interface Diagnostic {
@@ -90,6 +93,8 @@ export interface RefreshReport {
   contentHash: string;
   /** true si hubo reconstrucción completa (mapa ausente, corrupto o incompatible). */
   rebuilt: boolean;
+  /** true si nada cambió en disco y no se recalculó (REQ-MAP-003). */
+  unchanged: boolean;
 }
 
 export interface MapStatus {
@@ -172,6 +177,8 @@ export interface FileInfo {
   imports: string[];
   /** Ids de archivo que importan a este (derivado invirtiendo aristas). */
   importedBy: string[];
+  /** Ids de los símbolos declarados en el archivo. */
+  symbols: string[];
 }
 
 export interface ImpactRequest {
@@ -250,9 +257,13 @@ export interface ContextPack {
 
 export declare class FokerEngine {
   /** Abre el motor para un root absoluto. Carga el mapa si es válido; si no, queda vacío. */
-  static open(root: string, config: EngineConfig): Promise<FokerEngine>;
-  refresh(opts?: RefreshOptions): Promise<RefreshReport>;
+  static open(root: string, config?: EngineConfig | null): Promise<FokerEngine>;
+  /** Avisos de la carga, p. ej. FKR-MAP-005 si el mapa persistido estaba corrupto. */
+  loadDiagnostics(): Diagnostic[];
+  refresh(opts?: RefreshOptions | null): Promise<RefreshReport>;
   status(): MapStatus;
+  /** Archivos que difieren del disco, sin reconstruir. */
+  checkStale(): Promise<number>;
   save(): Promise<SaveReport>;
   /** JSON canónico del mapa completo (evita crear millones de objetos JS). */
   exportMapJson(): Promise<string>;

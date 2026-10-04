@@ -24,3 +24,4 @@ Copia de `spec/adr/`. Una decisión nueva o modificada exige un ADR nuevo con n�
 | [ADR-018](ADR-018-benchmark.md) | Metodología de benchmark: experimento pareado con agente headless | Aceptada (diseño); repos y presupuesto PENDIENTES |
 | [ADR-019](ADR-019-reconstruccion-de-contratos.md) | Contratos reconstruidos: JSON Schemas y API nativa | Aceptada (decisión del usuario, 2026-10-03) |
 | [ADR-020](ADR-020-extraccion-por-recorrido.md) | Extracción de símbolos por recorrido del árbol, no por queries `.scm` | Aceptada |
+| [ADR-021](ADR-021-contrato-nativo-engine.md) | Contrato nativo del motor | Aceptada |
