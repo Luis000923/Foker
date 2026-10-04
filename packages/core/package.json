@@ -1,0 +1,23 @@
+{
+  "name": "@foker/core",
+  "version": "0.0.0",
+  "description": "Cargador del addon nativo de Foker (napi-rs).",
+  "license": "UNLICENSED",
+  "type": "module",
+  "exports": {
+    ".": {
+      "@foker/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=22.14.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  }
+}

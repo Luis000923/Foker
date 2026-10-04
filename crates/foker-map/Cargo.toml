@@ -1,0 +1,13 @@
+[package]
+name = "foker-map"
+description = "Project Map de Foker: descubrimiento, parseo, resolución, grafo y PageRank global."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+
+[lints]
+workspace = true

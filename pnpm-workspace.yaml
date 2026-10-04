@@ -1,0 +1,8 @@
+packages:
+  - packages/*
+
+# Supply chain (FOKER-SPEC §21.2): no instalar versiones publicadas hace menos de 1 día.
+minimumReleaseAge: 1440
+
+# Ninguna dependencia ejecuta scripts de instalación salvo las listadas aquí.
+allowBuilds: {}

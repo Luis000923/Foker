@@ -1,0 +1,26 @@
+{
+  "name": "@foker/policy",
+  "version": "0.0.0",
+  "description": "Política de Foker: rutas protegidas, aprobaciones, secretos, workspace trust y ejecución segura.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "exports": {
+    ".": {
+      "@foker/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=22.14.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@foker/schemas": "workspace:*"
+  }
+}
