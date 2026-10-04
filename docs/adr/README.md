@@ -23,3 +23,4 @@ Copia de `spec/adr/`. Una decisión nueva o modificada exige un ADR nuevo con n�
 | [ADR-017](ADR-017-seguridad-proyecto-generado.md) | Seguridad del proyecto generado alineada con OWASP ASVS 5.0 (sin afirmar cumplimiento) | Aceptada (modifica ADR-005 original) |
 | [ADR-018](ADR-018-benchmark.md) | Metodología de benchmark: experimento pareado con agente headless | Aceptada (diseño); repos y presupuesto PENDIENTES |
 | [ADR-019](ADR-019-reconstruccion-de-contratos.md) | Contratos reconstruidos: JSON Schemas y API nativa | Aceptada (decisión del usuario, 2026-10-03) |
+| [ADR-020](ADR-020-extraccion-por-recorrido.md) | Extracción de símbolos por recorrido del árbol, no por queries `.scm` | Aceptada |

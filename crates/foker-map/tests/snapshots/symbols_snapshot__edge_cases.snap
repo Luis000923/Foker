@@ -1,0 +1,347 @@
+---
+source: crates/foker-map/tests/symbols_snapshot.rs
+expression: "extract(&fixture(\"edge-cases\"))"
+---
+{
+  "files": [
+    {
+      "exports": [],
+      "id": "src/anonymous.ts",
+      "import_refs": {},
+      "imports": [],
+      "lines": 3,
+      "parse_status": "ok",
+      "symbols": [
+        {
+          "doc": null,
+          "exported": "default",
+          "id": "src/anonymous.ts#default",
+          "kind": "function",
+          "name": "default",
+          "parent": null,
+          "range": [
+            0,
+            0,
+            2,
+            1
+          ],
+          "signature": "export default function ()",
+          "tags": []
+        }
+      ]
+    },
+    {
+      "exports": [],
+      "id": "src/binary.ts",
+      "import_refs": {},
+      "imports": [],
+      "lines": 1,
+      "parse_status": "skipped",
+      "symbols": []
+    },
+    {
+      "exports": [],
+      "id": "src/bom.ts",
+      "import_refs": {},
+      "imports": [],
+      "lines": 1,
+      "parse_status": "ok",
+      "symbols": [
+        {
+          "doc": null,
+          "exported": "named",
+          "id": "src/bom.ts#bom",
+          "kind": "variable",
+          "name": "bom",
+          "parent": null,
+          "range": [
+            0,
+            0,
+            0,
+            24
+          ],
+          "signature": "export const bom = true",
+          "tags": []
+        }
+      ]
+    },
+    {
+      "exports": [],
+      "id": "src/crlf.ts",
+      "import_refs": {},
+      "imports": [],
+      "lines": 3,
+      "parse_status": "ok",
+      "symbols": [
+        {
+          "doc": null,
+          "exported": "named",
+          "id": "src/crlf.ts#crlf",
+          "kind": "function",
+          "name": "crlf",
+          "parent": null,
+          "range": [
+            0,
+            0,
+            2,
+            1
+          ],
+          "signature": "export function crlf(): string",
+          "tags": []
+        }
+      ]
+    },
+    {
+      "exports": [],
+      "id": "src/declarations.d.ts",
+      "import_refs": {},
+      "imports": [],
+      "lines": 11,
+      "parse_status": "ok",
+      "symbols": [
+        {
+          "doc": null,
+          "exported": "named",
+          "id": "src/declarations.d.ts#declared",
+          "kind": "function",
+          "name": "declared",
+          "parent": null,
+          "range": [
+            10,
+            0,
+            10,
+            52
+          ],
+          "signature": "export declare function declared(a: number): string",
+          "tags": []
+        }
+      ]
+    },
+    {
+      "exports": [
+        [
+          "longSignature",
+          "longSignature",
+          null,
+          false
+        ]
+      ],
+      "id": "src/hooks.tsx",
+      "import_refs": {
+        "useState": 1
+      },
+      "imports": [
+        {
+          "bindings": [
+            "useState as useState"
+          ],
+          "kind": "Static",
+          "specifier": "react",
+          "type_only": false
+        }
+      ],
+      "lines": 20,
+      "parse_status": "ok",
+      "symbols": [
+        {
+          "doc": null,
+          "exported": "named",
+          "id": "src/hooks.tsx#useToggle",
+          "kind": "variable",
+          "name": "useToggle",
+          "parent": null,
+          "range": [
+            2,
+            0,
+            5,
+            2
+          ],
+          "signature": "export const useToggle = (initial = false) =>",
+          "tags": [
+            "react_hook"
+          ]
+        },
+        {
+          "doc": null,
+          "exported": "named",
+          "id": "src/hooks.tsx#Toggle",
+          "kind": "variable",
+          "name": "Toggle",
+          "parent": null,
+          "range": [
+            7,
+            0,
+            10,
+            2
+          ],
+          "signature": "export const Toggle = () =>",
+          "tags": [
+            "react_component"
+          ]
+        },
+        {
+          "doc": null,
+          "exported": "named",
+          "id": "src/hooks.tsx#longSignature",
+          "kind": "variable",
+          "name": "longSignature",
+          "parent": null,
+          "range": [
+            12,
+            0,
+            18,
+            14
+          ],
+          "signature": "const longSignature = (aVeryLongParameterNameThatKeepsGoing: string, anotherVeryLongParameterNameThatKeepsGoing: number, yetAnotherVeryLongParameterNameThatKeepsGoingAndGoing: boolean, oneMoreVeryLongParameterNameToPushTheSignaturePastTheLimit: string[], finalVeryLongParameterNameToBeSureWeExceedFourHundredCharacters: Record<string, unknown>): void =>",
+          "tags": []
+        }
+      ]
+    },
+    {
+      "exports": [
+        [
+          "count",
+          "counter",
+          null,
+          false
+        ],
+        [
+          "default",
+          "Shape",
+          null,
+          false
+        ]
+      ],
+      "id": "src/merging.ts",
+      "import_refs": {},
+      "imports": [],
+      "lines": 20,
+      "parse_status": "ok",
+      "symbols": [
+        {
+          "doc": null,
+          "exported": "named",
+          "id": "src/merging.ts#Box",
+          "kind": "interface",
+          "name": "Box",
+          "parent": null,
+          "range": [
+            0,
+            0,
+            2,
+            1
+          ],
+          "signature": "export interface Box { width: number; }",
+          "tags": []
+        },
+        {
+          "doc": null,
+          "exported": "named",
+          "id": "src/merging.ts#Box~2",
+          "kind": "interface",
+          "name": "Box",
+          "parent": null,
+          "range": [
+            4,
+            0,
+            6,
+            1
+          ],
+          "signature": "export interface Box { height: number; }",
+          "tags": []
+        },
+        {
+          "doc": null,
+          "exported": "named",
+          "id": "src/merging.ts#Direction",
+          "kind": "enum",
+          "name": "Direction",
+          "parent": null,
+          "range": [
+            8,
+            0,
+            11,
+            1
+          ],
+          "signature": "export const enum Direction { Up, Down, }",
+          "tags": []
+        },
+        {
+          "doc": null,
+          "exported": "named",
+          "id": "src/merging.ts#Shape",
+          "kind": "class",
+          "name": "Shape",
+          "parent": null,
+          "range": [
+            13,
+            0,
+            15,
+            1
+          ],
+          "signature": "export abstract class Shape",
+          "tags": []
+        },
+        {
+          "doc": null,
+          "exported": "none",
+          "id": "src/merging.ts#Shape.area",
+          "kind": "method",
+          "name": "area",
+          "parent": "Shape",
+          "range": [
+            14,
+            2,
+            14,
+            25
+          ],
+          "signature": "abstract area(): number",
+          "tags": []
+        },
+        {
+          "doc": null,
+          "exported": "named",
+          "id": "src/merging.ts#counter",
+          "kind": "variable",
+          "name": "counter",
+          "parent": null,
+          "range": [
+            17,
+            0,
+            17,
+            16
+          ],
+          "signature": "let counter = 0",
+          "tags": []
+        }
+      ]
+    },
+    {
+      "exports": [],
+      "id": "src/syntax-error.ts",
+      "import_refs": {},
+      "imports": [],
+      "lines": 9,
+      "parse_status": "partial",
+      "symbols": [
+        {
+          "doc": null,
+          "exported": "named",
+          "id": "src/syntax-error.ts#ok",
+          "kind": "function",
+          "name": "ok",
+          "parent": null,
+          "range": [
+            0,
+            0,
+            2,
+            1
+          ],
+          "signature": "export function ok(): number",
+          "tags": []
+        }
+      ]
+    }
+  ],
+  "oversized": []
+}

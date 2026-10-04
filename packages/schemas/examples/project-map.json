@@ -30,7 +30,7 @@
       "mtime_ns": 1791108000000000000,
       "parse_status": "ok",
       "rank": { "global": 0.35 },
-      "exports": ["apps/web/src/app/page.tsx#default"]
+      "exports": ["apps/web/src/app/page.tsx#HomePage"]
     },
     {
       "id": "packages/ui/src/button.tsx",
@@ -48,7 +48,7 @@
   ],
   "symbols": [
     {
-      "id": "apps/web/src/app/page.tsx#default",
+      "id": "apps/web/src/app/page.tsx#HomePage",
       "name": "HomePage",
       "kind": "function",
       "tags": ["react_component", "next_route"],

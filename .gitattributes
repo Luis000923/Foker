@@ -12,3 +12,8 @@
 *.tgz binary
 *.wasm binary
 *.node binary
+
+# Fixtures que deben conservar sus bytes exactos (CRLF, BOM, binario).
+fixtures/edge-cases/src/crlf.ts -text
+fixtures/edge-cases/src/bom.ts -text
+fixtures/edge-cases/src/binary.ts binary

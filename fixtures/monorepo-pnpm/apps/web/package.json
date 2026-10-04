@@ -1,0 +1,10 @@
+{
+  "name": "@mono/web",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "@mono/core": "workspace:*",
+    "@mono/ui": "workspace:*",
+    "react": "19.2.0"
+  }
+}
