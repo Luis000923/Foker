@@ -38,6 +38,9 @@ importers:
       '@foker/schemas':
         specifier: workspace:*
         version: link:../schemas
+      yaml:
+        specifier: 2.9.1
+        version: 2.9.1
 
   packages/core:
     devDependencies:

@@ -25,7 +25,8 @@
     "@foker/integrations": "workspace:*",
     "@foker/mcp": "workspace:*",
     "@foker/core": "workspace:*",
-    "@foker/schemas": "workspace:*"
+    "@foker/schemas": "workspace:*",
+    "yaml": "2.9.1"
   },
   "bin": {
     "foker": "./dist/bin.js"
