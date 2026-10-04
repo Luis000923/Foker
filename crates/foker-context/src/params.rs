@@ -1,10 +1,19 @@
 //! Parámetros internos de calibración; no son configuración pública de CLI/MCP.
 use crate::{ContextError, Intent};
 use serde::{Deserialize, Serialize};
-/// Pesos y umbrales efectivos; defaults originales de §9.
+/// Pesos y umbrales efectivos; recuperación léxica ampliada según ADR-028.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct ContextParams {
+    /// Expansión léxica es/en v1, desactivable para medir el baseline.
+    #[serde(skip_serializing_if = "expansion_predeterminada")]
+    pub lexical_expansion: bool,
+    /// Corte BM25 relativo al máximo; cero conserva top-k.
+    #[serde(skip_serializing_if = "corte_bm25_predeterminado")]
+    pub bm25_min_relative: f64,
+    /// Corte del ranking opcional relativo al máximo; cero lo desactiva.
+    #[serde(skip_serializing_if = "relevancia_predeterminada")]
+    pub relevance_fraction: f64,
     /// Parámetro w_anchor (default 1.0).
     pub w_anchor: f64,
     /// Parámetro mention_factor (default 0.8).
@@ -55,6 +64,9 @@ pub struct ContextParams {
 impl Default for ContextParams {
     fn default() -> Self {
         Self {
+            lexical_expansion: true,
+            bm25_min_relative: 0.0,
+            relevance_fraction: 0.01,
             w_anchor: 1.0,
             mention_factor: 0.8,
             w_lex: 0.6,
@@ -108,6 +120,8 @@ impl ContextParams {
     /// Valida valores antes de calcular scores o presupuestos.
     pub fn validate(&self) -> Result<(), ContextError> {
         let weights = [
+            self.bm25_min_relative,
+            self.relevance_fraction,
             self.w_anchor,
             self.mention_factor,
             self.w_lex,
@@ -132,6 +146,8 @@ impl ContextParams {
             .iter()
             .any(|v| !v.is_finite() || *v < 0.0 || *v > 100.0)
             || [
+                self.bm25_min_relative,
+                self.relevance_fraction,
                 self.anchor_fraction,
                 self.margin_fraction,
                 self.l0_min_fraction,
@@ -162,10 +178,52 @@ impl ContextParams {
     }
 }
 
+// Los campos añadidos se omiten cuando coinciden con los defaults de ADR-028:
+// los overrides anteriores conservan la forma JSON reconocida por el esquema v1.
+fn expansion_predeterminada(value: &bool) -> bool {
+    *value == ContextParams::default().lexical_expansion
+}
+fn corte_bm25_predeterminado(value: &f64) -> bool {
+    *value == ContextParams::default().bm25_min_relative
+}
+fn relevancia_predeterminada(value: &f64) -> bool {
+    *value == ContextParams::default().relevance_fraction
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    #[test]
+    fn campos_nuevos_preservan_forma_legacy_y_roundtrip() {
+        let defaults = ContextParams::default();
+        let json = serde_json::to_value(&defaults).unwrap();
+        for key in [
+            "lexical_expansion",
+            "bm25_min_relative",
+            "relevance_fraction",
+        ] {
+            assert!(json.get(key).is_none());
+        }
+        assert_eq!(
+            serde_json::from_value::<ContextParams>(json).unwrap(),
+            defaults
+        );
+        let baseline = ContextParams {
+            lexical_expansion: false,
+            bm25_min_relative: 0.5,
+            relevance_fraction: 0.0,
+            ..defaults
+        };
+        let json = serde_json::to_value(&baseline).unwrap();
+        assert_eq!(json["lexical_expansion"], false);
+        assert_eq!(json["bm25_min_relative"], 0.5);
+        assert_eq!(json["relevance_fraction"], 0.0);
+        assert_eq!(
+            serde_json::from_value::<ContextParams>(json).unwrap(),
+            baseline
+        );
+    }
     #[test]
     fn limites_enteros_no_truncan_ni_desbordan() {
         let defaults = ContextParams::default();
@@ -205,6 +263,14 @@ mod tests {
             assert!(params.validate().is_err());
         }
         for params in [
+            ContextParams {
+                bm25_min_relative: 1.01,
+                ..Default::default()
+            },
+            ContextParams {
+                relevance_fraction: f64::NAN,
+                ..Default::default()
+            },
             ContextParams {
                 anchor_fraction: 1.01,
                 ..Default::default()

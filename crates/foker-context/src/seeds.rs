@@ -128,7 +128,12 @@ pub fn build(
             );
         }
     }
-    for hit in Bm25::new(map).search_with_params(&tokens.terms, &params) {
+    let terms = if params.lexical_expansion {
+        crate::normalize::expand_terms(&tokens.terms)
+    } else {
+        tokens.terms.clone()
+    };
+    for hit in Bm25::new(map).search_with_params(&terms, &params) {
         seeds.add(
             map,
             &hit.id,

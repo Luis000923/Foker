@@ -838,3 +838,68 @@ fn calibration_params_validate_and_control_selection() {
             .all(|f| f.level != RenderLevel::L3)
     );
 }
+
+#[test]
+fn expansion_y_cortes_preservan_anclas_cache_y_determinismo() {
+    let request = ContextRequest {
+        params: Some(ContextParams {
+            lexical_expansion: true,
+            bm25_min_relative: 0.25,
+            relevance_fraction: 0.1,
+            ..Default::default()
+        }),
+        ..button()
+    };
+    let expected = pack(&request);
+    assert!(
+        expected
+            .files
+            .iter()
+            .any(|f| f.id == "packages/ui/src/button.tsx" && f.level != RenderLevel::L0)
+    );
+    assert!(expected.budget.used <= request.budget_tokens);
+    let expected_json = expected.to_canonical_json();
+    std::thread::scope(|scope| {
+        for _ in 0..25 {
+            let request = &request;
+            let expected_json = &expected_json;
+            scope.spawn(move || {
+                for _ in 0..2 {
+                    assert_eq!(&pack(request).to_canonical_json(), expected_json);
+                }
+            });
+        }
+    });
+    let mut cache = cache::ContextCache::default();
+    let first = cache.build(state(), &root(), &request, &inputs()).unwrap();
+    assert!(!first.1.cache_hit);
+    assert!(
+        cache
+            .build(state(), &root(), &request, &inputs())
+            .unwrap()
+            .1
+            .cache_hit
+    );
+    for params in [
+        ContextParams {
+            lexical_expansion: false,
+            ..request.params.clone().unwrap()
+        },
+        ContextParams {
+            bm25_min_relative: 0.5,
+            ..request.params.clone().unwrap()
+        },
+        ContextParams {
+            relevance_fraction: 0.2,
+            ..request.params.clone().unwrap()
+        },
+    ] {
+        let changed = ContextRequest {
+            params: Some(params),
+            ..request.clone()
+        };
+        let (changed_pack, metrics) = cache.build(state(), &root(), &changed, &inputs()).unwrap();
+        assert!(!metrics.cache_hit);
+        assert_ne!(changed_pack.pack_hash, expected.pack_hash);
+    }
+}

@@ -1,0 +1,80 @@
+# Grupos de equivalencia léxica v1; vocabulario general de desarrollo, sin rutas.
+usuario user
+cuenta account
+sesion session
+permiso permission
+autenticacion authentication auth
+autorizacion authorization
+contrasena password
+correo email mail
+carrito cart
+pedido order
+pago payment
+precio price
+importe amount
+moneda currency
+impuesto tax
+subtotal subtotal
+total total
+descuento discount
+redondeo rounding round
+producto product
+inventario inventory
+existencia stock
+cliente customer client
+factura invoice
+boton button
+formulario form
+entrada input
+salida output
+etiqueta label
+mensaje message
+notificacion notification
+error error
+validacion validation validate
+esquema schema
+configuracion configuration config
+archivo file
+ruta path route
+directorio directory
+busqueda search
+filtro filter
+orden sort
+pagina page
+paginacion pagination
+cache cache
+clave key
+valor value
+fecha date
+hora time
+registro record log
+evento event
+cola queue
+trabajo job
+limite limit
+presupuesto budget
+contexto context
+mapa map
+grafo graph
+simbolo symbol
+exportacion export
+importacion import
+dependencia dependency
+prueba test
+cobertura coverage
+reintento retry
+cancelacion cancellation cancel
+conexion connection
+solicitud request
+respuesta response
+servidor server
+recurso resource
+estado state status
+componente component
+estilo style
+tema theme
+oscuro dark
+claro light
+accesibilidad accessibility
+seguridad security
+serializacion serialization serialize

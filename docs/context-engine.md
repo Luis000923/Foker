@@ -7,13 +7,16 @@ alcance y archivos modificados; Rust no ejecuta git ni checks.
 ## Pipeline
 
 - `normalize`: NFC y espacios de la tarea, candidatos léxicos y stopwords es/en
-  versionadas (150 entradas por idioma). Las anclas reutilizan `foker_map::path`.
+  versionadas (150 entradas por idioma). La consulta BM25 añade equivalencias es/en
+  de `lexicon-es-en-v1.tsv` y stemming nominal ligero limitado al diccionario. Las anclas reutilizan `foker_map::path`.
 - `intent`: tabla versionada y desempate fijo.
-- `bm25`: documentos de rutas y símbolos exportados, top 20 normalizado.
+- `bm25`: documentos de rutas y símbolos exportados, top 20 normalizado; corte
+  relativo opcional para experimentos.
 - `seeds` y `rank`: pesos normativos, required_context débil (0,5), PPR y razones.
   El grafo y el procedimiento numérico se comparten con el PageRank global de
   `foker-map`. El mapa construido ya aplica include y filtros de secretos.
-- `select`: reserva anclas, degrada niveles, añade contornos y contabiliza tokens.
+- `select`: reserva anclas, corta candidatos opcionales por debajo del 1 % del
+  máximo del ranking, degrada niveles, añade contornos y contabiliza tokens.
 - `render`: delimitación de datos, tipos completos mediante rangos del mapa y
   lectura segura del disco, sin volver a parsear ni inventar declaraciones.
 - `pack`: contratos Rust y JSON canónico snake_case.
@@ -77,32 +80,80 @@ mapa caliente y 20 construcciones sin caché del pack (p95 informativo, TARGET
 cargo test --release -p foker-context --test perf_large -- --ignored --nocapture
 ```
 
-## Calibración FKR-037
+## Calibración y mejora de recuperación FKR-037
 
-Los pesos y umbrales viven en `foker-context::ContextParams`; conservan los valores
-originales de §9. La API nativa admite `ContextRequest.params` opcional **interno**
-para experimentos. Sus campos omitidos usan defaults de Rust. No se expone en MCP
-ni CLI pública. Incluye pesos de ancla, menciones, BM25, dirty, alcance y skill;
-r(intent), factor tests; top BM25, k1/b; niveles L2/L0; umbral de ancla, margen y
-reserva core. Valores no finitos/fuera de rango producen FKR-INP-001.
+Todos los parámetros viven en `foker-context::ContextParams`. Los pesos de §9
+se conservan. [ADR-028](adr/ADR-028-expansion-lexica-context-engine.md) acepta la
+expansión léxica bilingüe y el corte del ranking al 1 % del máximo: amplían el
+algoritmo MVP de §9.3/9.7. Se expanden solo términos BM25; no se fabrican anclas
+ni se cambia la intención. El diccionario v1 agrupa vocabulario general y se
+versiona con el código. El stemming elimina tildes, plural y un sufijo nominal
+para comparar entradas; no transforma documentos ni añade raíces arbitrarias.
 
-Solo params efectivos distintos de los defaults aparecen en la petición JSON
-normalizada (snake_case, completos), se añaden canónicamente al pack_hash y forman
-parte de la clave de caché. Omitir params o indicar los defaults conserva los packs
-anteriores. Para calibrar core se usa `params.coreFiles` sin `coreFiles` separado;
-un `coreFiles` explícito de la API nativa prevalece por compatibilidad.
+La API nativa admite `ContextRequest.params` opcional **interno**, sin nuevos
+campos de CLI/MCP. Campos omitidos usan defaults de Rust:
+
+| Parámetro TS / Rust | Default | Efecto |
+|---|---:|---|
+| `lexicalExpansion` / `lexical_expansion` | true | Expansión es↔en v1 |
+| `bm25MinRelative` / `bm25_min_relative` | 0 | Cero conserva top 20; positivo sustituye top-k por score BM25 ≥ umbral relativo |
+| `relevanceFraction` / `relevance_fraction` | 0,01 | No-anclas con PPR < máximo × fracción quedan fuera de L1/L2 y contornos L0 |
+
+Las fracciones aceptan valores finitos en [0,1]; cero desactiva el corte.
+Las anclas siguen siendo obligatorias y core permanece estático. Los descartes
+usan `RANK_CUTOFF`, ya existente. Los demás parámetros incluyen pesos de ancla,
+menciones, dirty, alcance y skill; r(intent), factor tests; top BM25 y k1/b;
+niveles L2/L0; umbral de ancla, margen y reserva core. Valores inválidos producen
+FKR-INP-001. Un `coreFiles` explícito de la API prevalece sobre `params.coreFiles`.
+
+Solo params efectivos distintos de defaults aparecen en la petición JSON
+normalizada y participan canónicamente en hash y caché. Los tres campos nuevos
+se omiten dentro de params cuando coinciden con sus defaults; los overrides
+anteriores conservan la forma JSON anterior. **Pendiente fuera del ámbito**:
+sincronizar `spec/api/foker-core.d.ts` y el esquema estricto de context-pack para
+admitir overrides nuevos no predeterminados. Los packs normales y overrides
+antiguos conservan una forma admitida. ADR-028 documenta esta ampliación.
+
+### Resultados con 60 casos y split persistido
+
+Se midió antes/después con presupuesto 8.000. La selección usa exclusivamente
+los 30 casos `calibration`, sin reasignar splits; los 30 `validation` se evalúan
+para baseline y configuración elegida. Dataset SHA-256:
+`482dbc0a2783eb159df86f4f63a9b46c38e6b349cb9267e2fbeda2f3b7b5ec09`.
+La rejilla de ADR-028 tiene 32 combinaciones de expansión y cortes. Se maximiza
+recall sujeto a media de tokens ≤ baseline; desempate por precisión. Gana
+expansión=true, corte BM25=0 y corte ranking=0,01. No se ajusta tras validación.
+
+| Split | Configuración | Recall | Precisión | Media tokens del pack | Mediana tokens |
+|---|---|---:|---:|---:|---:|
+| calibration (30) | Antes | 0,6222 | 0,021787 | 6.655,33 | 7.541,5 |
+| calibration (30) | Después | 0,7389 | 0,052084 | 4.728,37 | 4.101 |
+| validation (30) | Antes | 0,6000 | 0,022893 | 6.650,13 | 7.546,5 |
+| validation (30) | Después | 0,7500 | 0,049178 | 5.242,50 | 7.498,5 |
+
+La cifra honesta es **0,7500 en validation**: el TARGET ≥ 0,80 sigue pendiente.
+El pack medio en validación disminuye un 21,17 %. La expansión aislada mejora
+calibración hasta 0,7389 pero aumenta ligeramente tokens; el corte de selección
+conserva recall y reduce tamaño. El corte BM25 no gana, por eso continúa top 20.
+La precisión cuenta archivos distintos a nivel ≥ L1; L0 queda fuera. Los archivos
+nuevos aún ausentes siguen contando como misses. Las tareas similares dentro de
+una fixture limitan la evidencia de generalización. Tokens corresponden al
+estimador `bytes-lf/3.2@1`, no a un tokenizer externo.
 
 ```sh
-pnpm --filter @foker/benchmarks run diagnose
-pnpm --filter @foker/benchmarks run calibrate
+./node_modules/.bin/tsc -p benchmarks/tsconfig.build.json
+cargo build --offline --release -p foker-napi
+# Linux x64 glibc: artefacto equivalente al build:native de package.json.
+cp target/release/libfoker_napi.so packages/core/foker-core.linux-x64-gnu.node
+node benchmarks/run.mjs ctx-gold benchmarks/ctx-gold/cases.jsonl 8000 /tmp/foker-ctx-after
 ```
 
-El [diagnóstico baseline](../benchmarks/reports/ctx-gold-diagnostico.md) explica cada
-miss y presupuesto. El [informe semilla 37](../benchmarks/reports/calibracion-37.md)
-contiene split estratificado por fixture (21/9), 144 configuraciones y resultado.
-La precisión cuenta únicamente archivos distintos a nivel ≥ L1; L0 del core queda
-fuera. La configuración elegida conserva recall 0,7143 en calibración y 0,6296 en
-validación; medianas antes/después 7.548/7.532 y 7.540/7.553 tokens. No mejora la
-validación: defaults y snapshots se conservan. [ADR-024](../spec/adr/ADR-024-calibracion-context-engine.md)
-rechaza el cambio y propone mejoras de recuperación sin implementarlas. El TARGET
-0,80 sigue pendiente; los 30 casos tampoco cubren el mínimo normativo de 60.
+ADR-028 incluye la rejilla completa y cómo reproducirla con `evaluateContext`,
+filtrando calibration. Los informes de la tarea se guardan en `/tmp` para respetar
+el ámbito; no se modifican benchmarks. La rejilla histórica de 144 pesos de
+`node benchmarks/run.mjs calibrate` se ejecutó sobre el baseline y no lo mejoró;
+no se usó para ajustar los nuevos cortes. [ADR-024](adr/ADR-024-calibracion-context-engine.md)
+conserva el resultado histórico negativo de 30 casos; ADR-028 registra la mejora
+actual con 60 casos. Los snapshots botón/carrito se actualizan por el nuevo
+algoritmo, y el de tarea sin señal queda idéntico. Los tests nuevos cubren
+expansión, cortes, anclas, hash/caché y 50 ejecuciones idénticas en 25 hilos.

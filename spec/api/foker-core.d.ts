@@ -208,6 +208,12 @@ export type Intent = 'fix' | 'add' | 'modify' | 'refactor' | 'test' | 'explain';
 
 /** Interno: calibración FKR-037; no se expone en CLI/MCP. */
 export interface ContextParams {
+  /** ADR-028: expansión léxica es/en v1. */
+  lexicalExpansion?: boolean;
+  /** ADR-028: corte relativo BM25 en [0, 1]. */
+  bm25MinRelative?: number;
+  /** ADR-028: corte relativo del ranking en [0, 1]. */
+  relevanceFraction?: number;
   wAnchor?: number;
   mentionFactor?: number;
   wLex?: number;

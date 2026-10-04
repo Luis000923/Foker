@@ -352,6 +352,12 @@ pub struct ContextTaskScope {
 /// Parámetros internos de calibración (sin CLI/MCP).
 #[napi(object)]
 pub struct ContextParams {
+    /// Interno: expansión léxica es/en v1.
+    pub lexical_expansion: Option<bool>,
+    /// Interno: corte relativo BM25.
+    pub bm25_min_relative: Option<f64>,
+    /// Interno: corte relativo del ranking opcional.
+    pub relevance_fraction: Option<f64>,
     /// Interno: w_anchor.
     pub w_anchor: Option<f64>,
     /// Interno: mention_factor.
@@ -404,6 +410,15 @@ impl TryFrom<ContextParams> for foker_context::ContextParams {
     fn try_from(value: ContextParams) -> Result<Self, Self::Error> {
         let defaults = Self::default();
         Self {
+            lexical_expansion: value
+                .lexical_expansion
+                .unwrap_or(defaults.lexical_expansion),
+            bm25_min_relative: value
+                .bm25_min_relative
+                .unwrap_or(defaults.bm25_min_relative),
+            relevance_fraction: value
+                .relevance_fraction
+                .unwrap_or(defaults.relevance_fraction),
             w_anchor: value.w_anchor.unwrap_or(defaults.w_anchor),
             mention_factor: value.mention_factor.unwrap_or(defaults.mention_factor),
             w_lex: value.w_lex.unwrap_or(defaults.w_lex),

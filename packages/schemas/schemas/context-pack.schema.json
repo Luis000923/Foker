@@ -147,6 +147,22 @@
             "bm25_b"
           ],
           "properties": {
+            "lexical_expansion": {
+              "description": "Interno: expansión léxica es/en v1 (ADR-028); solo presente si difiere del default.",
+              "type": "boolean"
+            },
+            "bm25_min_relative": {
+              "description": "Interno: corte relativo BM25 (ADR-028); solo presente si difiere del default.",
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "relevance_fraction": {
+              "description": "Interno: corte relativo del ranking (ADR-028); solo presente si difiere del default.",
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
             "w_anchor": {
               "type": "number",
               "minimum": 0,

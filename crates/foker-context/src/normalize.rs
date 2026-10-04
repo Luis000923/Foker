@@ -204,3 +204,70 @@ mod tests {
         assert!(request(&r, &ContextInputs::default()).is_err());
     }
 }
+
+/// Diccionario determinista v1: expande solo términos, nunca anclas ni intención.
+pub const LEXICON_V1: &str = include_str!("../data/lexicon-es-en-v1.tsv");
+
+/// Plurales y sufijos nominales españoles; se aplican solo al buscar el diccionario.
+fn spanish_root(term: &str) -> String {
+    let plain: String = term
+        .nfd()
+        .filter(|c| !unicode_normalization::char::is_combining_mark(*c))
+        .collect();
+    let singular = if plain.ends_with("es") && !plain.ends_with("ces") {
+        plain.strip_suffix("es").unwrap_or(&plain)
+    } else {
+        plain.strip_suffix('s').unwrap_or(&plain)
+    };
+    for suffix in ["acion", "amiento", "idad", "o", "a"] {
+        if let Some(root) = singular.strip_suffix(suffix)
+            && root.chars().count() >= 4
+        {
+            return root.to_owned();
+        }
+    }
+    singular.to_owned()
+}
+
+/// Conserva multiplicidad original y añade cada alternativa una sola vez.
+pub fn expand_terms(terms: &[String]) -> Vec<String> {
+    let mut additions = BTreeSet::new();
+    for line in LEXICON_V1.lines().filter(|line| !line.starts_with('#')) {
+        let group: Vec<_> = line.split_whitespace().collect();
+        if terms.iter().any(|term| {
+            group
+                .iter()
+                .any(|entry| *entry == term || spanish_root(entry) == spanish_root(term))
+        }) {
+            additions.extend(group.into_iter().map(str::to_owned));
+        }
+    }
+    for term in terms {
+        additions.remove(term);
+    }
+    let mut expanded = terms.to_vec();
+    expanded.extend(additions);
+    expanded.sort();
+    expanded
+}
+
+#[cfg(test)]
+mod expansion_tests {
+    use super::*;
+    #[test]
+    fn expansion_bilingue_plural_acentos_y_multiplicidad() {
+        let es = expand_terms(&tokenize("usuarios autenticación precios").terms);
+        for term in ["user", "authentication", "auth", "price"] {
+            assert!(es.contains(&term.into()));
+        }
+        assert!(expand_terms(&["user".into()]).contains(&"usuario".into()));
+        assert_eq!(expand_terms(&["inexistente".into()]), ["inexistente"]);
+        let repeated = expand_terms(&["carrito".into(), "carrito".into()]);
+        assert_eq!(repeated.iter().filter(|t| *t == "carrito").count(), 2);
+        assert_eq!(repeated.iter().filter(|t| *t == "cart").count(), 1);
+        assert_eq!(
+            repeated,
+            expand_terms(&["carrito".into(), "carrito".into()])
+        );
+    }
+}

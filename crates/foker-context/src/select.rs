@@ -186,7 +186,12 @@ pub fn select(
     let mut related = String::new();
     let mut omitted = BTreeMap::new();
     let mut included: BTreeSet<_> = selected.iter().map(|f| f.id.clone()).collect();
+    let maximum = ranked.first().map_or(0.0, |c| c.score);
     for (position, candidate) in ranked.iter().filter(|c| !c.anchor).enumerate() {
+        if below_relevance(candidate.score, maximum, params.relevance_fraction) {
+            omitted.insert(candidate.id.clone(), "RANK_CUTOFF");
+            continue;
+        }
         let levels = if position < params.l2_count {
             vec![RenderLevel::L2, RenderLevel::L1]
         } else {
@@ -216,6 +221,9 @@ pub fn select(
     if capacity.saturating_sub(used) > (budget as f64 * params.l0_min_fraction).floor() as usize {
         let mut outlines = 0;
         for candidate in ranked.iter().filter(|c| !included.contains(&c.id)) {
+            if below_relevance(candidate.score, maximum, params.relevance_fraction) {
+                continue;
+            }
             if outlines == params.l0_count {
                 break;
             }
@@ -278,5 +286,22 @@ mod tests {
         assert_eq!(estimate_tokens("éé"), 2);
         assert_eq!(estimate_tokens("a\r\nb"), estimate_tokens("a\nb"));
         assert_eq!(estimate_tokens("1234567890123456"), 5);
+    }
+}
+
+/// Corte inclusivo; un máximo nulo no elimina candidatos.
+fn below_relevance(score: f64, maximum: f64, fraction: f64) -> bool {
+    fraction > 0.0 && maximum > 0.0 && score < maximum * fraction
+}
+
+#[cfg(test)]
+mod relevance_tests {
+    use super::*;
+    #[test]
+    fn corte_relativo_inclusivo_y_desactivable() {
+        assert!(!below_relevance(0.2, 1.0, 0.2));
+        assert!(below_relevance(0.19, 1.0, 0.2));
+        assert!(!below_relevance(0.0, 1.0, 0.0));
+        assert!(!below_relevance(0.0, 0.0, 0.2));
     }
 }

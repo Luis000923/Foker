@@ -125,13 +125,59 @@ impl Bm25 {
                 hit.score /= max;
             }
         }
-        hits.truncate(params.bm25_top);
+        if params.bm25_min_relative > 0.0 {
+            hits.retain(|hit| hit.score >= params.bm25_min_relative);
+        } else {
+            hits.truncate(params.bm25_top);
+        }
         hits
     }
 }
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn corte_relativo_supera_top_k_y_excluye_cola_debil() {
+        let index = Bm25 {
+            documents: vec![
+                Document {
+                    id: "a".into(),
+                    terms: BTreeMap::from([("cart".into(), 2)]),
+                    len: 2,
+                },
+                Document {
+                    id: "b".into(),
+                    terms: BTreeMap::from([("cart".into(), 2)]),
+                    len: 2,
+                },
+                Document {
+                    id: "c".into(),
+                    terms: BTreeMap::from([("cart".into(), 1)]),
+                    len: 100,
+                },
+            ],
+            frequencies: BTreeMap::from([("cart".into(), 3)]),
+            average: 34.0,
+        };
+        let mut params = crate::ContextParams {
+            bm25_top: 1,
+            ..Default::default()
+        };
+        assert_eq!(index.search_with_params(&["cart".into()], &params).len(), 1);
+        params.bm25_min_relative = 0.5;
+        let hits = index.search_with_params(&["cart".into()], &params);
+        assert_eq!(
+            hits.iter().map(|h| h.id.as_str()).collect::<Vec<_>>(),
+            ["a", "b"]
+        );
+        params.bm25_min_relative = 1.0;
+        assert_eq!(index.search_with_params(&["cart".into()], &params).len(), 2);
+        assert!(
+            index
+                .search_with_params(&["missing".into()], &params)
+                .is_empty()
+        );
+    }
     #[test]
     fn known_query_normalization_and_ties() {
         let index = Bm25 {

@@ -1,6 +1,6 @@
 # ADR-024 · Calibración del Context Engine con ctx-gold
 
-- **Estado**: Rechazada (cambio de defaults)
+- **Estado**: Rechazada (rejilla histórica de pesos); propuestas léxicas implementadas en ADR-028
 - **Fecha**: 2026-10-04
 - **Issue**: FKR-037
 
@@ -64,7 +64,18 @@ no se alcanza con esta búsqueda. La mínima mejora de precisión en calibració
 no justifica cambiar el comportamiento público. Se conservan la instrumentación,
 los parámetros internos y los informes reproducibles para futuros experimentos.
 
-## Propuestas de algoritmo (sin implementar)
+## Seguimiento 2026-10-04
+
+[ADR-028](ADR-028-expansion-lexica-context-engine.md) implementa expansión es/en
+versionada y cortes relativos centralizados en ContextParams. Con 60 casos y
+splits persistidos (30/30), la configuración elegida solo con calibration mejora
+validation de 0,6000 a 0,7500, y reduce la media de 6.650,13 a 5.242,50 tokens.
+El objetivo 0,80 sigue pendiente. Se acepta expansión y corte del ranking al 1 %;
+se conserva top 20 porque el corte BM25 no gana. Las cifras de 30 casos que siguen
+son históricas y no describen los defaults nuevos. ADR-028 documenta contratos,
+rejilla, snapshots y la sincronización normativa pendiente fuera del ámbito.
+
+## Propuestas de algoritmo (seguimiento en ADR-028)
 
 - Investigar expansión léxica versionada español/inglés o anotaciones de dominio
   independientes del gold para tareas sin ruta/símbolo: sus archivos objetivo

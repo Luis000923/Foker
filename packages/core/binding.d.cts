@@ -95,6 +95,12 @@ export interface ContextPack {
 
 /** Parámetros internos de calibración (sin CLI/MCP). */
 export interface ContextParams {
+  /** Interno: expansión léxica es/en v1. */
+  lexicalExpansion?: boolean
+  /** Interno: corte relativo BM25. */
+  bm25MinRelative?: number
+  /** Interno: corte relativo del ranking opcional. */
+  relevanceFraction?: number
   /** Interno: w_anchor. */
   wAnchor?: number
   /** Interno: mention_factor. */
