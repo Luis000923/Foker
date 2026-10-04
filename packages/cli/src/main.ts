@@ -15,7 +15,27 @@ export interface IO {
 const version = (createRequire(import.meta.url)('../package.json') as { version: string }).version;
 export async function main(argv: string[], env: NodeJS.ProcessEnv, io: IO): Promise<number> {
   const start = performance.now();
-  let commandName = 'foker';
+  // Reconocer el primer posicional sin depender de que parseArgs acepte todos los flags.
+  const stringFlags = new Set(
+    [...globalFlags, ...commands.flatMap((c) => c.flags)]
+      .filter((f) => f.type !== 'boolean')
+      .flatMap((f) => [`--${f.name}`, ...(f.short ? [`-${f.short}`] : [])]),
+  );
+  let firstPositional: string | undefined;
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i] as string;
+    if (arg === '--') {
+      firstPositional = argv[i + 1];
+      break;
+    }
+    if (!arg.startsWith('-')) {
+      firstPositional = arg;
+      break;
+    }
+    if (stringFlags.has(arg) && argv[i + 1] && !argv[i + 1]?.startsWith('-')) i++;
+  }
+  const mcpMode = firstPositional === 'mcp';
+  let commandName = mcpMode ? 'mcp' : 'foker';
   let json = argv.includes('--json');
   let ci = env['CI'] === 'true' || argv.includes('--ci');
   let debug = argv.includes('--debug');
@@ -94,9 +114,16 @@ export async function main(argv: string[], env: NodeJS.ProcessEnv, io: IO): Prom
           : new FokerError('FKR-INT-001', error instanceof Error ? error.message : String(error));
     result.exitCode = errorCode(failure.code)?.exit ?? 10;
     errors.push({ code: failure.code, message: failure.message });
-    if (debug) io.stderr(`${failure.stack ?? failure.message}\n`);
+    if (debug && !mcpMode) io.stderr(`${failure.stack ?? failure.message}\n`);
   }
   const duration = Math.max(0, Math.round(performance.now() - start));
+  if (mcpMode && (errors.length || (!argv.includes('--help') && !argv.includes('-h') && !argv.includes('--version')))) {
+    for (const error of errors)
+      io.stderr(
+        `${JSON.stringify({ ts: new Date().toISOString(), level: 'error', event: 'startup', code: error.code, message: error.message })}\n`,
+      );
+    return result.exitCode;
+  }
   if (json || result.json || (ci && errors.length > 0))
     io.stdout(
       `${JSON.stringify({ schema: 'foker.cli/v1', command: commandName, ok: result.exitCode === 0, exit_code: result.exitCode, data: result.data, warnings: result.warnings, errors, duration_ms: duration })}\n`,
