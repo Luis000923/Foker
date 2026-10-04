@@ -57,3 +57,18 @@ Cada bug corregido añade un caso de regresión.
 
 `benchmark.yml` llega con su issue (FOKER-SPEC §21.2). Todas las
 Actions se fijan por SHA y cada job tiene permisos mínimos.
+
+## Documentación (§23)
+
+| Área | Documentos |
+|---|---|
+| Entrada | [README](README.md), [primeros pasos](docs/getting-started.md), esta guía |
+| Diseño | [Arquitectura](docs/architecture.md), [mapa](docs/project-map.md), [contexto](docs/context-engine.md), [ADRs](docs/adr/README.md) |
+| Desarrollo y calidad | [Desarrollo](docs/development.md), [tests](docs/testing.md), [benchmark](docs/benchmark.md), [roadmap](docs/roadmap.md) |
+| Uso | [Agentes](docs/agents.md), [tareas](docs/tasks.md), [skills](docs/skills.md), [MCP](docs/mcp.md), [integraciones](docs/integrations/README.md), [verificación](docs/integrations/verification.md), [plantillas](docs/templates.md) |
+| Seguridad | [Divulgación](SECURITY.md), [seguridad](docs/security.md), [trust/checks](docs/config-trust-exec.md), [secretos](docs/findings-secrets.md) |
+| Referencias generadas | [CLI](docs/cli.md): test docs.test.ts de CLI; [configuración](docs/configuration.md): `node packages/schemas/scripts/generate.mjs` o test docs.test.ts de schemas con UPDATE_SNAPSHOTS=1 |
+
+REQ-DOC-001: CI comprueba ambas referencias; consulta [testing.md](docs/testing.md) antes de
+regenerar. Documenta pendientes con su issue; no presentes la especificación como comportamiento
+implementado ni edites a mano archivos generados.

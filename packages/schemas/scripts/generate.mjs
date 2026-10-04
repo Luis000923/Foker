@@ -6,6 +6,7 @@
 // Con --check no escribe: sale con código 1 si algún archivo generado está desactualizado.
 
 import { readFileSync, writeFileSync } from 'node:fs';
+import './gen-config-docs.mjs';
 import { compile } from 'json-schema-to-typescript';
 
 const pkgDir = new URL('../', import.meta.url);
