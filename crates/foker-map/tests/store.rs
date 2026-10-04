@@ -160,3 +160,46 @@ fn parse_cache_roundtrip_and_reuse() {
     fs::write(dir.path().join(".foker/cache/parse-cache.json"), b"basura").unwrap();
     assert!(load_parse_cache(dir.path()).entries.is_empty());
 }
+
+#[test]
+fn read_only_preserves_corrupt_map_and_rejects_save() {
+    use foker_map::engine::{EngineError, MapEngine, OpenMode, RefreshOptions};
+    use foker_map::store::load_map_read_only;
+
+    let dir = tempfile::tempdir().unwrap();
+    project(dir.path());
+    fs::create_dir(dir.path().join(".foker")).unwrap();
+    let corrupt = b"{ no es json";
+    fs::write(dir.path().join(MAP_FILE), corrupt).unwrap();
+    let entries = || {
+        let mut names: Vec<_> = fs::read_dir(dir.path().join(".foker"))
+            .unwrap()
+            .map(|entry| entry.unwrap().file_name())
+            .collect();
+        names.sort();
+        names
+    };
+    let before = entries();
+    assert!(matches!(
+        load_map_read_only(dir.path()),
+        Loaded::Corrupt { moved_to: None, .. }
+    ));
+    let mut engine =
+        MapEngine::open_with(dir.path(), MapConfig::default(), OpenMode::ReadOnly).unwrap();
+    assert_eq!(engine.load_diagnostics[0].code, "FKR-MAP-005");
+    assert_eq!(engine.load_diagnostics[0].subject, None);
+    // Rechaza save incluso sin un mapa en memoria, antes de tocar disco.
+    for refreshed in [false, true] {
+        if refreshed {
+            engine.refresh(&RefreshOptions::default()).unwrap();
+        }
+        assert!(matches!(
+            engine.save(),
+            Err(EngineError::Store(StoreError::Write { message, .. }))
+                if message == "motor abierto en modo solo lectura"
+        ));
+        assert_eq!(fs::read(dir.path().join(MAP_FILE)).unwrap(), corrupt);
+        assert_eq!(entries(), before);
+        assert!(!dir.path().join(".foker/cache").exists());
+    }
+}

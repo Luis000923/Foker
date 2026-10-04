@@ -11,7 +11,8 @@ use crate::config::MapConfig;
 use crate::discover::{Discovery, discover};
 use crate::model::{MapDiagnostic, ProjectMap};
 use crate::store::{
-    Loaded, MapLock, SaveReport, StoreError, load_map, load_parse_cache, save_map, save_parse_cache,
+    Loaded, MapLock, SaveReport, StoreError, load_map, load_map_read_only, load_parse_cache,
+    save_map, save_parse_cache,
 };
 
 /// Opciones de refresco.
@@ -90,10 +91,20 @@ fn fingerprint(discovery: &Discovery) -> Fingerprint {
         .collect()
 }
 
+/// Permisos de persistencia del motor.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OpenMode {
+    /// Recupera mapas corruptos y permite guardar.
+    ReadWrite,
+    /// Solo lee el disco; refresca únicamente en memoria.
+    ReadOnly,
+}
+
 /// Motor de un root.
 pub struct MapEngine {
     root: PathBuf,
     config: MapConfig,
+    mode: OpenMode,
     cache: ParseCache,
     /// Mapa cargado del disco (antes del primer refresco) o construido.
     map: Option<ProjectMap>,
@@ -108,6 +119,11 @@ pub struct MapEngine {
 impl MapEngine {
     /// Abre el motor: carga el mapa persistido si es válido y la caché de parseo.
     pub fn open(root: &Path, config: MapConfig) -> Result<Self, EngineError> {
+        Self::open_with(root, config, OpenMode::ReadWrite)
+    }
+
+    /// Abre el motor con permisos explícitos de persistencia.
+    pub fn open_with(root: &Path, config: MapConfig, mode: OpenMode) -> Result<Self, EngineError> {
         let root = std::fs::canonicalize(root).map_err(|e| BuildError::Root {
             path: root.display().to_string(),
             message: e.to_string(),
@@ -120,7 +136,11 @@ impl MapEngine {
             .into());
         }
         let mut load_diagnostics = Vec::new();
-        let map = match load_map(&root) {
+        let loaded = match mode {
+            OpenMode::ReadWrite => load_map(&root),
+            OpenMode::ReadOnly => load_map_read_only(&root),
+        };
+        let map = match loaded {
             Loaded::Valid(map) => Some(*map),
             Loaded::Missing => None,
             Loaded::Corrupt { reason, moved_to } => {
@@ -137,6 +157,7 @@ impl MapEngine {
             cache: load_parse_cache(&root),
             root,
             config,
+            mode,
             map,
             state: None,
             fingerprint: Fingerprint::new(),
@@ -299,6 +320,13 @@ impl MapEngine {
 
     /// Guarda el mapa y la caché de parseo bajo el lock del root.
     pub fn save(&mut self) -> Result<SaveReport, EngineError> {
+        if self.mode == OpenMode::ReadOnly {
+            return Err(StoreError::Write {
+                path: crate::store::MAP_FILE.into(),
+                message: "motor abierto en modo solo lectura".into(),
+            }
+            .into());
+        }
         let map = self.map().cloned().ok_or_else(|| StoreError::Write {
             path: crate::store::MAP_FILE.into(),
             message: "no hay mapa: ejecuta refresh antes de save".into(),

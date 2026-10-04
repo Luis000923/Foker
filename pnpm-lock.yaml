@@ -23,6 +23,12 @@ importers:
 
   packages/cli:
     dependencies:
+      '@foker/core':
+        specifier: workspace:*
+        version: link:../core
+      '@foker/schemas':
+        specifier: workspace:*
+        version: link:../schemas
       '@foker/engine':
         specifier: workspace:*
         version: link:../engine

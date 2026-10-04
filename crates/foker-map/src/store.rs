@@ -183,6 +183,15 @@ fn corrupt_name() -> String {
 
 /// Carga `.foker/project-map.json`. Un archivo inválido se aparta a `.foker/cache/`.
 pub fn load_map(root: &Path) -> Loaded {
+    load_map_with(root, true)
+}
+
+/// Valida el mapa sin apartar archivos corruptos ni crear directorios.
+pub fn load_map_read_only(root: &Path) -> Loaded {
+    load_map_with(root, false)
+}
+
+fn load_map_with(root: &Path, move_corrupt: bool) -> Loaded {
     let path = root.join(MAP_FILE);
     let bytes = match fs::read(&path) {
         Ok(bytes) => bytes,
@@ -200,6 +209,12 @@ pub fn load_map(root: &Path) -> Loaded {
     match parsed {
         Ok(map) => Loaded::Valid(Box::new(map)),
         Err(reason) => {
+            if !move_corrupt {
+                return Loaded::Corrupt {
+                    reason,
+                    moved_to: None,
+                };
+            }
             let target = corrupt_name();
             let moved = fs::create_dir_all(root.join(".foker/cache"))
                 .and_then(|()| fs::rename(&path, root.join(&target)))

@@ -21,6 +21,10 @@ la reconstrucción inicial (ADR-019); esta decisión actualiza el resumen de FOK
 - Los campos de `EngineConfig` son opcionales, incluidos los globs de `kinds`. Los valores omitidos
   toman los defaults definidos en Rust (`MapConfig::default()` y `KindGlobs::defaults()`), sin
   duplicarlos en TypeScript. `FokerEngine.open` admite omitir la configuración.
+- Se añade `EngineConfig.readOnly?: boolean` (por defecto `false`) para cumplir FOKER-SPEC
+  §16.5 en `map --check` y `map --dry-run`: valida sin apartar mapas corruptos, refresca en
+  memoria y no guarda la caché de parseo. `save()` falla con `StoreError::Write` y el mensaje
+  "motor abierto en modo solo lectura" antes de crear archivos o adquirir el lock.
 - Se elimina `EngineConfig.context`: la configuración de contexto pertenece a `buildContext` y
   se concretará en FKR-033 y posteriores, sin anticipar ahora su contrato.
 - Se elimina `RefreshOptions.paths`. El refresco incremental compara tamaño y mtime de todo el
