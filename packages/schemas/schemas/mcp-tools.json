@@ -1,0 +1,596 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://foker.dev/schemas/mcp-tools/v1.json",
+  "title": "Herramientas MCP de Foker",
+  "description": "Definición de las 8 herramientas del servidor MCP (FOKER-SPEC §10.3), en orden alfabético. inputSchema y outputSchema se publican autocontenidos tras resolver sus $ref.",
+  "foker_mcp_api": 1,
+  "tools": [
+    {
+      "name": "foker_check",
+      "title": "Ejecutar checks",
+      "description": "Ejecuta un perfil de validación del proyecto (typecheck, lint, test, secrets…) y devuelve hallazgos estructurados. No cambia el estado de ninguna tarea. Úsalo para feedback rápido antes de foker_task_submit.",
+      "inputSchema": {
+        "title": "FokerCheckInput",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "profile": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{0,63}$",
+            "default": "quick"
+          },
+          "checks": {
+            "type": "array",
+            "maxItems": 20,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]{0,63}$"
+            }
+          },
+          "packages": {
+            "type": "array",
+            "maxItems": 50,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "pattern": "^[@a-z0-9][\\w.\\-/@]*$"
+            }
+          }
+        }
+      },
+      "outputSchema": {
+        "title": "FokerCheckOutput",
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["ok", "results"],
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "../common/v1.json#/$defs/checkResult"
+            }
+          },
+          "diagnostics": {
+            "$ref": "#/$defs/diagnostics"
+          }
+        }
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false
+      },
+      "timeout_s": 600
+    },
+    {
+      "name": "foker_context",
+      "title": "Contexto para una tarea",
+      "description": "Devuelve el contexto mínimo suficiente para una tarea: reglas del proyecto, núcleo, skill, firmas de dependencias y contenido de los archivos objetivo, con la razón de cada inclusión. Pasa anclas (archivos o símbolos) si las conoces.",
+      "inputSchema": {
+        "title": "FokerContextInput",
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["task"],
+        "properties": {
+          "task": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          },
+          "anchors": {
+            "$ref": "../context-pack/v1.json#/$defs/anchors"
+          },
+          "intent": {
+            "$ref": "../context-pack/v1.json#/$defs/intent"
+          },
+          "budget_tokens": {
+            "type": "integer",
+            "minimum": 1000,
+            "maximum": 20000
+          },
+          "skill": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+            "maxLength": 64
+          },
+          "task_id": {
+            "$ref": "../common/v1.json#/$defs/taskId"
+          },
+          "dirty_files": {
+            "type": "boolean",
+            "default": true
+          },
+          "explain": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "outputSchema": {
+        "title": "FokerContextOutput",
+        "$ref": "../context-pack/v1.json"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "timeout_s": 30
+    },
+    {
+      "name": "foker_impact",
+      "title": "Radio de impacto",
+      "description": "Lista qué archivos, paquetes y tests dependen de los archivos o símbolos dados (o de qué dependen), hasta una profundidad de 3.",
+      "inputSchema": {
+        "title": "FokerImpactInput",
+        "type": "object",
+        "additionalProperties": false,
+        "anyOf": [
+          {
+            "required": ["files"]
+          },
+          {
+            "required": ["symbols"]
+          }
+        ],
+        "properties": {
+          "files": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 20,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096
+            }
+          },
+          "symbols": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 20,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1024
+            }
+          },
+          "direction": {
+            "enum": ["dependents", "dependencies", "both"],
+            "default": "dependents"
+          },
+          "depth": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 3,
+            "default": 2
+          }
+        }
+      },
+      "outputSchema": {
+        "title": "FokerImpactOutput",
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["nodes", "packages", "tests"],
+        "properties": {
+          "nodes": {
+            "description": "Ordenados por distancia e id.",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["id", "distance", "via", "kind"],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "distance": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 3
+                },
+                "via": {
+                  "description": "Tipo de arista por la que se llegó; null para el origen.",
+                  "type": ["string", "null"]
+                },
+                "kind": {
+                  "enum": ["file", "symbol", "package"]
+                }
+              }
+            }
+          },
+          "packages": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "tests": {
+            "type": "array",
+            "items": {
+              "$ref": "../common/v1.json#/$defs/fileId"
+            }
+          },
+          "diagnostics": {
+            "$ref": "#/$defs/diagnostics"
+          }
+        }
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "timeout_s": 10
+    },
+    {
+      "name": "foker_search",
+      "title": "Buscar archivos y símbolos",
+      "description": "Busca archivos y símbolos del proyecto por nombre o ruta usando el Project Map (sin leer archivos).",
+      "inputSchema": {
+        "title": "FokerSearchInput",
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["query"],
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "kind": {
+            "enum": ["file", "symbol", "any"],
+            "default": "any"
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50,
+            "default": 20
+          }
+        }
+      },
+      "outputSchema": {
+        "title": "FokerSearchOutput",
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["hits"],
+        "properties": {
+          "hits": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["id", "kind", "name", "file", "score"],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "kind": {
+                  "enum": ["file", "symbol"]
+                },
+                "name": {
+                  "type": "string"
+                },
+                "file": {
+                  "$ref": "../common/v1.json#/$defs/fileId"
+                },
+                "signature": {
+                  "type": "string"
+                },
+                "score": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              }
+            }
+          },
+          "diagnostics": {
+            "$ref": "#/$defs/diagnostics"
+          }
+        }
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "timeout_s": 10
+    },
+    {
+      "name": "foker_status",
+      "title": "Estado de Foker",
+      "description": "Versión de Foker, estado del Project Map, perfiles de validación disponibles, confianza del workspace y tareas activas.",
+      "inputSchema": {
+        "title": "FokerStatusInput",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "title": "FokerStatusOutput",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "foker_version",
+          "foker_mcp_api",
+          "protocol",
+          "root_name",
+          "map",
+          "profiles",
+          "active_tasks",
+          "trust"
+        ],
+        "properties": {
+          "foker_version": {
+            "$ref": "../common/v1.json#/$defs/semver"
+          },
+          "foker_mcp_api": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "protocol": {
+            "description": "Revisión MCP negociada.",
+            "type": "string"
+          },
+          "root_name": {
+            "description": "Nombre del directorio raíz (nunca la ruta absoluta).",
+            "type": "string"
+          },
+          "map": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["content_hash", "files", "symbols", "stale_files", "schema_version"],
+            "properties": {
+              "content_hash": {
+                "$ref": "../common/v1.json#/$defs/hash"
+              },
+              "files": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "symbols": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "stale_files": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "schema_version": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          },
+          "profiles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "active_tasks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["task_id", "state"],
+              "properties": {
+                "task_id": {
+                  "$ref": "../common/v1.json#/$defs/taskId"
+                },
+                "state": {
+                  "$ref": "../task/v1.json#/$defs/state"
+                }
+              }
+            }
+          },
+          "trust": {
+            "enum": ["trusted", "untrusted"]
+          },
+          "diagnostics": {
+            "$ref": "#/$defs/diagnostics"
+          }
+        }
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "timeout_s": 30
+    },
+    {
+      "name": "foker_task_begin",
+      "title": "Empezar tarea",
+      "description": "Crea una tarea con alcance (globs de rutas que podrás modificar) y perfil de validación. Devuelve task_id, que debes pasar a foker_context y foker_task_submit. Las tareas inactivas 4 h pasan a BLOCKED.",
+      "inputSchema": {
+        "title": "FokerTaskBeginInput",
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["description", "scope"],
+        "properties": {
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "scope": {
+            "$ref": "../task/v1.json#/$defs/scope"
+          },
+          "profile": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{0,63}$",
+            "default": "default"
+          },
+          "skill": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+            "maxLength": 64
+          },
+          "max_attempts": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5,
+            "default": 3
+          },
+          "client_token": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          }
+        }
+      },
+      "outputSchema": {
+        "title": "FokerTaskBeginOutput",
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["task_id", "state", "attempt", "baseline", "allowed_paths", "protected_paths_in_scope", "checks"],
+        "properties": {
+          "task_id": {
+            "$ref": "../common/v1.json#/$defs/taskId"
+          },
+          "state": {
+            "const": "RUNNING"
+          },
+          "attempt": {
+            "const": 1
+          },
+          "baseline": {
+            "$ref": "../task/v1.json#/$defs/baseline"
+          },
+          "allowed_paths": {
+            "type": "array",
+            "items": {
+              "$ref": "../common/v1.json#/$defs/glob"
+            }
+          },
+          "protected_paths_in_scope": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "checks": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "diagnostics": {
+            "$ref": "#/$defs/diagnostics"
+          }
+        }
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false
+      },
+      "timeout_s": 30
+    },
+    {
+      "name": "foker_task_get",
+      "title": "Consultar tarea",
+      "description": "Devuelve estado, intentos, últimos hallazgos de validación y siguiente acción de una tarea.",
+      "inputSchema": {
+        "title": "FokerTaskGetInput",
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["task_id"],
+        "properties": {
+          "task_id": {
+            "$ref": "../common/v1.json#/$defs/taskId"
+          }
+        }
+      },
+      "outputSchema": {
+        "title": "FokerTaskGetOutput",
+        "$ref": "../task/v1.json"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "timeout_s": 5
+    },
+    {
+      "name": "foker_task_submit",
+      "title": "Enviar tarea a validación",
+      "description": "Declara terminado el intento actual y ejecuta los gates deterministas (alcance, política, mapa, checks, skill). Solo Foker decide si la tarea queda COMPLETED. Si el resultado es REJECTED, corrige los hallazgos y vuelve a llamar.",
+      "inputSchema": {
+        "title": "FokerTaskSubmitInput",
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["task_id"],
+        "properties": {
+          "task_id": {
+            "$ref": "../common/v1.json#/$defs/taskId"
+          },
+          "summary": {
+            "type": "string",
+            "maxLength": 2000
+          }
+        }
+      },
+      "outputSchema": {
+        "title": "FokerTaskSubmitOutput",
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["task_id", "state", "attempt", "gates", "evidence", "next_action"],
+        "properties": {
+          "task_id": {
+            "$ref": "../common/v1.json#/$defs/taskId"
+          },
+          "state": {
+            "$ref": "../task/v1.json#/$defs/state"
+          },
+          "attempt": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5
+          },
+          "gates": {
+            "type": "array",
+            "items": {
+              "$ref": "../common/v1.json#/$defs/gateResult"
+            }
+          },
+          "evidence": {
+            "description": "Ruta relativa al root del evidence.json.",
+            "type": "string",
+            "pattern": "^\\.foker/runs/tsk_[0-9A-HJKMNP-TV-Z]{26}/[1-5]/evidence\\.json$"
+          },
+          "next_action": {
+            "enum": ["done", "fix_and_resubmit", "await_human_approval", "blocked_contact_human", "failed"]
+          },
+          "diagnostics": {
+            "$ref": "#/$defs/diagnostics"
+          }
+        }
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false
+      },
+      "timeout_s": 600
+    }
+  ],
+  "$defs": {
+    "diagnostics": {
+      "description": "Avisos no fatales, p. ej. salida truncada a 80.000 caracteres (FOKER-SPEC §10.5).",
+      "type": "array",
+      "items": {
+        "$ref": "../common/v1.json#/$defs/diagnostic"
+      }
+    }
+  }
+}

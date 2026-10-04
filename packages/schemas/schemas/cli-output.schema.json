@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://foker.dev/schemas/cli-output/v1.json",
+  "title": "Salida --json de la CLI de Foker",
+  "description": "Sobre único para todos los comandos (FOKER-SPEC §16.3). 'data' es específico de cada comando y se documenta en docs/cli.md (generado).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "command", "ok", "data", "warnings", "errors", "duration_ms"],
+  "properties": {
+    "schema": { "const": "foker.cli/v1" },
+    "command": { "description": "Comando y subcomando, p. ej. map o task submit.", "type": "string", "minLength": 1 },
+    "ok": { "type": "boolean" },
+    "exit_code": { "description": "FOKER-SPEC §16.4.", "enum": [0, 1, 2, 3, 4, 5, 6, 7, 10] },
+    "data": {},
+    "warnings": { "type": "array", "items": { "$ref": "../common/v1.json#/$defs/message" } },
+    "errors": { "type": "array", "items": { "$ref": "../common/v1.json#/$defs/message" } },
+    "duration_ms": { "type": "integer", "minimum": 0 }
+  }
+}

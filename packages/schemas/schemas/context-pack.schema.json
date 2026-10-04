@@ -1,0 +1,155 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://foker.dev/schemas/context-pack/v1.json",
+  "title": "Foker Context Pack",
+  "description": "Salida determinista del Context Engine (FOKER-SPEC §9). Las claves usan snake_case en JSON; la API nativa expone camelCase.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "pack_version",
+    "pack_hash",
+    "map_hash",
+    "request",
+    "intent",
+    "intent_source",
+    "budget",
+    "sections",
+    "files",
+    "excluded",
+    "diagnostics"
+  ],
+  "properties": {
+    "pack_version": { "const": 1 },
+    "pack_hash": { "description": "BLAKE3 de rendered + files canónicos.", "$ref": "../common/v1.json#/$defs/hash" },
+    "map_hash": { "description": "content_hash del Project Map usado.", "$ref": "../common/v1.json#/$defs/hash" },
+    "request": { "$ref": "#/$defs/request" },
+    "intent": { "$ref": "#/$defs/intent" },
+    "intent_source": { "enum": ["request", "inferred"] },
+    "budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["limit", "used", "estimator"],
+      "properties": {
+        "limit": { "type": "integer", "minimum": 1 },
+        "used": { "type": "integer", "minimum": 0 },
+        "estimator": {
+          "description": "Identificador versionado del estimador de tokens, p. ej. bytes-lf/3.2@1.",
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "sections": {
+      "description": "Secciones en orden de renderizado, estable → dinámico (FOKER-SPEC §9.8).",
+      "type": "array",
+      "items": { "$ref": "#/$defs/section" }
+    },
+    "files": { "type": "array", "items": { "$ref": "#/$defs/packFile" } },
+    "excluded": {
+      "description": "Siguientes candidatos descartados (máx. 20), para depuración.",
+      "type": "array",
+      "maxItems": 20,
+      "items": { "$ref": "#/$defs/excludedFile" }
+    },
+    "diagnostics": { "type": "array", "items": { "$ref": "../common/v1.json#/$defs/diagnostic" } },
+    "rendered": {
+      "description": "Markdown estable→dinámico. Omitido en structuredContent MCP salvo explain=true (va en content[0]).",
+      "type": "string"
+    }
+  },
+  "$defs": {
+    "intent": { "enum": ["fix", "add", "modify", "refactor", "test", "explain"] },
+    "level": {
+      "description": "L3 contenido completo, L2 firmas + tipos + JSDoc, L1 firmas, L0 ruta + nombres exportados.",
+      "enum": ["L0", "L1", "L2", "L3"]
+    },
+    "reason": {
+      "description": "Razón de inclusión (FOKER-SPEC §9.7). SKILL_CONTEXT marca anclas débiles de required_context (§13.2).",
+      "type": "string",
+      "pattern": "^(ANCHOR|PATH_MENTION|SYMBOL_MENTION|DIRTY|TASK_SCOPE|CORE|SKILL_CONTEXT|LEXICAL:.+|DEPENDENCY_OF:.+|DEPENDENT_OF:.+|TEST_OF:.+)$"
+    },
+    "anchors": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "files": { "type": "array", "maxItems": 20, "items": { "type": "string", "minLength": 1, "maxLength": 4096 } },
+        "symbols": { "type": "array", "maxItems": 20, "items": { "type": "string", "minLength": 1, "maxLength": 1024 } }
+      }
+    },
+    "contextRequest": {
+      "description": "Entrada del Context Engine tal como la envía el cliente (FOKER-SPEC §9.2). Límite de presupuesto de la CLI; MCP lo restringe a 20.000.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["task"],
+      "properties": {
+        "task": { "type": "string", "minLength": 1, "maxLength": 4000 },
+        "anchors": { "$ref": "#/$defs/anchors" },
+        "intent": { "$ref": "#/$defs/intent" },
+        "budget_tokens": { "type": "integer", "minimum": 1000, "maximum": 200000 },
+        "skill": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$", "maxLength": 64 },
+        "task_id": { "$ref": "../common/v1.json#/$defs/taskId" },
+        "dirty_files": { "type": "boolean", "default": true },
+        "explain": { "type": "boolean", "default": false }
+      }
+    },
+    "request": {
+      "description": "ContextRequest normalizado: todos los campos presentes, anclas ordenadas.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["task", "anchors", "intent", "budget_tokens", "skill", "task_id", "dirty_files", "explain"],
+      "properties": {
+        "task": { "type": "string", "minLength": 1, "maxLength": 4000 },
+        "anchors": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["files", "symbols"],
+          "properties": {
+            "files": { "type": "array", "maxItems": 20, "items": { "type": "string" } },
+            "symbols": { "type": "array", "maxItems": 20, "items": { "type": "string" } }
+          }
+        },
+        "intent": { "anyOf": [{ "$ref": "#/$defs/intent" }, { "type": "null" }] },
+        "budget_tokens": { "type": "integer", "minimum": 1000, "maximum": 200000 },
+        "skill": { "type": ["string", "null"] },
+        "task_id": { "anyOf": [{ "$ref": "../common/v1.json#/$defs/taskId" }, { "type": "null" }] },
+        "dirty_files": { "type": "boolean" },
+        "explain": { "type": "boolean" }
+      }
+    },
+    "section": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "class", "stability", "tokens", "hash"],
+      "properties": {
+        "id": { "enum": ["rules", "core", "skill", "task_scope", "related", "targets", "request"] },
+        "class": { "enum": ["mandatory", "optional"] },
+        "stability": { "enum": ["static", "session", "task"] },
+        "tokens": { "type": "integer", "minimum": 0 },
+        "hash": { "$ref": "../common/v1.json#/$defs/hash" }
+      }
+    },
+    "packFile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "level", "tokens", "score", "reasons"],
+      "properties": {
+        "id": { "$ref": "../common/v1.json#/$defs/fileId" },
+        "level": { "$ref": "#/$defs/level" },
+        "tokens": { "type": "integer", "minimum": 0 },
+        "score": { "description": "PPR redondeado a 1e-12.", "type": "number", "minimum": 0 },
+        "reasons": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/reason" } },
+        "note": { "description": "Aviso, p. ej. contenido completo omitido por presupuesto.", "type": "string" }
+      }
+    },
+    "excludedFile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "reason", "score"],
+      "properties": {
+        "id": { "$ref": "../common/v1.json#/$defs/fileId" },
+        "reason": { "enum": ["BUDGET", "RANK_CUTOFF"] },
+        "score": { "type": "number", "minimum": 0 }
+      }
+    }
+  }
+}

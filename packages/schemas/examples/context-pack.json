@@ -1,0 +1,88 @@
+{
+  "pack_version": 1,
+  "pack_hash": "blake3:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "map_hash": "blake3:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "request": {
+    "task": "Añade la variante danger al botón",
+    "anchors": { "files": ["packages/ui/src/button.tsx"], "symbols": [] },
+    "intent": null,
+    "budget_tokens": 8000,
+    "skill": "react-component",
+    "task_id": "tsk_01J9Z3K8Q4M7V2N5X8B1C6D0EF",
+    "dirty_files": true,
+    "explain": false
+  },
+  "intent": "add",
+  "intent_source": "inferred",
+  "budget": { "limit": 8000, "used": 1712, "estimator": "bytes-lf/3.2@1" },
+  "sections": [
+    {
+      "id": "rules",
+      "class": "mandatory",
+      "stability": "static",
+      "tokens": 410,
+      "hash": "blake3:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    },
+    {
+      "id": "core",
+      "class": "optional",
+      "stability": "static",
+      "tokens": 120,
+      "hash": "blake3:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+    },
+    {
+      "id": "skill",
+      "class": "mandatory",
+      "stability": "static",
+      "tokens": 530,
+      "hash": "blake3:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "id": "task_scope",
+      "class": "mandatory",
+      "stability": "session",
+      "tokens": 60,
+      "hash": "blake3:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    },
+    {
+      "id": "related",
+      "class": "optional",
+      "stability": "task",
+      "tokens": 210,
+      "hash": "blake3:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    },
+    {
+      "id": "targets",
+      "class": "mandatory",
+      "stability": "task",
+      "tokens": 340,
+      "hash": "blake3:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+    },
+    {
+      "id": "request",
+      "class": "mandatory",
+      "stability": "task",
+      "tokens": 42,
+      "hash": "blake3:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    }
+  ],
+  "files": [
+    {
+      "id": "packages/ui/src/button.tsx",
+      "level": "L3",
+      "tokens": 300,
+      "score": 0.412,
+      "reasons": ["ANCHOR", "TASK_SCOPE"]
+    },
+    {
+      "id": "apps/web/src/app/page.tsx",
+      "level": "L1",
+      "tokens": 38,
+      "score": 0.0412,
+      "reasons": ["DEPENDENT_OF:packages/ui/src/button.tsx"]
+    }
+  ],
+  "excluded": [{ "id": "packages/ui/src/card.tsx", "reason": "RANK_CUTOFF", "score": 0.0031 }],
+  "diagnostics": [],
+  "rendered": "## Reglas del proyecto\n..."
+}

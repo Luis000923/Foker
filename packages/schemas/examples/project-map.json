@@ -1,0 +1,111 @@
+{
+  "$schema": "https://foker.dev/schemas/project-map/v1.json",
+  "schema_version": 1,
+  "foker_version": "0.1.0",
+  "generator": {
+    "engine": "0.1.0",
+    "parsers": { "tsx": "0.23.2", "typescript": "0.23.2" },
+    "resolver": "11.0.0"
+  },
+  "generated_at": "2026-10-04T10:00:00Z",
+  "content_hash": "blake3:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "config_hash": "blake3:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "project": {
+    "name": "aurora-analytics",
+    "workspace_kind": "pnpm",
+    "packages": [
+      { "id": "pkg:@aurora/ui", "name": "@aurora/ui", "path": "packages/ui", "version": "0.0.0" },
+      { "id": "pkg:web", "name": "web", "path": "apps/web", "version": "0.0.0" }
+    ]
+  },
+  "files": [
+    {
+      "id": "apps/web/src/app/page.tsx",
+      "package": "pkg:web",
+      "language": "tsx",
+      "kind": "source",
+      "hash": "blake3:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "size_bytes": 412,
+      "lines": 14,
+      "mtime_ns": 1791108000000000000,
+      "parse_status": "ok",
+      "rank": { "global": 0.35 },
+      "exports": ["apps/web/src/app/page.tsx#default"]
+    },
+    {
+      "id": "packages/ui/src/button.tsx",
+      "package": "pkg:@aurora/ui",
+      "language": "tsx",
+      "kind": "source",
+      "hash": "blake3:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "size_bytes": 960,
+      "lines": 31,
+      "mtime_ns": 1791108000000000000,
+      "parse_status": "ok",
+      "rank": { "global": 0.65 },
+      "exports": ["packages/ui/src/button.tsx#Button", "packages/ui/src/button.tsx#ButtonProps"]
+    }
+  ],
+  "symbols": [
+    {
+      "id": "apps/web/src/app/page.tsx#default",
+      "name": "HomePage",
+      "kind": "function",
+      "tags": ["react_component", "next_route"],
+      "exported": "default",
+      "signature": "export default function HomePage(): JSX.Element",
+      "doc": null,
+      "range": { "start": { "line": 2, "col": 0 }, "end": { "line": 13, "col": 1 } },
+      "parent": null
+    },
+    {
+      "id": "packages/ui/src/button.tsx#Button",
+      "name": "Button",
+      "kind": "variable",
+      "tags": ["react_component"],
+      "exported": "named",
+      "signature": "export const Button: React.ForwardRefExoticComponent<ButtonProps>",
+      "doc": "Botón base del sistema de diseño.",
+      "range": { "start": { "line": 8, "col": 0 }, "end": { "line": 30, "col": 2 } },
+      "parent": null
+    },
+    {
+      "id": "packages/ui/src/button.tsx#ButtonProps",
+      "name": "ButtonProps",
+      "kind": "interface",
+      "tags": [],
+      "exported": "named",
+      "signature": "export interface ButtonProps { variant?: \"primary\" | \"ghost\" }",
+      "doc": null,
+      "range": { "start": { "line": 3, "col": 0 }, "end": { "line": 5, "col": 1 } },
+      "parent": null
+    }
+  ],
+  "edges": [
+    {
+      "kind": "imports",
+      "from": "apps/web/src/app/page.tsx",
+      "to": "packages/ui/src/button.tsx",
+      "confidence": "resolved"
+    },
+    { "kind": "imports_external", "from": "packages/ui/src/button.tsx", "to": "npm:react", "confidence": "resolved" },
+    { "kind": "package_depends", "from": "pkg:web", "to": "pkg:@aurora/ui", "confidence": "declared" },
+    {
+      "kind": "uses_symbol",
+      "from": "apps/web/src/app/page.tsx",
+      "to": "packages/ui/src/button.tsx#Button",
+      "confidence": "resolved",
+      "weight": 2
+    }
+  ],
+  "external_modules": ["npm:react"],
+  "diagnostics": [
+    {
+      "code": "FKR-MAP-104",
+      "message": "Import no resuelto: @/lib/analytics",
+      "file": "apps/web/src/app/page.tsx",
+      "subject": "@/lib/analytics"
+    }
+  ],
+  "stats": { "files": 2, "symbols": 3, "edges": 4, "parse_errors": 0, "unresolved_imports": 1, "duration_ms": 38 }
+}

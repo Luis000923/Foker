@@ -33,6 +33,19 @@ Resumen de FOKER-SPEC §7.7 y §19.
 - Los tests y `pnpm typecheck` consumen el código fuente de otros paquetes del workspace sin
   compilar: Vitest usa un alias y `tsc` la condición de exportación `@foker/source`.
 
+## Esquemas y tipos
+
+`packages/schemas/schemas/*.json` (JSON Schema 2020-12) son la fuente única de los formatos de Foker
+(ADR-019). Tras cambiar un esquema o `data/error-codes.json`:
+
+```sh
+pnpm --filter @foker/schemas run generate   # src/generated/types.ts y packages/core/src/error-codes.generated.ts
+```
+
+CI falla si los generados están desactualizados (`generate:check`). Los ejemplos de `examples/`
+reproducen los de FOKER-SPEC y se validan en los tests. `mcpTools()` publica los esquemas de las
+herramientas MCP autocontenidos (sin `$ref`), como exigen los clientes.
+
 ## Tests
 
 | Nivel | Herramienta |

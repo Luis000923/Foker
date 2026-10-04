@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://foker.dev/schemas/foker-md/v1.json",
+  "title": "Frontmatter de foker.md",
+  "description": "Frontmatter YAML de la especificación de producto (FOKER-SPEC §15.1). El cuerpo Markdown es libre y no confiable (T1).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["foker_spec", "name"],
+  "properties": {
+    "foker_spec": { "const": 1 },
+    "name": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$", "maxLength": 214 },
+    "description": { "type": "string", "maxLength": 1024 },
+    "template": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+        "options": { "type": "object" }
+      }
+    }
+  }
+}

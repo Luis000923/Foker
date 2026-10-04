@@ -15,3 +15,10 @@ invirtiendo `foker-vault/.tools/generar_boveda.py` sobre las notas de `foker-vau
 
 Hasta recuperar el original, cualquier detalle que dependa de esos archivos es PENDIENTE
 (ver docs/ESTADO.md). Si aparece `foker-spec/`, sustituir este directorio por la copia exacta.
+
+## Actualización 2026-10-03 (ADR-019)
+Por decisión del usuario, los contratos que faltaban se reescribieron desde esta especificación:
+- `schemas/*.json` → `packages/schemas/schemas/` (8 documentos + `common` + `foker-md`) y
+  `packages/schemas/data/error-codes.json`.
+- `api/foker-core.d.ts` → `spec/api/foker-core.d.ts` (reconstruido).
+Son normativos hasta que aparezca el original (ver `adr/ADR-019-reconstruccion-de-contratos.md`).

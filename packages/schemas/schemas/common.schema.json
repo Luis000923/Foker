@@ -1,0 +1,133 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://foker.dev/schemas/common/v1.json",
+  "title": "Definiciones comunes de Foker",
+  "description": "Tipos compartidos por los demás esquemas (FOKER-SPEC §8, §12, §18). No describe un documento por sí mismo.",
+  "$defs": {
+    "semver": {
+      "type": "string",
+      "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$"
+    },
+    "hash": {
+      "description": "Hash BLAKE3 en hexadecimal con prefijo.",
+      "type": "string",
+      "pattern": "^blake3:[0-9a-f]{64}$"
+    },
+    "fileId": {
+      "description": "Ruta normalizada (REQ-XPLAT-001): POSIX, relativa al root, sin segmentos . ni .., sin barra inicial ni final.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096,
+      "pattern": "^(?!/)(?![A-Za-z]:)(?!.*//)(?!.*/$)(?!(?:.*/)?\\.\\.?(?:/|$))[^\\\\\\u0000]+$"
+    },
+    "glob": {
+      "description": "Glob relativo al root con separador /.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512,
+      "pattern": "^(?!/)[^\\\\\\u0000]+$"
+    },
+    "taskId": {
+      "description": "tsk_ + ULID.",
+      "type": "string",
+      "pattern": "^tsk_[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "timestamp": {
+      "description": "Fecha y hora RFC 3339 en UTC.",
+      "type": "string",
+      "format": "date-time"
+    },
+    "errorCode": {
+      "description": "Código FKR-<ÁREA>-<NNN> (FOKER-SPEC §18). Los 1xx son diagnósticos.",
+      "type": "string",
+      "pattern": "^FKR-(CFG|INP|MAP|CTX|MCP|POL|TSK|VAL|SKL|SYN|INT)-\\d{3}$"
+    },
+    "position": {
+      "description": "Posición base 0; columna en bytes UTF-8.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["line", "col"],
+      "properties": {
+        "line": { "type": "integer", "minimum": 0 },
+        "col": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "range": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["start", "end"],
+      "properties": {
+        "start": { "$ref": "#/$defs/position" },
+        "end": { "$ref": "#/$defs/position" }
+      }
+    },
+    "diagnostic": {
+      "description": "Resultado de dominio esperado que no es un error (REQ-NAPI-002).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "message"],
+      "properties": {
+        "code": { "$ref": "#/$defs/errorCode" },
+        "message": { "type": "string", "minLength": 1 },
+        "file": { "$ref": "#/$defs/fileId" },
+        "range": { "$ref": "#/$defs/range" },
+        "subject": { "description": "Especificador, ancla o símbolo al que se refiere.", "type": "string" }
+      }
+    },
+    "finding": {
+      "description": "Hallazgo estructurado de un check o gate para que el agente se autocorrija.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["message"],
+      "properties": {
+        "rule": {
+          "description": "Regla, p. ej. tsc/TS2322, secret/aws-access-key, scope/out-of-scope.",
+          "type": "string"
+        },
+        "file": { "$ref": "#/$defs/fileId" },
+        "line": { "description": "Base 1, como lo muestran las herramientas.", "type": "integer", "minimum": 1 },
+        "col": { "description": "Base 1.", "type": "integer", "minimum": 1 },
+        "code": { "type": "string" },
+        "severity": { "enum": ["error", "warning"] },
+        "message": { "type": "string", "minLength": 1 }
+      }
+    },
+    "checkResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["check", "status", "exit_code", "duration_ms", "findings", "output_tail"],
+      "properties": {
+        "check": { "type": "string" },
+        "status": { "enum": ["pass", "fail", "timeout", "skipped"] },
+        "exit_code": { "type": ["integer", "null"] },
+        "duration_ms": { "type": "integer", "minimum": 0 },
+        "findings": { "type": "array", "items": { "$ref": "#/$defs/finding" } },
+        "output_tail": { "description": "Últimas líneas de la salida, redactadas.", "type": "string" }
+      }
+    },
+    "gateResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["gate", "status", "findings"],
+      "properties": {
+        "gate": {
+          "description": "G1 scope, G2 policy, G3 map, G4 checks, G5 skill (FOKER-SPEC §12.4).",
+          "enum": ["scope", "policy", "map", "checks", "skill"]
+        },
+        "status": { "enum": ["pass", "fail", "blocked", "approval_required", "skipped"] },
+        "findings": { "type": "array", "items": { "$ref": "#/$defs/finding" } },
+        "checks": { "type": "array", "items": { "$ref": "#/$defs/checkResult" } }
+      }
+    },
+    "message": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["message"],
+      "properties": {
+        "code": { "$ref": "#/$defs/errorCode" },
+        "message": { "type": "string", "minLength": 1 },
+        "hint": { "type": "string" }
+      }
+    }
+  }
+}

@@ -13,7 +13,9 @@
       "!spec",
       "!foker-vault",
       "!packages/core/binding.cjs",
-      "!packages/core/binding.d.cts"
+      "!packages/core/binding.d.cts",
+      "!packages/schemas/src/generated",
+      "!packages/core/src/error-codes.generated.ts"
     ]
   },
   "formatter": {
@@ -37,6 +39,9 @@
       "style": {
         "useImportType": "error",
         "useNodejsImportProtocol": "error"
+      },
+      "complexity": {
+        "useLiteralKeys": "off"
       }
     }
   },
@@ -47,5 +52,17 @@
         "organizeImports": "on"
       }
     }
-  }
+  },
+  "overrides": [
+    {
+      "includes": ["**/*.test.ts"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noTemplateCurlyInString": "off"
+          }
+        }
+      }
+    }
+  ]
 }

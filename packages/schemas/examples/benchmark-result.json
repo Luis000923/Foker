@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "run_id": "2026-10-20-full-01",
+  "manifest_hash": "blake3:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "task_id": "fixture-a/fix-001",
+  "task_type": "fix",
+  "repo": { "name": "fixture-a", "commit": "8467f3d1f797efc0b933d3ff20182607a9154b04" },
+  "arm": "foker",
+  "repetition": 2,
+  "host": { "name": "claude-code", "version": "2.3.0" },
+  "model": "claude-sonnet-5-5",
+  "foker_version": "0.1.0",
+  "started_at": "2026-10-20T08:00:00Z",
+  "limits": { "max_turns": 60, "max_minutes": 30, "max_cost_usd": 5 },
+  "metrics": {
+    "input_tokens_total": 182000,
+    "cached_tokens": 120000,
+    "cache_write_tokens": 21000,
+    "output_tokens": 6100,
+    "cost_usd": 0.41,
+    "latency_s": 312.5,
+    "files_exposed": 9,
+    "files_modified": 2,
+    "exposure_precision": 0.33,
+    "exposure_recall": 1,
+    "out_of_scope_edits": 0,
+    "errors": 0,
+    "retries": 1,
+    "tests_passed": 1,
+    "ccr_relevante": 6.2
+  },
+  "success": true,
+  "success_breakdown": {
+    "fail_to_pass": true,
+    "pass_to_pass": true,
+    "typecheck_lint": true,
+    "protected_untouched": true,
+    "within_limits": true
+  }
+}

@@ -1,0 +1,136 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://foker.dev/schemas/foker-skill/v1.json",
+  "title": "foker.skill.yaml",
+  "description": "Contrato de Foker para una Skill (FOKER-SPEC §13). Acompaña a un SKILL.md compatible con el estándar Agent Skills (agentskills.io). 'permissions' solo puede restringir.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "name",
+    "version",
+    "purpose",
+    "triggers",
+    "constraints",
+    "tools",
+    "workflow_ref",
+    "validation",
+    "outputs",
+    "permissions"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "name": {
+      "description": "Igual al 'name' de SKILL.md y al nombre del directorio (REQ-SKL-001).",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+    },
+    "version": { "$ref": "../common/v1.json#/$defs/semver" },
+    "purpose": { "type": "string", "minLength": 1, "maxLength": 1024 },
+    "triggers": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "keywords": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "paths": { "type": "array", "items": { "$ref": "../common/v1.json#/$defs/glob" } }
+      }
+    },
+    "inputs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "type"],
+        "properties": {
+          "name": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+          "type": { "enum": ["path", "symbol", "string"] },
+          "required": { "type": "boolean", "default": false },
+          "description": { "type": "string" }
+        }
+      }
+    },
+    "constraints": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "required_context": {
+      "description": "Anclas débiles (peso 0,5) al pedir contexto con esta skill.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "files": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "symbols": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "tools": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "foker_check",
+          "foker_context",
+          "foker_impact",
+          "foker_search",
+          "foker_status",
+          "foker_task_begin",
+          "foker_task_get",
+          "foker_task_submit"
+        ]
+      }
+    },
+    "workflow_ref": {
+      "description": "Sección de SKILL.md con el procedimiento.",
+      "type": "string",
+      "pattern": "^SKILL\\.md(#[a-z0-9-]+)?$"
+    },
+    "validation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["checks"],
+      "properties": {
+        "checks": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$" }
+        }
+      }
+    },
+    "outputs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind"],
+        "properties": {
+          "kind": { "enum": ["modified_files", "created_files", "tests"] },
+          "within_scope": { "type": "boolean", "default": true }
+        }
+      }
+    },
+    "permissions": {
+      "description": "Se intersecan con el alcance de la tarea y la política; nunca amplían (REQ-SKL-002).",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "write_paths": { "type": "array", "items": { "$ref": "../common/v1.json#/$defs/glob" } },
+        "network": { "type": "boolean", "default": false }
+      }
+    },
+    "compatibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "foker": {
+          "description": "Rango semver de Foker soportado, p. ej. >=0.1.0 <0.3.0.",
+          "type": "string",
+          "minLength": 1
+        },
+        "hosts": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "enum": ["claude-code", "opencode", "antigravity"] }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,211 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://foker.dev/schemas/foker-config/v1.json",
+  "title": "foker.config.yaml",
+  "description": "Configuración técnica de Foker en el proyecto gestionado (FOKER-SPEC §15.2). Claves desconocidas = FKR-CFG-001. Los valores omitidos toman los defaults de Foker.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version"],
+  "properties": {
+    "version": { "const": 1 },
+    "project": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "maxLength": 214 },
+        "description": { "type": "string", "maxLength": 1024 }
+      }
+    },
+    "template": {
+      "description": "Plantilla con la que se creó el proyecto (la registra foker init --template).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version"],
+      "properties": {
+        "name": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+        "version": { "$ref": "../common/v1.json#/$defs/semver" },
+        "options": { "type": "object" }
+      }
+    },
+    "map": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "include": { "$ref": "#/$defs/globs" },
+        "exclude": { "$ref": "#/$defs/globs" },
+        "tsconfig": { "$ref": "#/$defs/globs" },
+        "max_file_bytes": { "type": "integer", "minimum": 1024, "maximum": 67108864, "default": 1048576 },
+        "max_files": { "type": "integer", "minimum": 1, "maximum": 500000, "default": 50000 },
+        "kinds": {
+          "description": "Globs que asignan files[].kind; el resto es source.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "test": { "$ref": "#/$defs/globs" },
+            "declaration": { "$ref": "#/$defs/globs" },
+            "config": { "$ref": "#/$defs/globs" },
+            "generated": { "$ref": "#/$defs/globs" }
+          }
+        }
+      }
+    },
+    "context": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "default_budget_tokens": { "type": "integer", "minimum": 1000, "maximum": 200000, "default": 8000 },
+        "core_files": {
+          "description": "N archivos de mayor PageRank global en la sección core.",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100,
+          "default": 15
+        }
+      }
+    },
+    "validation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "profiles": {
+          "type": "object",
+          "propertyNames": { "$ref": "#/$defs/name" },
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["checks"],
+            "properties": {
+              "checks": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/name" } }
+            }
+          }
+        },
+        "checks": {
+          "type": "object",
+          "propertyNames": { "$ref": "#/$defs/name" },
+          "additionalProperties": { "$ref": "#/$defs/check" }
+        }
+      }
+    },
+    "policy": { "$ref": "#/$defs/policy" },
+    "skills": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "disabled": {
+          "description": "Skills incluidas que no se exportan ni se sugieren.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/name" }
+        }
+      }
+    },
+    "integrations": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "targets": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "enum": ["claude-code", "opencode", "antigravity"] }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "name": { "type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$" },
+    "globs": { "type": "array", "items": { "$ref": "../common/v1.json#/$defs/glob" } },
+    "argument": {
+      "description": "Argumento de argv. ${affected_packages} es el único marcador permitido y debe ocupar el argumento entero.",
+      "anyOf": [
+        { "const": "${affected_packages}" },
+        { "type": "string", "minLength": 1, "pattern": "^(?![\\s\\S]*\\$\\{)" }
+      ]
+    },
+    "check": {
+      "oneOf": [
+        {
+          "description": "Comando ejecutado sin shell con argv fijo.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["run"],
+          "properties": {
+            "run": {
+              "type": "array",
+              "minItems": 1,
+              "prefixItems": [{ "type": "string", "minLength": 1, "pattern": "^(?![\\s\\S]*\\$\\{)" }],
+              "items": { "$ref": "#/$defs/argument" }
+            },
+            "timeout_s": { "type": "integer", "minimum": 1, "maximum": 3600, "default": 300 },
+            "network": {
+              "description": "El check necesita red (p. ej. pnpm audit).",
+              "type": "boolean",
+              "default": false
+            },
+            "cwd": { "description": "Directorio relativo al root.", "$ref": "../common/v1.json#/$defs/glob" },
+            "parser": {
+              "description": "Parser de hallazgos de la salida.",
+              "enum": ["tsc", "eslint", "vitest", "generic"],
+              "default": "generic"
+            }
+          }
+        },
+        {
+          "description": "Verificador integrado de Foker.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["builtin"],
+          "properties": {
+            "builtin": { "enum": ["secret-scan"] },
+            "timeout_s": { "type": "integer", "minimum": 1, "maximum": 3600 }
+          }
+        }
+      ]
+    },
+    "policy": {
+      "description": "FOKER-SPEC §11.3. El proyecto solo puede añadir restricciones (REQ-POL-001); relajar exige overrides.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "secret_globs": { "$ref": "#/$defs/globs" },
+        "protected_paths": { "$ref": "#/$defs/globs" },
+        "approval_required": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "paths": { "$ref": "#/$defs/globs" },
+            "dependency_changes": { "type": "boolean", "default": true },
+            "file_deletions_outside_scope": { "type": "boolean", "default": true }
+          }
+        },
+        "env_allowlist": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" }
+        },
+        "tasks": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "max_attempts_default": { "type": "integer", "minimum": 1, "maximum": 5, "default": 3 },
+            "max_active": { "type": "integer", "minimum": 1, "maximum": 20, "default": 5 }
+          }
+        },
+        "overrides": {
+          "description": "Relajaciones explícitas de la política por defecto; foker doctor las lista.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["justification"],
+            "minProperties": 2,
+            "properties": {
+              "remove_secret_globs": { "$ref": "#/$defs/globs" },
+              "remove_protected_paths": { "$ref": "#/$defs/globs" },
+              "remove_approval_paths": { "$ref": "#/$defs/globs" },
+              "justification": { "type": "string", "minLength": 10, "maxLength": 1000 }
+            }
+          }
+        }
+      }
+    }
+  }
+}
