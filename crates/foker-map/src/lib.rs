@@ -15,6 +15,7 @@ pub mod parse;
 pub mod path;
 pub mod project;
 pub mod resolve;
+pub mod store;
 
 pub use error::FokerCode;
 

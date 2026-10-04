@@ -42,7 +42,7 @@ pub struct CachedParse {
 
 /// Caché de parseo por id de archivo. Es una función pura del contenido: reutilizarla no puede
 /// cambiar el resultado (REQ-MAP-001).
-#[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ParseCache {
     /// Versión del extractor que produjo las entradas.
     pub extractor_version: u32,
@@ -50,6 +50,12 @@ pub struct ParseCache {
     pub grammars: BTreeMap<String, String>,
     /// Entradas.
     pub entries: BTreeMap<String, CachedParse>,
+}
+
+impl Default for ParseCache {
+    fn default() -> Self {
+        ParseCache::new()
+    }
 }
 
 impl ParseCache {
