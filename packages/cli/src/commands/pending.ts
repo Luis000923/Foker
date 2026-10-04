@@ -39,6 +39,5 @@ export const pendingCommands: Command[] = [
   ...['begin', 'submit', 'status', 'list', 'approve', 'reject', 'unblock', 'cancel', 'verify'].map((n) =>
     pending(`task ${n}`, `Tareas: ${n}`, 'FKR-048', taskFlags, n === 'list' ? 0 : 1),
   ),
-  pending('doctor', 'Diagnostica el entorno', 'FKR-069', [b('fix', 'Aplica correcciones seguras')]),
   pending('trust', 'Confía en el workspace', 'FKR-041', [b('yes', 'Confirma confianza')]),
 ];
