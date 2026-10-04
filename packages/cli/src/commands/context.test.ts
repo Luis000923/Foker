@@ -20,13 +20,17 @@ afterEach(async () => {
 
 async function run(...args: string[]) {
   let stdout = '';
-  const exit = await main(['--cwd', root, '--json', ...args], {}, {
-    stdout: (s) => {
-      stdout += s;
+  const exit = await main(
+    ['--cwd', root, '--json', ...args],
+    {},
+    {
+      stdout: (s) => {
+        stdout += s;
+      },
+      stderr: () => {},
+      isTTY: false,
     },
-    stderr: () => {},
-    isTTY: false,
-  });
+  );
   return { exit, output: JSON.parse(stdout) };
 }
 

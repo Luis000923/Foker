@@ -187,7 +187,7 @@ it('context produce un pack válido con el ancla L3 sin guardar el mapa', async 
     expect(envelope((await run([...args, '--format', 'json'])).stdout).data.pack_hash).toBe(pack.pack_hash);
     expect((await run([...args, '--budget', '10', '--json'])).exit).toBe(2);
     expect(envelope((await run([...args, '--skill', 'missing', '--json'])).stdout).errors[0].code).toBe('FKR-SKL-001');
-    expect(envelope((await run([...args, '--task', 'x', '--json'])).stdout).errors[0].message).toContain('FKR-045');
+    expect(envelope((await run([...args, '--task', 'x', '--json'])).stdout).errors[0].code).toBe('FKR-TSK-001');
     writeFileSync(join(root, 'foker.config.yaml'), 'version: 1\ncontext:\n  core_files: 0\n');
     const noCore = envelope((await run([...args, '--json'])).stdout).data;
     expect(pack.sections.find((section: { id: string }) => section.id === 'core').tokens).toBeGreaterThan(0);
