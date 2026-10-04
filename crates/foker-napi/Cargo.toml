@@ -7,9 +7,25 @@ rust-version.workspace = true
 license.workspace = true
 publish.workspace = true
 
+[lib]
+crate-type = ["cdylib"]
+# Los tests de dominio viven en foker-map y foker-context (REQ-NAPI-001); el binding se prueba desde
+# @foker/core. Un ejecutable de test no puede enlazar los símbolos de Node-API.
+test = false
+doctest = false
+
 [dependencies]
 foker-map.workspace = true
 foker-context.workspace = true
+napi = { version = "3.14.0", default-features = false, features = ["napi8"] }
+napi-derive = "3.6.10"
 
-[lints]
-workspace = true
+[build-dependencies]
+napi-build = "2.6.0"
+
+# Las macros de napi-rs generan código `unsafe`; el resto de lints se heredan del workspace.
+[lints.rust]
+missing_docs = "warn"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }

@@ -81,6 +81,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Tests Rust
         run: cargo nextest run --workspace --locked --profile ci
+      - name: Addon nativo
+        run: pnpm build:native
       - name: Tests TypeScript
         run: pnpm test:ts
       - name: Build TypeScript
