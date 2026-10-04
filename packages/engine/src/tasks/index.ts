@@ -119,6 +119,9 @@ export class TaskStore {
       await this.move(task, 'BLOCKED', 'foker', 'stale', undefined, true);
     return task;
   }
+  inspect(id: string) {
+    return this.read(id);
+  }
   async get(id: string): Promise<TaskRecord> {
     return withLock(this.path(id, '.lock'), async () => this.expire(await this.read(id)));
   }
@@ -216,15 +219,17 @@ export class TaskStore {
   async cancel(id: string) {
     return this.mutate(id, async (task) => this.move(task, 'CANCELLED', this.actor, 'cancel'));
   }
-  async submit(id: string) {
+  async submit(id: string, deferBaselineCheck = false) {
     return this.mutate(id, async (task) => {
       await this.move(task, 'VALIDATING', this.actor, 'submit');
-      try {
-        await diffSinceBaseline(this.root, task);
-      } catch (error) {
-        if (!(error instanceof BaselineTamperedError)) throw error;
-        task.last_gates = [{ gate: 'policy', status: 'blocked', findings: [] }];
-        await this.move(task, 'BLOCKED', 'foker', 'baseline_tampered');
+      if (!deferBaselineCheck) {
+        try {
+          await diffSinceBaseline(this.root, task);
+        } catch (error) {
+          if (!(error instanceof BaselineTamperedError)) throw error;
+          task.last_gates = [{ gate: 'policy', status: 'blocked', findings: [] }];
+          await this.move(task, 'BLOCKED', 'foker', 'baseline_tampered');
+        }
       }
     });
   }
@@ -279,13 +284,33 @@ export class TaskStore {
       await this.move(task, 'RUNNING', 'foker', 'retry');
     } else await this.move(task, 'FAILED', 'foker', 'attempts_exhausted');
   }
-  private async human(id: string, action: 'approve' | 'reject' | 'unblock', actor: string, reason?: string) {
+  private async human(
+    id: string,
+    action: 'approve' | 'reject' | 'unblock',
+    actor: string,
+    reason?: string,
+    scope?: TaskRecord['scope'],
+  ) {
     if (!/^cli:.+/.test(actor)) throw new FokerError('FKR-INP-001', 'Se requiere actor humano cli:<usuario>');
     return this.mutate(id, async (task) => {
       const to = action === 'approve' ? 'COMPLETED' : action === 'reject' ? 'REJECTED' : 'RUNNING';
       if (task.state !== (action === 'unblock' ? 'BLOCKED' : 'AWAITING_APPROVAL'))
         throw new FokerError('FKR-TSK-002', 'Acción humana no permitida');
-      task.approvals.push({ action, actor, at: this.now(), ...(reason === undefined ? {} : { reason }) });
+      if (scope) {
+        checked('task', { ...task, scope });
+        for (const path of scope.paths) {
+          normalizePath(this.root, path);
+          matchGlobs('validation', [path]);
+        }
+        task.scope = scope;
+      }
+      task.approvals.push({
+        action,
+        actor,
+        at: this.now(),
+        ...(scope ? { scope } : {}),
+        ...(reason === undefined ? {} : { reason }),
+      });
       await this.move(task, to, actor, reason ?? action);
       await this.retry(task);
     });
@@ -296,8 +321,8 @@ export class TaskStore {
   reject(id: string, actor: string, reason?: string) {
     return this.human(id, 'reject', actor, reason);
   }
-  unblock(id: string, actor: string, reason?: string) {
-    return this.human(id, 'unblock', actor, reason);
+  unblock(id: string, actor: string, reason?: string, scope?: TaskRecord['scope']) {
+    return this.human(id, 'unblock', actor, reason, scope);
   }
   diffSinceBaseline(task: TaskRecord) {
     return diffSinceBaseline(this.root, task);
@@ -345,3 +370,5 @@ export class TaskStore {
     });
   }
 }
+
+export { submitTask, validateProfile, verifyTask } from './gates.js';

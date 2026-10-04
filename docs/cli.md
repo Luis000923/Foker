@@ -78,127 +78,6 @@ Arranca MCP stdio
 |---|---|---|---|
 | --root | string | "" | Raíz |
 
-## foker validate
-
-Ejecuta checks
-
-| Flag | Tipo | Default | Descripción |
-|---|---|---|---|
-| --profile | string | "" | Perfil |
-| --checks | string | "" | Checks |
-| --packages | string | "" | Paquetes |
-| --changed | boolean | false | Solo cambios |
-
-## foker task
-
-Gestiona tareas
-
-| Flag | Tipo | Default | Descripción |
-|---|---|---|---|
-| --scope | string | "" | Ámbito |
-| --profile | string | "" | Perfil |
-| --skill | string | "" | Skill |
-| --reason | string | "" | Razón |
-
-## foker task begin
-
-Tareas: begin
-
-| Flag | Tipo | Default | Descripción |
-|---|---|---|---|
-| --scope | string | "" | Ámbito |
-| --profile | string | "" | Perfil |
-| --skill | string | "" | Skill |
-| --reason | string | "" | Razón |
-
-## foker task submit
-
-Tareas: submit
-
-| Flag | Tipo | Default | Descripción |
-|---|---|---|---|
-| --scope | string | "" | Ámbito |
-| --profile | string | "" | Perfil |
-| --skill | string | "" | Skill |
-| --reason | string | "" | Razón |
-
-## foker task status
-
-Tareas: status
-
-| Flag | Tipo | Default | Descripción |
-|---|---|---|---|
-| --scope | string | "" | Ámbito |
-| --profile | string | "" | Perfil |
-| --skill | string | "" | Skill |
-| --reason | string | "" | Razón |
-
-## foker task list
-
-Tareas: list
-
-| Flag | Tipo | Default | Descripción |
-|---|---|---|---|
-| --scope | string | "" | Ámbito |
-| --profile | string | "" | Perfil |
-| --skill | string | "" | Skill |
-| --reason | string | "" | Razón |
-
-## foker task approve
-
-Tareas: approve
-
-| Flag | Tipo | Default | Descripción |
-|---|---|---|---|
-| --scope | string | "" | Ámbito |
-| --profile | string | "" | Perfil |
-| --skill | string | "" | Skill |
-| --reason | string | "" | Razón |
-
-## foker task reject
-
-Tareas: reject
-
-| Flag | Tipo | Default | Descripción |
-|---|---|---|---|
-| --scope | string | "" | Ámbito |
-| --profile | string | "" | Perfil |
-| --skill | string | "" | Skill |
-| --reason | string | "" | Razón |
-
-## foker task unblock
-
-Tareas: unblock
-
-| Flag | Tipo | Default | Descripción |
-|---|---|---|---|
-| --scope | string | "" | Ámbito |
-| --profile | string | "" | Perfil |
-| --skill | string | "" | Skill |
-| --reason | string | "" | Razón |
-
-## foker task cancel
-
-Tareas: cancel
-
-| Flag | Tipo | Default | Descripción |
-|---|---|---|---|
-| --scope | string | "" | Ámbito |
-| --profile | string | "" | Perfil |
-| --skill | string | "" | Skill |
-| --reason | string | "" | Razón |
-
-## foker task verify
-
-Tareas: verify
-
-| Flag | Tipo | Default | Descripción |
-|---|---|---|---|
-| --scope | string | "" | Ámbito |
-| --profile | string | "" | Perfil |
-| --skill | string | "" | Skill |
-| --reason | string | "" | Razón |
-
 ## foker skill
 
 Gestiona skills
@@ -276,6 +155,134 @@ Evalúa una acción contra la política
 | --path | string | "" | Ruta |
 | --command | string | "" | Comando |
 
+## foker validate
+
+Ejecuta checks
+
+| Flag | Tipo | Default | Descripción |
+|---|---|---|---|
+| --profile | string | "" | Perfil (default) |
+| --checks | string | "" | Lista de checks |
+| --packages | string | "" | Lista de paquetes |
+| --changed | boolean | false | Solo cambios |
+
+## foker task begin
+
+Tareas: begin
+
+| Flag | Tipo | Default | Descripción |
+|---|---|---|---|
+| --scope | string[] | [] | Ámbito (repetible) |
+| --profile | string | "" | Perfil |
+| --skill | string | "" | Skill |
+| --reason | string | "" | Razón |
+| --summary | string | "" | Resumen del intento |
+| --yes | boolean | false | Confirma en CI explícito |
+
+## foker task submit
+
+Tareas: submit
+
+| Flag | Tipo | Default | Descripción |
+|---|---|---|---|
+| --scope | string[] | [] | Ámbito (repetible) |
+| --profile | string | "" | Perfil |
+| --skill | string | "" | Skill |
+| --reason | string | "" | Razón |
+| --summary | string | "" | Resumen del intento |
+| --yes | boolean | false | Confirma en CI explícito |
+
+## foker task status
+
+Tareas: status
+
+| Flag | Tipo | Default | Descripción |
+|---|---|---|---|
+| --scope | string[] | [] | Ámbito (repetible) |
+| --profile | string | "" | Perfil |
+| --skill | string | "" | Skill |
+| --reason | string | "" | Razón |
+| --summary | string | "" | Resumen del intento |
+| --yes | boolean | false | Confirma en CI explícito |
+
+## foker task list
+
+Tareas: list
+
+| Flag | Tipo | Default | Descripción |
+|---|---|---|---|
+| --scope | string[] | [] | Ámbito (repetible) |
+| --profile | string | "" | Perfil |
+| --skill | string | "" | Skill |
+| --reason | string | "" | Razón |
+| --summary | string | "" | Resumen del intento |
+| --yes | boolean | false | Confirma en CI explícito |
+
+## foker task approve
+
+Tareas: approve
+
+| Flag | Tipo | Default | Descripción |
+|---|---|---|---|
+| --scope | string[] | [] | Ámbito (repetible) |
+| --profile | string | "" | Perfil |
+| --skill | string | "" | Skill |
+| --reason | string | "" | Razón |
+| --summary | string | "" | Resumen del intento |
+| --yes | boolean | false | Confirma en CI explícito |
+
+## foker task reject
+
+Tareas: reject
+
+| Flag | Tipo | Default | Descripción |
+|---|---|---|---|
+| --scope | string[] | [] | Ámbito (repetible) |
+| --profile | string | "" | Perfil |
+| --skill | string | "" | Skill |
+| --reason | string | "" | Razón |
+| --summary | string | "" | Resumen del intento |
+| --yes | boolean | false | Confirma en CI explícito |
+
+## foker task unblock
+
+Tareas: unblock
+
+| Flag | Tipo | Default | Descripción |
+|---|---|---|---|
+| --scope | string[] | [] | Ámbito (repetible) |
+| --profile | string | "" | Perfil |
+| --skill | string | "" | Skill |
+| --reason | string | "" | Razón |
+| --summary | string | "" | Resumen del intento |
+| --yes | boolean | false | Confirma en CI explícito |
+
+## foker task cancel
+
+Tareas: cancel
+
+| Flag | Tipo | Default | Descripción |
+|---|---|---|---|
+| --scope | string[] | [] | Ámbito (repetible) |
+| --profile | string | "" | Perfil |
+| --skill | string | "" | Skill |
+| --reason | string | "" | Razón |
+| --summary | string | "" | Resumen del intento |
+| --yes | boolean | false | Confirma en CI explícito |
+
+## foker task verify
+
+Tareas: verify
+
+| Flag | Tipo | Default | Descripción |
+|---|---|---|---|
+| --scope | string[] | [] | Ámbito (repetible) |
+| --profile | string | "" | Perfil |
+| --skill | string | "" | Skill |
+| --reason | string | "" | Razón |
+| --summary | string | "" | Resumen del intento |
+| --yes | boolean | false | Confirma en CI explícito |
+
 ## Datos de context
 
 `foker context "<tarea>"` imprime Markdown por defecto. `--json` o `--format json` entrega el sobre CLI con `data` conforme a `context-pack.schema.json` (snake_case). Las anclas de archivo entran en L3; `--explain` incluye razones y descartados. Lee reglas, skill y cambios de git; abre el motor en solo lectura y no guarda el mapa. `--budget` admite 1000–200000 tokens. `--task` queda pendiente de FKR-045. Un presupuesto insuficiente para contexto obligatorio produce FKR-CTX-001 y exit 1.
@@ -283,3 +290,7 @@ Evalúa una acción contra la política
 ## Datos de map
 
 `data` incluye `contentHash`, `files`, `symbols`, `added`, `changed`, `removed`, `rebuilt`, `unchanged`, `diagnostics` y, al guardar, `saved: {path, bytes}`. `--stats` añade `stats: {files, symbols, staleFiles, durationMs}`. `--dry-run --export` añade `plannedFiles` y no escribe. Las rutas de exportación se normalizan respecto a `--cwd`. `--check` compara el hash previo con el refrescado y no guarda.
+
+## Datos de task y validate
+
+`task begin` recibe una descripción y `--scope` repetible. status devuelve un TaskRecord (sin id, lista); list devuelve la lista. submit devuelve `{task_id, state, attempt, gates, evidence, next_action}`: REJECTED describe el intento aunque la FSM haya preparado RUNNING para reintentar. REJECTED/FAILED salen con 1; AWAITING_APPROVAL/BLOCKED con 6; COMPLETED con 0. verify reejecuta y compara la última evidencia sin modificar la tarea. approve/reject/unblock exigen TTY y confirmación, excepto con --ci explícito y CI=true; --yes solo no permite aprobación no interactiva. unblock admite --scope para fijar el nuevo alcance. validate usa el perfil default por defecto; --checks y --packages son listas separadas por comas. --changed calcula paquetes afectados; escribe logs en .foker/runs/adhoc/ sin tocar tareas. Ambos requieren trust para ejecutar checks.

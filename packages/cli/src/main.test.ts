@@ -46,7 +46,9 @@ it('argumentos inválidos y comandos pendientes usan FKR-INP-001, exit 2', async
     expect(result.exit).toBe(2);
     expect(envelope(result.stdout).errors[0].code).toBe('FKR-INP-001');
   }
-  expect(envelope((await run(['task', 'submit', '--json'])).stdout).errors[0].message).toContain('FKR-048');
+  expect(envelope((await run(['task', 'submit', '--json'])).stdout).errors[0].message).toContain(
+    'Falta descripción o task_id',
+  );
 });
 it('CI activa JSON en errores, tanto por flag como entorno', async () => {
   for (const [args, env] of [
