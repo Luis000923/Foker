@@ -1,0 +1,32 @@
+{
+  "id": "a-15",
+  "type": "refactor",
+  "gold_modified": [
+    "packages/cart/src/inventoryAmount.ts",
+    "packages/catalog/src/moneyPolicy.ts",
+    "packages/catalog/src/stockValue.ts"
+  ],
+  "hidden_tests": {
+    "fail_to_pass": {
+      "paths": ["benchmarks/fixtures/fixture-a/tasks/a-15/hidden-tests/a-15.test.ts"],
+      "destinations": ["packages/catalog/src/__hidden__/a-15.test.ts"],
+      "command": ["pnpm", "exec", "vitest", "run", "packages/catalog/src/__hidden__/a-15.test.ts"]
+    },
+    "pass_to_pass": {
+      "paths": ["benchmarks/fixtures/fixture-a/tasks/a-15/hidden-tests/a-15-regression.test.ts"],
+      "destinations": ["packages/catalog/src/__hidden__/a-15-regression.test.ts"],
+      "command": ["pnpm", "exec", "vitest", "run", "packages/catalog/src/__hidden__/a-15-regression.test.ts"]
+    }
+  },
+  "default_checks": [["pnpm", "run", "typecheck"], ["pnpm", "run", "lint"]],
+  "allow_protected": [],
+  "modified": [
+    "packages/cart/src/inventoryAmount.ts",
+    "packages/catalog/src/moneyPolicy.ts",
+    "packages/catalog/src/stockValue.ts"
+  ],
+  "packages": ["cart", "catalog"],
+  "hint": false,
+  "decoy": false,
+  "cross_package": true
+}

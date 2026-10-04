@@ -1,0 +1,19 @@
+diff --git a/packages/catalog/src/isPositiveQuantity.test.ts b/packages/catalog/src/isPositiveQuantity.test.ts
+new file mode 100644
+index 0000000..1aa093a
+--- /dev/null
++++ b/packages/catalog/src/isPositiveQuantity.test.ts
+@@ -0,0 +1,3 @@
++import { expect, test } from 'vitest';
++import { isPositiveQuantity } from './isPositiveQuantity.js';
++test('isPositiveQuantity: regresión', () => { expect(isPositiveQuantity(0)).toBe(false); expect(isPositiveQuantity(1.5)).toBe(false); expect(isPositiveQuantity(2)).toBe(true); });
+diff --git a/packages/catalog/src/isPositiveQuantity.ts b/packages/catalog/src/isPositiveQuantity.ts
+index 1d121c2..30d290e 100644
+--- a/packages/catalog/src/isPositiveQuantity.ts
++++ b/packages/catalog/src/isPositiveQuantity.ts
+@@ -1,4 +1,4 @@
+ /** Valida una cantidad solicitada de artículos. */
+ export function isPositiveQuantity(quantity: number) {
+-  return quantity >= 0;
++  return Number.isInteger(quantity) && quantity > 0;
+ }

@@ -11,6 +11,7 @@ export const SCHEMA_NAMES = [
   'foker-md',
   'cli-output',
   'benchmark-result',
+  'benchmark-manifest',
   'mcp-tools',
 ] as const;
 
@@ -29,6 +30,7 @@ const FILES: Record<SchemaName, string> = {
   'foker-md': 'foker-md.schema.json',
   'cli-output': 'cli-output.schema.json',
   'benchmark-result': 'benchmark-result.schema.json',
+  'benchmark-manifest': 'benchmark-manifest.schema.json',
   'mcp-tools': 'mcp-tools.json',
 };
 

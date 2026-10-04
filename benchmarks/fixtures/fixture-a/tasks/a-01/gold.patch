@@ -1,0 +1,10 @@
+diff --git a/packages/catalog/src/policy-1.ts b/packages/catalog/src/policy-1.ts
+index 46a52bf..560c546 100644
+--- a/packages/catalog/src/policy-1.ts
++++ b/packages/catalog/src/policy-1.ts
+@@ -1,4 +1,4 @@
+ /** Consulta la disponibilidad de una referencia del inventario. */
+ export function inStock(quantity: number) {
+-  return quantity >= 0;
++  return quantity > 0;
+ }

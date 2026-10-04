@@ -1,0 +1,19 @@
+{
+  "name": "@foker/benchmarks",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "validate-manifest": "node run.mjs validate-manifest",
+    "validate-results": "node run.mjs validate-results",
+    "ctx-gold": "node run.mjs ctx-gold",
+    "evaluate-task": "node run.mjs evaluate-task",
+    "generate": "node fixtures/fixture-a/generate.mjs",
+    "verify-tasks": "node fixtures/fixture-a/verify-tasks.mjs"
+  },
+  "dependencies": {
+    "@foker/schemas": "workspace:*",
+    "@foker/core": "workspace:*",
+    "@foker/engine": "workspace:*"
+  }
+}

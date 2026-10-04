@@ -85,6 +85,25 @@ describe('REQ-REPO-001', () => {
     ]);
   });
 
+  it('verifica benchmarks, imports transitivos y dependencias prohibidas', () => {
+    write(
+      'benchmarks/package.json',
+      JSON.stringify({
+        name: '@foker/benchmarks',
+        dependencies: { '@foker/engine': 'workspace:*', '@foker/policy': 'workspace:*' },
+      }),
+    );
+    write('benchmarks/src/check.ts', "import { runCheck } from '@foker/policy';\n");
+    expect(checkDependencies(root)).toEqual([]);
+    write('benchmarks/src/check.ts', "import { mcp } from '@foker/mcp';\n");
+    expect(checkDependencies(root)[0]).toContain('no puede importar');
+    write(
+      'benchmarks/package.json',
+      JSON.stringify({ name: '@foker/benchmarks', dependencies: { '@foker/mcp': 'workspace:*' } }),
+    );
+    expect(checkDependencies(root)[0]).toContain('no puede depender');
+  });
+
   it('rechaza crates que dependen hacia la derecha', () => {
     crate('foker-map', ['foker-context']);
     expect(checkDependencies(root)).toEqual([

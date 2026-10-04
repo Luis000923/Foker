@@ -20,3 +20,9 @@ coverage/
 /packages/integrations/roles/
 
 /packages/cli/templates/
+
+# Benchmark: fixtures e informes generados
+/benchmarks/generated/
+/benchmarks/reports/ctx-gold-*.md
+/benchmarks/reports/ctx-gold-*.json
+!/benchmarks/reports/ctx-gold-example.md

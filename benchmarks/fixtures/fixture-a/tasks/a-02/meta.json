@@ -1,0 +1,24 @@
+{
+  "id": "a-02",
+  "type": "fix",
+  "gold_modified": ["packages/cart/src/lineTotal.ts"],
+  "hidden_tests": {
+    "fail_to_pass": {
+      "paths": ["benchmarks/fixtures/fixture-a/tasks/a-02/hidden-tests/a-02.test.ts"],
+      "destinations": ["packages/cart/src/__hidden__/a-02.test.ts"],
+      "command": ["pnpm", "exec", "vitest", "run", "packages/cart/src/__hidden__/a-02.test.ts"]
+    },
+    "pass_to_pass": {
+      "paths": ["benchmarks/fixtures/fixture-a/tasks/a-02/hidden-tests/a-02-regression.test.ts"],
+      "destinations": ["packages/cart/src/__hidden__/a-02-regression.test.ts"],
+      "command": ["pnpm", "exec", "vitest", "run", "packages/cart/src/__hidden__/a-02-regression.test.ts"]
+    }
+  },
+  "default_checks": [["pnpm", "run", "typecheck"], ["pnpm", "run", "lint"]],
+  "allow_protected": [],
+  "modified": ["packages/cart/src/lineTotal.ts"],
+  "packages": ["cart"],
+  "hint": false,
+  "decoy": false,
+  "cross_package": false
+}

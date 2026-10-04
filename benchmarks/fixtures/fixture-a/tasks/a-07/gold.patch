@@ -1,0 +1,10 @@
+diff --git a/packages/cart/src/policy-7.ts b/packages/cart/src/policy-7.ts
+index dc84a4d..2781047 100644
+--- a/packages/cart/src/policy-7.ts
++++ b/packages/cart/src/policy-7.ts
+@@ -1,4 +1,4 @@
+ /** Calcula el saldo disponible tras una solicitud de unidades. */
+ export function remainingQuantity(stock: number, requested: number) {
+-  return stock - requested;
++  return Math.max(0, stock - requested);
+ }

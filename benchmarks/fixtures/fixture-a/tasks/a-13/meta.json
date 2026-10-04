@@ -1,0 +1,24 @@
+{
+  "id": "a-13",
+  "type": "feature",
+  "gold_modified": ["packages/orders/src/trackingUrl.ts", "packages/ui/src/deliveryLink.ts"],
+  "hidden_tests": {
+    "fail_to_pass": {
+      "paths": ["benchmarks/fixtures/fixture-a/tasks/a-13/hidden-tests/a-13.test.ts"],
+      "destinations": ["packages/orders/src/__hidden__/a-13.test.ts"],
+      "command": ["pnpm", "exec", "vitest", "run", "packages/orders/src/__hidden__/a-13.test.ts"]
+    },
+    "pass_to_pass": {
+      "paths": ["benchmarks/fixtures/fixture-a/tasks/a-13/hidden-tests/a-13-regression.test.ts"],
+      "destinations": ["packages/orders/src/__hidden__/a-13-regression.test.ts"],
+      "command": ["pnpm", "exec", "vitest", "run", "packages/orders/src/__hidden__/a-13-regression.test.ts"]
+    }
+  },
+  "default_checks": [["pnpm", "run", "typecheck"], ["pnpm", "run", "lint"]],
+  "allow_protected": [],
+  "modified": ["packages/orders/src/trackingUrl.ts", "packages/ui/src/deliveryLink.ts"],
+  "packages": ["orders", "ui"],
+  "hint": false,
+  "decoy": false,
+  "cross_package": true
+}

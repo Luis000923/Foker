@@ -123,6 +123,7 @@ fokerSkill?: FokerSkill
 fokerMd?: FokerMdFrontmatter
 cliOutput?: CliOutput
 benchmarkResult?: BenchmarkResult
+benchmarkManifest?: BenchmarkManifest
 foker_check_input?: FokerCheckInput
 foker_check_output?: FokerCheckOutput
 foker_context_input?: FokerContextInput
@@ -751,6 +752,217 @@ protected_untouched: boolean
 within_limits: boolean
 }
 notes?: string
+}
+export interface BenchmarkManifest {
+schema_version: 1
+/**
+ * @minItems 1
+ */
+repos: [{
+name: string
+url?: string
+commit: string
+fixture?: string
+}, ...({
+name: string
+url?: string
+commit: string
+fixture?: string
+})[]]
+/**
+ * @minItems 3
+ */
+tasks: [{
+id: string
+repo: string
+type: ("fix" | "feature" | "refactor" | "test")
+statement: string
+gold_patch: string
+hidden_tests: {
+fail_to_pass: {
+/**
+ * @minItems 1
+ */
+paths: [string, ...(string)[]]
+/**
+ * @minItems 1
+ */
+command: [string, ...(string)[]]
+}
+pass_to_pass: {
+/**
+ * @minItems 1
+ */
+paths: [string, ...(string)[]]
+/**
+ * @minItems 1
+ */
+command: [string, ...(string)[]]
+}
+}
+/**
+ * @minItems 1
+ */
+gold_modified: [string, ...(string)[]]
+/**
+ * @minItems 1
+ */
+gold_read?: [string, ...(string)[]]
+}, {
+id: string
+repo: string
+type: ("fix" | "feature" | "refactor" | "test")
+statement: string
+gold_patch: string
+hidden_tests: {
+fail_to_pass: {
+/**
+ * @minItems 1
+ */
+paths: [string, ...(string)[]]
+/**
+ * @minItems 1
+ */
+command: [string, ...(string)[]]
+}
+pass_to_pass: {
+/**
+ * @minItems 1
+ */
+paths: [string, ...(string)[]]
+/**
+ * @minItems 1
+ */
+command: [string, ...(string)[]]
+}
+}
+/**
+ * @minItems 1
+ */
+gold_modified: [string, ...(string)[]]
+/**
+ * @minItems 1
+ */
+gold_read?: [string, ...(string)[]]
+}, {
+id: string
+repo: string
+type: ("fix" | "feature" | "refactor" | "test")
+statement: string
+gold_patch: string
+hidden_tests: {
+fail_to_pass: {
+/**
+ * @minItems 1
+ */
+paths: [string, ...(string)[]]
+/**
+ * @minItems 1
+ */
+command: [string, ...(string)[]]
+}
+pass_to_pass: {
+/**
+ * @minItems 1
+ */
+paths: [string, ...(string)[]]
+/**
+ * @minItems 1
+ */
+command: [string, ...(string)[]]
+}
+}
+/**
+ * @minItems 1
+ */
+gold_modified: [string, ...(string)[]]
+/**
+ * @minItems 1
+ */
+gold_read?: [string, ...(string)[]]
+}, ...({
+id: string
+repo: string
+type: ("fix" | "feature" | "refactor" | "test")
+statement: string
+gold_patch: string
+hidden_tests: {
+fail_to_pass: {
+/**
+ * @minItems 1
+ */
+paths: [string, ...(string)[]]
+/**
+ * @minItems 1
+ */
+command: [string, ...(string)[]]
+}
+pass_to_pass: {
+/**
+ * @minItems 1
+ */
+paths: [string, ...(string)[]]
+/**
+ * @minItems 1
+ */
+command: [string, ...(string)[]]
+}
+}
+/**
+ * @minItems 1
+ */
+gold_modified: [string, ...(string)[]]
+/**
+ * @minItems 1
+ */
+gold_read?: [string, ...(string)[]]
+})[]]
+model: (string | null)
+host: {
+name: "claude-code"
+version: string
+}
+foker_version: Semver
+seeds: {
+fixture: number
+order: number
+bootstrap: number
+}
+limits: {
+max_turns: 60
+max_minutes: 30
+max_cost_usd: (number | null)
+}
+prices: {
+version: string
+/**
+ * @minItems 1
+ */
+models: [{
+model: (string | null)
+input: (number | null)
+cache_read: (number | null)
+cache_write: (number | null)
+output: (number | null)
+}, ...({
+model: (string | null)
+input: (number | null)
+cache_read: (number | null)
+cache_write: (number | null)
+output: (number | null)
+})[]]
+}
+suites: {
+/**
+ * @minItems 3
+ * @maxItems 3
+ */
+smoke: [string, string, string]
+/**
+ * @minItems 1
+ */
+full: [string, ...(string)[]]
+}
 }
 export interface FokerCheckInput {
 profile?: string

@@ -1,0 +1,24 @@
+{
+  "id": "a-03",
+  "type": "fix",
+  "gold_modified": ["packages/pricing/src/policy-3.ts"],
+  "hidden_tests": {
+    "fail_to_pass": {
+      "paths": ["benchmarks/fixtures/fixture-a/tasks/a-03/hidden-tests/a-03.test.ts"],
+      "destinations": ["packages/pricing/src/__hidden__/a-03.test.ts"],
+      "command": ["pnpm", "exec", "vitest", "run", "packages/pricing/src/__hidden__/a-03.test.ts"]
+    },
+    "pass_to_pass": {
+      "paths": ["benchmarks/fixtures/fixture-a/tasks/a-03/hidden-tests/a-03-regression.test.ts"],
+      "destinations": ["packages/pricing/src/__hidden__/a-03-regression.test.ts"],
+      "command": ["pnpm", "exec", "vitest", "run", "packages/pricing/src/__hidden__/a-03-regression.test.ts"]
+    }
+  },
+  "default_checks": [["pnpm", "run", "typecheck"], ["pnpm", "run", "lint"]],
+  "allow_protected": [],
+  "modified": ["packages/pricing/src/policy-3.ts"],
+  "packages": ["pricing"],
+  "hint": false,
+  "decoy": true,
+  "cross_package": false
+}

@@ -13,6 +13,7 @@ import { fileURLToPath } from 'node:url';
  * @type {Record<string, string[]>}
  */
 export const TS_GRAPH = {
+  '@foker/benchmarks': ['@foker/schemas', '@foker/core', '@foker/engine'],
   '@foker/core': [],
   '@foker/schemas': [],
   '@foker/policy': ['@foker/schemas'],
@@ -111,10 +112,12 @@ export function checkTypeScript(root) {
   /** @type {string[]} */
   const errors = [];
   const packagesDir = join(root, 'packages');
-  if (!existsSync(packagesDir)) return errors;
-
-  for (const dir of readdirSync(packagesDir).sort()) {
-    const pkgPath = join(packagesDir, dir, 'package.json');
+  const packageDirs = (existsSync(packagesDir) ? readdirSync(packagesDir) : [])
+    .sort()
+    .map((dir) => join(packagesDir, dir));
+  if (existsSync(join(root, 'benchmarks/package.json'))) packageDirs.push(join(root, 'benchmarks'));
+  for (const pkgDir of packageDirs) {
+    const pkgPath = join(pkgDir, 'package.json');
     if (!existsSync(pkgPath)) continue;
     const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
     const name = pkg.name;
@@ -133,7 +136,6 @@ export function checkTypeScript(root) {
       if (dep === name || !permitted.has(dep)) errors.push(`${where}: "${name}" no puede depender de "${dep}"`);
     }
 
-    const pkgDir = join(packagesDir, dir);
     for (const file of sourceFiles(join(pkgDir, 'src'))) {
       const fileId = relative(root, file).split(sep).join('/');
       for (const spec of importSpecifiers(readFileSync(file, 'utf8'))) {
