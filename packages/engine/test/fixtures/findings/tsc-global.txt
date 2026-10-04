@@ -1,0 +1,2 @@
+error TS18003: No inputs were found in config file 'tsconfig.json'.
+error TS5023: Unknown compiler option 'invalid'.

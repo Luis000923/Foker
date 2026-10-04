@@ -1,0 +1,100 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`eslint.json snapshot 1`] = `
+[
+  {
+    "col": 7,
+    "file": "src/app.ts",
+    "line": 3,
+    "message": "'unused' is assigned a value but never used.",
+    "rule": "eslint/no-unused-vars",
+    "severity": "error",
+  },
+]
+`;
+
+exports[`eslint.txt snapshot 1`] = `
+[
+  {
+    "col": 7,
+    "file": "src/app.ts",
+    "line": 3,
+    "message": "'unused' is assigned a value but never used",
+    "rule": "eslint/no-unused-vars",
+    "severity": "error",
+  },
+  {
+    "col": 1,
+    "file": "src/app.ts",
+    "line": 5,
+    "message": "Unexpected console statement",
+    "rule": "eslint/no-console",
+    "severity": "warning",
+  },
+]
+`;
+
+exports[`generic.txt snapshot 1`] = `
+[
+  {
+    "message": "ERROR: compilation failed",
+    "rule": "generic/error",
+    "severity": "error",
+  },
+  {
+    "message": "An error occurred while loading config",
+    "rule": "generic/error",
+    "severity": "error",
+  },
+]
+`;
+
+exports[`tsc.txt snapshot 1`] = `
+[
+  {
+    "code": "TS2345",
+    "col": 5,
+    "file": "src/app.ts",
+    "line": 10,
+    "message": "Argument of type 'number' is not assignable to parameter of type 'string'.",
+    "rule": "tsc/TS2345",
+    "severity": "error",
+  },
+  {
+    "code": "TS2322",
+    "col": 3,
+    "file": "src/main.ts",
+    "line": 2,
+    "message": "Type 'string' is not assignable to type 'number'.",
+    "rule": "tsc/TS2322",
+    "severity": "error",
+  },
+]
+`;
+
+exports[`vitest.json snapshot 1`] = `
+[
+  {
+    "col": 8,
+    "file": "src/app.test.ts",
+    "line": 12,
+    "message": "AssertionError: expected 3 to be 4
+ ❯ src/app.test.ts:12:8",
+    "rule": "vitest/fail",
+    "severity": "error",
+  },
+]
+`;
+
+exports[`vitest.txt snapshot 1`] = `
+[
+  {
+    "col": 8,
+    "file": "src/app.test.ts",
+    "line": 12,
+    "message": "calculator > adds numbers",
+    "rule": "vitest/fail",
+    "severity": "error",
+  },
+]
+`;

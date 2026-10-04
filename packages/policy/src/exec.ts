@@ -4,6 +4,7 @@ import { access, realpath } from 'node:fs/promises';
 import { delimiter, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import type { CheckResult } from '@foker/schemas';
 import { DEFAULT_POLICY, policyError } from './policy.js';
+import { redactSecrets } from './secrets/index.js';
 
 export function redact(
   text: string,
@@ -15,7 +16,7 @@ export function redact(
     .map(([, value]) => value as string)
     .sort((a, b) => b.length - a.length);
   for (const secret of secrets) text = text.split(secret).join('[REDACTED:env]');
-  return text;
+  return redactSecrets(text);
 }
 const affectedMarker = '$' + '{affected_packages}';
 
@@ -29,6 +30,8 @@ export interface ExecutableCheck {
 }
 export interface ExecOptions {
   root: string;
+  /** Salida completa capturada (hasta 1 MiB), ya redactada. */
+  onOutput?: (output: string) => void;
   affectedPackages?: string[];
   env?: NodeJS.ProcessEnv;
   envAllowlist?: string[];
@@ -103,14 +106,18 @@ export async function runCheck(
   const inputEnv = options.env ?? process.env;
   const allowlist = options.envAllowlist ?? check.env_allowlist ?? DEFAULT_POLICY.env_allowlist;
   const env = Object.fromEntries(Object.entries(inputEnv).filter(([key]) => allowlist.includes(key)));
-  const result = (status: CheckResult['status'], exit_code: number | null, output = ''): CheckResult => ({
-    check: check.name ?? check.check ?? check.run[0] ?? '',
-    status,
-    exit_code,
-    duration_ms: Math.max(0, Math.round(performance.now() - started)),
-    findings: [],
-    output_tail: redact(output, inputEnv, allowlist).split(/\r?\n/).slice(-50).join('\n'),
-  });
+  const result = (status: CheckResult['status'], exit_code: number | null, output = ''): CheckResult => {
+    const safeOutput = redact(output, inputEnv, allowlist);
+    options.onOutput?.(safeOutput);
+    return {
+      check: check.name ?? check.check ?? check.run[0] ?? '',
+      status,
+      exit_code,
+      duration_ms: Math.max(0, Math.round(performance.now() - started)),
+      findings: [],
+      output_tail: safeOutput.split(/\r?\n/).slice(-50).join('\n'),
+    };
+  };
   let executable = argv.shift();
   if (process.platform === 'win32' && executable) executable = await windowsExecutable(executable, cwd, inputEnv);
   if (options.signal?.aborted) return aborted();
