@@ -4,7 +4,7 @@
 
 ## Hito actual
 
-M0, M2, M3 (salvo FKR-037), M4 y E6 (salvo FKR-070, manual) completos en local. Siguiente: docs generadas (REQ-DOC-001) y partes de M1 sin coste de API (FKR-010, 012, 013, 017). FKR-011/014/015/016/018 y FKR-037 dependen de PREGUNTA-2/6; FKR-080 de PREGUNTA-3.
+M0, M2, M3, M4 y E6 completos en local; M1 con todo lo que no gasta API (manifiesto, Fixture A, ctx-gold, evaluador, arnés en contenedor, análisis). Bloqueado por decisiones humanas: ejecución del benchmark (PREGUNTA-2), Fixture B (PREGUNTA-6), publicación (PREGUNTA-3) y verificación manual de anfitriones (FKR-070).
 
 ## Issues
 
@@ -29,7 +29,11 @@ M0, M2, M3 (salvo FKR-037), M4 y E6 (salvo FKR-070, manual) completos en local. 
 | FKR-029 | Consultas + `FokerEngine` | hecho | feat/FKR-029-consultas | Contrato: mapa valida contra el esquema; ADR-021 |
 | FKR-030…035 | Context Engine | hecho | feat/FKR-030-context-engine | REQ-CTX-001 (50 ejecuciones), REQ-CTX-004 p95 221 ms en 10k |
 | FKR-036 | `foker context` + buildContext | hecho | feat/FKR-036-context-cli | Pack valida contra el esquema |
-| FKR-037 | Calibración con ctx-gold | bloqueado | — | Requiere FKR-017 (M1) |
+| FKR-037 | Calibración con ctx-gold | hecho (resultado negativo) | feat/FKR-037-calibracion | ADR-024 Rechazada: recall validación 0,63 < TARGET 0,80; propuestas de algoritmo |
+| FKR-010/012/013/017 | Manifiesto, evaluador, Fixture A, ctx-gold | hecho | feat/FKR-010-benchmark-base | 20 tareas verificadas con install real; ctx-gold 30 casos (AC final ≥ 60) |
+| FKR-011/016 | Arnés headless y análisis | hecho (sin ejecución real) | feat/FKR-011-arnes | Imagen foker-bench construida y probada; falta PREGUNTA-2 |
+| FKR-014/015/018 | Fixture B, línea base, benchmark completo | bloqueado | — | PREGUNTA-6 y PREGUNTA-2 |
+| FKR-080 | Publicación npm | bloqueado | — | PREGUNTA-3 |
 | FKR-040…042 | Config, trust, ejecutor seguro | hecho | feat/FKR-040-config-trust-exec | ADR-022 (shims .cmd en Windows) |
 | FKR-043/044 | Parsers de hallazgos, escáner de secretos | hecho | feat/FKR-043-parsers-secretos | 24 reglas |
 | FKR-045/046 | Ledger + FSM, baseline | hecho | feat/FKR-045-ledger-baseline | Evidencia inmutable, baseline autenticada |
@@ -73,4 +77,4 @@ Sesión 2026-10-03 (usuario luis):
 
 ## Siguiente paso
 
-`docs/configuration.md` generado desde el esquema (REQ-DOC-001) y docs de §23; luego FKR-010/012/013/017.
+Con PREGUNTA-2 resuelta: smoke del benchmark (3 tareas × 2 brazos) y línea base FKR-015. Sin ella: mejoras de recall del Context Engine propuestas en ADR-024, cobertura (§19.2) y checks en contenedor en CI (REQ-SEC-001).
