@@ -72,6 +72,14 @@ M0, M2, M3, M4 y E6 completos en local; M1 con todo lo que no gasta API (manifie
   (`claude setup-token`) o `ANTHROPIC_API_KEY`; anfitrión `codex` con `--codex-auth-dir`
   explícito montado en solo lectura; `billing` subscription/api y coste como equivalente API.
   Imagen Docker con Codex pendiente de reconstruir; smoke real pendiente de permiso (consume cuota).
+- **Smoke real del benchmark** (`bench-smoke-3`, claude-sonnet-5-5 por suscripción, 3 tareas × 2 brazos):
+  arnés validado de punta a punta tras corregir root MCP (`--root .`), salida truncada a 64 KiB,
+  pnpm sin bit de ejecución, `/tmp` noexec, verifyDepsBeforeRun de pnpm 11 y permiso de tools MCP en `-p`.
+  Éxito 2/3 en ambos brazos (a-09 falla en ambos: no adaptan el consumidor `ui/referenceSearch`).
+  Foker gasta ~4,5x tokens de entrada (298k vs 66k por tarea exitosa; 0,16 vs 0,02 USD equivalentes).
+  Causa medida: `foker_task_begin` devuelve ~9.100 tokens (`dirty_files` con 409 rutas de node_modules) y
+  `foker_task_submit` ~2.000–4.400 (`output_tail` de checks que pasan, con ANSI). Corrección en curso (ADR-030).
+  El control no puede ejecutar tests por Bash en `-p`: revisar equidad antes de la línea base.
 - Verificación local completa: 120 tests Rust (2 omitidos), 539 TS, clippy, Biome, tsc,
   check:deps, generate:check.
 
