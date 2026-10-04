@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "baseUrl": ".",
+    "paths": {
+      "~/*": ["src/*"],
+      "@shared": ["src/shared/index.ts"]
+    }
+  }
+}

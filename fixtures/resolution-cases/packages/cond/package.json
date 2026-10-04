@@ -1,0 +1,15 @@
+{
+  "name": "@rc/cond",
+  "version": "1.0.0",
+  "exports": {
+    ".": {
+      "types": "./src/cond.ts",
+      "import": "./dist/cond.js",
+      "default": "./dist/cond.cjs"
+    },
+    "./sub": {
+      "types": "./src/sub.ts",
+      "default": "./dist/sub.js"
+    }
+  }
+}

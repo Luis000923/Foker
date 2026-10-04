@@ -9,6 +9,8 @@ pub mod error;
 pub mod glob;
 pub mod parse;
 pub mod path;
+pub mod project;
+pub mod resolve;
 
 pub use error::FokerCode;
 

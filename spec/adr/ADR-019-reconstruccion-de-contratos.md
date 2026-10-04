@@ -26,6 +26,7 @@ Sin esos contratos no se puede validar configuración, mapa, packs, tareas ni he
   - `map.kinds` (globs por `files[].kind`) y `context.core_files` en `foker.config.yaml`.
   - Diagnósticos `FKR-MAP-102` (archivo omitido por tamaño) y `FKR-MAP-103` (entrada omitida: symlink
     fuera del root, nombre no UTF-8), que §8.2 describe sin código.
+  - `external_modules[]` admite `node:<módulo>` para los módulos integrados de Node además de `npm:<paquete>`.
   - Semántica de globs (`matchGlobs`): un glob sin `/` casa con el nombre a cualquier profundidad.
   - Herramientas MCP con `title` y salidas con `diagnostics` opcional para avisos de truncado (§10.5).
 - Si aparece el original, se compara campo a campo y cualquier diferencia se resuelve con un ADR nuevo.
