@@ -1,0 +1,12 @@
+---
+source: crates/foker-map/tests/queries.rs
+expression: "render(&[types], &[], Direction::Dependents, 3)"
+---
+[
+    "0 file packages/core/src/cart/types.ts via -",
+    "1 file packages/core/src/cart/cart.ts via imports",
+    "1 file packages/core/src/index.ts via reexports",
+    "2 file apps/web/src/app/page.tsx via imports_type",
+    "2 file packages/core/src/cart/audit.ts via imports_type",
+    "packages: [\"pkg:@mono/core\", \"pkg:@mono/web\"]",
+]

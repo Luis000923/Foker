@@ -26,6 +26,12 @@ export class FokerError extends Error {
     if (error instanceof FokerError) return error;
     const code = (error as { code?: unknown } | null)?.code;
     const message = error instanceof Error ? error.message : String(error);
-    return new FokerError(isFokerErrorCode(code) ? code : 'FKR-INT-001', message, { cause: error });
+    if (isFokerErrorCode(code)) return new FokerError(code, message, { cause: error });
+    // Las funciones async del addon no pueden fijar error.code: el código llega como prefijo.
+    const prefixed = /^\[(FKR-[A-Z]{3}-\d{3})\] ([\s\S]*)$/.exec(message);
+    if (prefixed?.[1] && isFokerErrorCode(prefixed[1])) {
+      return new FokerError(prefixed[1], prefixed[2] ?? '', { cause: error });
+    }
+    return new FokerError('FKR-INT-001', message, { cause: error });
   }
 }

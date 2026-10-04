@@ -9,16 +9,20 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 use foker_map::FokerCode;
 use napi_derive::napi;
 
+mod engine;
+
+pub use engine::FokerEngine;
+
 /// Versión de la API nativa. Se incrementa al romper el contrato de `foker-core.d.ts`.
 const NATIVE_API: u32 = 1;
 
 /// Resultado interno con código `FKR-…` en `error.code`. Las funciones `#[napi]` deben escribir
 /// `napi::Result<T, FokerCode>` de forma literal: la macro no reconoce alias de tipo.
-type NativeResult<T> = napi::Result<T, FokerCode>;
+pub(crate) type NativeResult<T> = napi::Result<T, FokerCode>;
 
 /// Ejecuta `body` y convierte un pánico en `FKR-INT-001` en vez de abortar el proceso Node
 /// (FOKER-SPEC §7.4). Toda función exportada pasa por aquí.
-fn guard<T>(body: impl FnOnce() -> NativeResult<T>) -> NativeResult<T> {
+pub(crate) fn guard<T>(body: impl FnOnce() -> NativeResult<T>) -> NativeResult<T> {
     match catch_unwind(AssertUnwindSafe(body)) {
         Ok(result) => result,
         Err(payload) => {
@@ -59,7 +63,7 @@ pub fn version_info() -> napi::Result<VersionInfo, FokerCode> {
             native_api: NATIVE_API,
             map_schema: foker_map::MAP_SCHEMA_VERSION,
             context_schema: foker_context::PACK_VERSION,
-            grammars: HashMap::new(),
+            grammars: engine::grammars(),
         })
     })
 }

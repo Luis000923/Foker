@@ -15,8 +15,10 @@ pub mod pagerank;
 pub mod parse;
 pub mod path;
 pub mod project;
+pub mod query;
 pub mod resolve;
 pub mod store;
+pub mod text;
 
 pub use error::FokerCode;
 

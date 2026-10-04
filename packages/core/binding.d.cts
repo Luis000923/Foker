@@ -9,6 +9,154 @@
  */
 export declare const __napiBindingTarget: 'native' | 'wasm32-wasi' | 'wasm32-wasip1'
 
+/** Motor del Project Map para un root. Una instancia por root y proceso. */
+export declare class FokerEngine {
+  /** Abre el motor para un root absoluto. Carga el mapa persistido si es válido. */
+  static open(root: string, config?: EngineConfig | undefined | null): Promise<FokerEngine>
+  /** Diagnósticos de la carga (p. ej. `FKR-MAP-005` si el mapa estaba corrupto). */
+  loadDiagnostics(): Array<Diagnostic>
+  /** Refresca el mapa (incremental salvo `full`). */
+  refresh(options?: RefreshOptions | undefined | null): Promise<RefreshReport>
+  /** Estado del mapa en memoria. */
+  status(): MapStatus
+  /** Cuenta archivos desactualizados respecto al disco sin reconstruir. */
+  checkStale(): Promise<number>
+  /** Guarda el mapa en `.foker/project-map.json` (atómico, bajo lock). */
+  save(): Promise<SaveReport>
+  /** JSON canónico del mapa completo. */
+  exportMapJson(): Promise<string>
+  /** Busca archivos y símbolos por nombre o ruta. */
+  search(query: SearchQuery): Array<SearchHit>
+  /** Información de un archivo (id o ruta relativa). `null` si no está en el mapa. */
+  fileInfo(id: string): FileInfo | null
+  /** Información de un símbolo por id (`<archivo>#<nombre>`). `null` si no existe. */
+  symbolInfo(id: string): SymbolInfo | null
+  /** Radio de impacto de archivos y símbolos. */
+  impact(request: ImpactRequest): ImpactReport
+}
+
+/** Diagnóstico (código `FKR-…1xx`). */
+export interface Diagnostic {
+  /** Código. */
+  code: string
+  /** Mensaje. */
+  message: string
+  /** Archivo. */
+  file?: string
+  /** Sujeto (especificador, ancla…). */
+  subject?: string
+}
+
+/** Configuración del motor (sección `map` efectiva + globs de secretos de la política). */
+export interface EngineConfig {
+  /** Globs incluidos (vacío = todo). */
+  include?: Array<string>
+  /** Globs excluidos. */
+  exclude?: Array<string>
+  /** tsconfig usados en la resolución. */
+  tsconfig?: Array<string>
+  /** Globs de secretos: nunca se leen. */
+  secretGlobs?: Array<string>
+  /** Tamaño máximo de archivo parseado. */
+  maxFileBytes?: number
+  /** Número máximo de archivos fuente. */
+  maxFiles?: number
+  /** Clasificación de archivos. */
+  kinds?: KindGlobsConfig
+}
+
+/** Información de un archivo. */
+export interface FileInfo {
+  /** Id. */
+  id: string
+  /** Paquete. */
+  package?: string
+  /** Lenguaje. */
+  language: string
+  /** Tipo. */
+  kind: string
+  /** Hash. */
+  hash: string
+  /** Tamaño. */
+  sizeBytes: number
+  /** Líneas. */
+  lines: number
+  /** Estado del parseo. */
+  parseStatus: string
+  /** PageRank global. */
+  rankGlobal: number
+  /** Símbolos exportados. */
+  exports: Array<string>
+  /** Archivos que importa. */
+  imports: Array<string>
+  /** Archivos que lo importan. */
+  importedBy: Array<string>
+  /** Símbolos declarados. */
+  symbols: Array<string>
+}
+
+/** Nodo alcanzado. */
+export interface ImpactNode {
+  /** Id. */
+  id: string
+  /** Distancia. */
+  distance: number
+  /** Arista de llegada. */
+  via?: string
+  /** `file` o `symbol`. */
+  kind: string
+}
+
+/** Informe de impacto. */
+export interface ImpactReport {
+  /** Nodos por distancia e id. */
+  nodes: Array<ImpactNode>
+  /** Paquetes afectados. */
+  packages: Array<string>
+  /** Tests afectados. */
+  tests: Array<string>
+  /** Orígenes desconocidos. */
+  diagnostics: Array<Diagnostic>
+}
+
+/** Petición de impacto. */
+export interface ImpactRequest {
+  /** Archivos (≤ 20). */
+  files?: Array<string>
+  /** Símbolos (≤ 20). */
+  symbols?: Array<string>
+  /** `dependents` (por defecto), `dependencies` o `both`. */
+  direction?: string
+  /** 1–3 (por defecto 2). */
+  depth?: number
+}
+
+/** Globs que clasifican archivos. Los omitidos toman el valor por defecto. */
+export interface KindGlobsConfig {
+  /** Tests. */
+  test?: Array<string>
+  /** Declaraciones. */
+  declaration?: Array<string>
+  /** Configuración. */
+  config?: Array<string>
+  /** Generados. */
+  generated?: Array<string>
+}
+
+/** Estado del mapa. */
+export interface MapStatus {
+  /** `content_hash` (vacío si aún no hay mapa). */
+  contentHash: string
+  /** Archivos. */
+  files: number
+  /** Símbolos. */
+  symbols: number
+  /** Archivos desactualizados en la última comprobación. */
+  staleFiles: number
+  /** `schema_version`. */
+  schemaVersion: number
+}
+
 /**
  * `true` si algún glob casa con el id (misma semántica que el motor). Lanza `FKR-INP-001` si un
  * glob es inválido.
@@ -20,6 +168,108 @@ export declare function matchGlobs(id: string, globs: Array<string>): boolean
  * Lanza `FKR-POL-001` si la ruta es inválida o sale del root.
  */
 export declare function normalizePath(root: string, input: string): string
+
+/** Posición base 0. */
+export interface Position {
+  /** Línea. */
+  line: number
+  /** Columna en bytes. */
+  col: number
+}
+
+/** Rango. */
+export interface Range {
+  /** Inicio. */
+  start: Position
+  /** Fin. */
+  end: Position
+}
+
+/** Opciones de `refresh`. */
+export interface RefreshOptions {
+  /** Reconstrucción completa. */
+  full?: boolean
+}
+
+/** Resultado de `refresh`. */
+export interface RefreshReport {
+  /** Archivos nuevos. */
+  added: Array<string>
+  /** Archivos modificados. */
+  changed: Array<string>
+  /** Archivos eliminados. */
+  removed: Array<string>
+  /** Diagnósticos nuevos. */
+  diagnostics: Array<Diagnostic>
+  /** Duración. */
+  durationMs: number
+  /** `content_hash` resultante. */
+  contentHash: string
+  /** Hubo reconstrucción completa. */
+  rebuilt: boolean
+  /** No había cambios. */
+  unchanged: boolean
+}
+
+/** Resultado de `save`. */
+export interface SaveReport {
+  /** `.foker/project-map.json`. */
+  path: string
+  /** Bytes. */
+  bytes: number
+  /** `content_hash`. */
+  contentHash: string
+}
+
+/** Resultado de búsqueda. */
+export interface SearchHit {
+  /** Id. */
+  id: string
+  /** `file` o `symbol`. */
+  kind: string
+  /** Nombre. */
+  name: string
+  /** Archivo. */
+  file: string
+  /** Firma (símbolos). */
+  signature?: string
+  /** Puntuación en [0, 1]. */
+  score: number
+}
+
+/** Consulta de búsqueda. */
+export interface SearchQuery {
+  /** Texto (1–200 caracteres). */
+  query: string
+  /** `file`, `symbol` o `any` (por defecto). */
+  kind?: string
+  /** 1–50 (por defecto 20). */
+  limit?: number
+}
+
+/** Información de un símbolo. */
+export interface SymbolInfo {
+  /** Id. */
+  id: string
+  /** Nombre. */
+  name: string
+  /** Tipo. */
+  kind: string
+  /** Etiquetas. */
+  tags: Array<string>
+  /** Exportación. */
+  exported: string
+  /** Firma. */
+  signature: string
+  /** JSDoc. */
+  doc?: string
+  /** Rango. */
+  range: Range
+  /** Contenedor. */
+  parent?: string
+  /** Archivo. */
+  file: string
+}
 
 /** Devuelve las versiones del núcleo nativo. */
 export declare function versionInfo(): VersionInfo

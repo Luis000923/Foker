@@ -1,0 +1,10 @@
+---
+source: crates/foker-map/tests/queries.rs
+expression: "hits(\"card state\", SearchKind::Any)"
+---
+[
+    "0.50 packages/ui/src/card.tsx#useCardState",
+    "0.25 packages/ui/src/card.tsx",
+    "0.25 packages/ui/src/card.tsx#Card",
+    "0.25 packages/ui/src/card.tsx#CardProps",
+]
