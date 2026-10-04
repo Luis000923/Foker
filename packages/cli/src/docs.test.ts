@@ -23,6 +23,7 @@ it('REQ-DOC-001: docs/cli.md corresponde al registro', () => {
     exitCodes.map(([code, description]) => `| ${code} | ${description} |`).join('\n') +
     '\n\n' +
     commands.map((c) => `## foker ${c.name}\n\n${c.description}\n\n${flagsTable(c.flags)}`).join('\n') +
+    '\n## Datos de context\n\n`foker context "<tarea>"` imprime Markdown por defecto. `--json` o `--format json` entrega el sobre CLI con `data` conforme a `context-pack.schema.json` (snake_case). Las anclas de archivo entran en L3; `--explain` incluye razones y descartados. Lee reglas, skill y cambios de git; abre el motor en solo lectura y no guarda el mapa. `--budget` admite 1000–200000 tokens. `--task` queda pendiente de FKR-045. Un presupuesto insuficiente para contexto obligatorio produce FKR-CTX-001 y exit 1.\n' +
     '\n## Datos de map\n\n`data` incluye `contentHash`, `files`, `symbols`, `added`, `changed`, `removed`, `rebuilt`, `unchanged`, `diagnostics` y, al guardar, `saved: {path, bytes}`. `--stats` añade `stats: {files, symbols, staleFiles, durationMs}`. `--dry-run --export` añade `plannedFiles` y no escribe. Las rutas de exportación se normalizan respecto a `--cwd`. `--check` compara el hash previo con el refrescado y no guarda.\n';
   const path = new URL('../../../docs/cli.md', import.meta.url);
   if (process.env['UPDATE_SNAPSHOTS'] === '1') writeFileSync(path, markdown);

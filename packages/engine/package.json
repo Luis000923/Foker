@@ -1,7 +1,7 @@
 {
   "name": "@foker/engine",
   "version": "0.0.0",
-  "description": "Motor de Foker: configuración, tareas, gates, validación, Skills y auditoría.",
+  "description": "Motor de Foker: configuraci\u00f3n, tareas, gates, validaci\u00f3n, Skills y auditor\u00eda.",
   "license": "UNLICENSED",
   "type": "module",
   "exports": {
@@ -23,6 +23,7 @@
   "dependencies": {
     "@foker/core": "workspace:*",
     "@foker/policy": "workspace:*",
-    "@foker/schemas": "workspace:*"
+    "@foker/schemas": "workspace:*",
+    "yaml": "2.9.1"
   }
 }

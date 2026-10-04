@@ -314,6 +314,157 @@ pub struct ImpactReport {
     pub diagnostics: Vec<Diagnostic>,
 }
 
+/// Contrato de contexto: ContextAnchors.
+#[napi(object)]
+pub struct ContextAnchors {
+    /// Campo files.
+    pub files: Option<Vec<String>>,
+    /// Campo symbols.
+    pub symbols: Option<Vec<String>>,
+}
+
+/// Contrato de contexto: ContextSkill.
+#[napi(object)]
+pub struct ContextSkill {
+    /// Campo name.
+    pub name: String,
+    /// Campo body.
+    pub body: String,
+    /// Campo required_files.
+    pub required_files: Vec<String>,
+    /// Campo required_symbols.
+    pub required_symbols: Vec<String>,
+}
+
+/// Contrato de contexto: ContextTaskScope.
+#[napi(object)]
+pub struct ContextTaskScope {
+    /// Campo task_id.
+    pub task_id: String,
+    /// Campo description.
+    pub description: String,
+    /// Campo paths.
+    pub paths: Vec<String>,
+    /// Campo checks.
+    pub checks: Vec<String>,
+}
+
+/// Contrato de contexto: ContextRequest.
+#[napi(object)]
+pub struct ContextRequest {
+    /// Campo task.
+    pub task: String,
+    /// Campo anchors.
+    pub anchors: Option<ContextAnchors>,
+    /// Campo intent.
+    #[napi(ts_type = "'fix' | 'add' | 'modify' | 'refactor' | 'test' | 'explain'")]
+    pub intent: Option<String>,
+    /// Campo budget_tokens.
+    pub budget_tokens: Option<u32>,
+    /// Campo explain.
+    pub explain: Option<bool>,
+    /// Campo rules.
+    pub rules: Option<String>,
+    /// Campo skill.
+    pub skill: Option<ContextSkill>,
+    /// Campo task_scope.
+    pub task_scope: Option<ContextTaskScope>,
+    /// Campo dirty_files.
+    pub dirty_files: Option<Vec<String>>,
+}
+
+/// Contrato de contexto: ContextBudget.
+#[napi(object)]
+pub struct ContextBudget {
+    /// Campo limit.
+    pub limit: u32,
+    /// Campo used.
+    pub used: u32,
+    /// Campo estimator.
+    pub estimator: String,
+}
+
+/// Contrato de contexto: PackSection.
+#[napi(object)]
+pub struct PackSection {
+    /// Campo id.
+    #[napi(
+        ts_type = "'rules' | 'core' | 'skill' | 'task_scope' | 'related' | 'targets' | 'request'"
+    )]
+    pub id: String,
+    /// Campo class.
+    #[napi(ts_type = "'mandatory' | 'optional'")]
+    pub class: String,
+    /// Campo stability.
+    #[napi(ts_type = "'static' | 'session' | 'task'")]
+    pub stability: String,
+    /// Campo tokens.
+    pub tokens: u32,
+    /// Campo hash.
+    pub hash: String,
+}
+
+/// Contrato de contexto: PackFile.
+#[napi(object)]
+pub struct PackFile {
+    /// Campo id.
+    pub id: String,
+    /// Campo level.
+    #[napi(ts_type = "'L0' | 'L1' | 'L2' | 'L3'")]
+    pub level: String,
+    /// Campo tokens.
+    pub tokens: u32,
+    /// Campo score.
+    pub score: f64,
+    /// Campo reasons.
+    pub reasons: Vec<String>,
+    /// Campo note.
+    pub note: Option<String>,
+}
+
+/// Contrato de contexto: ContextExcluded.
+#[napi(object)]
+pub struct ContextExcluded {
+    /// Campo id.
+    pub id: String,
+    /// Campo reason.
+    #[napi(ts_type = "'BUDGET' | 'RANK_CUTOFF'")]
+    pub reason: String,
+    /// Campo score.
+    pub score: f64,
+}
+
+/// Contrato de contexto: ContextPack.
+#[napi(object)]
+pub struct ContextPack {
+    /// Campo pack_version.
+    pub pack_version: u32,
+    /// Campo pack_hash.
+    pub pack_hash: String,
+    /// Campo map_hash.
+    pub map_hash: String,
+    /// Campo intent.
+    #[napi(ts_type = "'fix' | 'add' | 'modify' | 'refactor' | 'test' | 'explain'")]
+    pub intent: String,
+    /// Campo intent_source.
+    #[napi(ts_type = "'request' | 'inferred'")]
+    pub intent_source: String,
+    /// Campo budget.
+    pub budget: ContextBudget,
+    /// Campo sections.
+    pub sections: Vec<PackSection>,
+    /// Campo files.
+    pub files: Vec<PackFile>,
+    /// Campo excluded.
+    pub excluded: Vec<ContextExcluded>,
+    /// Campo diagnostics.
+    pub diagnostics: Vec<Diagnostic>,
+    /// Campo rendered.
+    pub rendered: String,
+    /// Campo json.
+    pub json: String,
+}
+
 fn count(n: usize) -> u32 {
     u32::try_from(n).unwrap_or(u32::MAX)
 }
@@ -394,6 +545,128 @@ impl FokerEngine {
                 content_hash: report.content_hash,
                 rebuilt: report.rebuilt,
                 unchanged: report.unchanged,
+            })
+        })
+        .await
+    }
+
+    /// Construye contexto delegando en foker-context, fuera del hilo de Node.
+    #[napi]
+    pub async fn build_context(&self, request: ContextRequest) -> napi::Result<ContextPack> {
+        let inner = Arc::clone(&self.inner);
+        blocking(move || {
+            let mut engine = inner.write().map_err(|_| internal("lock envenenado"))?;
+            // Siempre refrescar (sin cambios es la ruta rápida): el pack lee el código actual del disco
+            // y debe rankear con un mapa coherente con él (FOKER-SPEC §9.1).
+            engine
+                .refresh(&Default::default())
+                .map_err(|e| engine_error(&e))?;
+            let intent = match request.intent.as_deref() {
+                None => None,
+                Some("fix") => Some(foker_context::Intent::Fix),
+                Some("add") => Some(foker_context::Intent::Add),
+                Some("modify") => Some(foker_context::Intent::Modify),
+                Some("refactor") => Some(foker_context::Intent::Refactor),
+                Some("test") => Some(foker_context::Intent::Test),
+                Some("explain") => Some(foker_context::Intent::Explain),
+                Some(other) => return Err(input_error(format!("intent desconocido: {other}"))),
+            };
+            let anchors = request.anchors.unwrap_or(ContextAnchors {
+                files: None,
+                symbols: None,
+            });
+            let req = foker_context::ContextRequest {
+                task: request.task,
+                anchors: foker_context::Anchors {
+                    files: anchors.files.unwrap_or_default(),
+                    symbols: anchors.symbols.unwrap_or_default(),
+                },
+                intent,
+                budget_tokens: request
+                    .budget_tokens
+                    .map(|v| v as usize)
+                    .unwrap_or_else(|| foker_context::ContextRequest::default().budget_tokens),
+                explain: request.explain.unwrap_or(false),
+                ..Default::default()
+            };
+            let inputs = foker_context::ContextInputs {
+                rules: request.rules,
+                skill: request.skill.map(|s| foker_context::SkillInput {
+                    name: s.name,
+                    body: s.body,
+                    required_files: s.required_files,
+                    required_symbols: s.required_symbols,
+                }),
+                task_scope: request.task_scope.map(|s| foker_context::TaskScopeInput {
+                    task_id: s.task_id,
+                    description: s.description,
+                    paths: s.paths,
+                    checks: s.checks,
+                }),
+                dirty_files: request.dirty_files.unwrap_or_default(),
+                ..Default::default()
+            };
+            let state = engine
+                .state()
+                .ok_or_else(|| internal("no hay estado tras refresh"))?;
+            let pack = foker_context::build_context(state, engine.root(), &req, &inputs)
+                .map_err(|e| napi::Error::new(e.code(), e.to_string()))?;
+            let json = pack.to_canonical_json();
+            Ok(ContextPack {
+                pack_version: pack.pack_version,
+                pack_hash: pack.pack_hash,
+                map_hash: pack.map_hash,
+                intent: pack.intent.as_str().into(),
+                intent_source: pack.intent_source,
+                budget: ContextBudget {
+                    limit: count(pack.budget.limit),
+                    used: count(pack.budget.used),
+                    estimator: pack.budget.estimator,
+                },
+                sections: pack
+                    .sections
+                    .into_iter()
+                    .map(|s| PackSection {
+                        id: s.id,
+                        class: s.class,
+                        stability: s.stability,
+                        tokens: count(s.tokens),
+                        hash: s.hash,
+                    })
+                    .collect(),
+                files: pack
+                    .files
+                    .into_iter()
+                    .map(|f| PackFile {
+                        id: f.id,
+                        level: f.level.as_str().into(),
+                        tokens: count(f.tokens),
+                        score: f.score,
+                        reasons: f.reasons,
+                        note: f.note,
+                    })
+                    .collect(),
+                excluded: pack
+                    .excluded
+                    .into_iter()
+                    .map(|f| ContextExcluded {
+                        id: f.id,
+                        reason: f.reason,
+                        score: f.score,
+                    })
+                    .collect(),
+                diagnostics: pack
+                    .diagnostics
+                    .into_iter()
+                    .map(|d| Diagnostic {
+                        code: d.code,
+                        message: d.message,
+                        file: None,
+                        subject: d.subject,
+                    })
+                    .collect(),
+                rendered: pack.rendered,
+                json,
             })
         })
         .await

@@ -159,3 +159,39 @@ it.each([
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+it('context produce un pack válido con el ancla L3 sin guardar el mapa', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'foker-cli-context-'));
+  try {
+    cpSync(new URL('../../../fixtures/monorepo-pnpm/', import.meta.url), root, {
+      recursive: true,
+      filter: (src) => !src.includes('/expected'),
+    });
+    const args = [
+      'context',
+      'Añade la variante danger al botón',
+      '--cwd',
+      root,
+      '--anchor',
+      'packages/ui/src/button.tsx',
+    ];
+    const result = await run([...args, '--json']);
+    expect(result.exit).toBe(0);
+    const pack = envelope(result.stdout).data;
+    expect(validate('context-pack', pack).ok).toBe(true);
+    expect(pack.files).toContainEqual(expect.objectContaining({ id: 'packages/ui/src/button.tsx', level: 'L3' }));
+    expect(existsSync(join(root, '.foker/project-map.json'))).toBe(false);
+    expect((await run(args)).stdout).toBe(pack.rendered);
+    expect(envelope((await run([...args, '--format', 'json'])).stdout).data.pack_hash).toBe(pack.pack_hash);
+    expect((await run([...args, '--budget', '10', '--json'])).exit).toBe(2);
+    expect(envelope((await run([...args, '--skill', 'missing', '--json'])).stdout).errors[0].code).toBe('FKR-SKL-001');
+    expect(envelope((await run([...args, '--task', 'x', '--json'])).stdout).errors[0].message).toContain('FKR-045');
+    mkdirSync(join(root, 'foker'), { recursive: true });
+    writeFileSync(join(root, 'foker/rules.md'), 'Regla obligatoria '.repeat(2000));
+    const tooSmall = await run([...args, '--budget', '1000', '--json']);
+    expect(tooSmall.exit).toBe(1);
+    expect(envelope(tooSmall.stdout).errors[0].code).toBe('FKR-CTX-001');
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});

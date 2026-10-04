@@ -45,6 +45,7 @@ export async function main(argv: string[], env: NodeJS.ProcessEnv, io: IO): Prom
       .sort((a, b) => b.name.length - a.name.length)
       .find((c) => c.name.split(' ').every((part, i) => parsed.positionals[i] === part));
     commandName = command?.name ?? parsed.positionals[0] ?? 'foker';
+    json ||= commandName === 'context' && parsed.values['format'] === 'json';
     const allowed = new Set([...globalFlags, ...(command?.flags ?? [])].map((f) => f.name));
     for (const token of parsed.tokens ?? []) {
       if (token.kind === 'option' && !allowed.has(token.name))
@@ -88,7 +89,7 @@ export async function main(argv: string[], env: NodeJS.ProcessEnv, io: IO): Prom
     if (debug) io.stderr(`${failure.stack ?? failure.message}\n`);
   }
   const duration = Math.max(0, Math.round(performance.now() - start));
-  if (json || (ci && errors.length > 0))
+  if (json || result.json || (ci && errors.length > 0))
     io.stdout(
       `${JSON.stringify({ schema: 'foker.cli/v1', command: commandName, ok: result.exitCode === 0, exit_code: result.exitCode, data: result.data, warnings: result.warnings, errors, duration_ms: duration })}\n`,
     );
@@ -103,7 +104,7 @@ export async function main(argv: string[], env: NodeJS.ProcessEnv, io: IO): Prom
           : commandName === 'map'
             ? `${data?.files} archivos, ${data?.symbols} símbolos; ${result.exitCode === 1 ? 'desactualizado' : 'correcto'}`
             : 'correcto';
-        io.stdout(human ?? `${commandName}: ${summary}\n`);
+        io.stdout(result.human ?? human ?? `${commandName}: ${summary}\n`);
       }
     }
   }

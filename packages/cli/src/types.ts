@@ -19,6 +19,8 @@ export interface Context {
   log(message: string): void;
 }
 export interface Result {
+  human?: string;
+  json?: boolean;
   data: unknown;
   warnings: Message[];
   exitCode: number;

@@ -28,3 +28,58 @@ describe('contrato del Project Map', () => {
     },
   );
 });
+
+it('buildContext valida el esquema y conserva packHash al repetir la petición', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'foker-context-contract-'));
+  try {
+    cpSync(new URL('../../../fixtures/monorepo-pnpm/', import.meta.url), root, {
+      recursive: true,
+      filter: (src) => !src.includes('/expected'),
+    });
+    const engine = await openEngine(root, { readOnly: true });
+    const request = { task: 'Añade la variante danger al botón', anchors: { files: ['packages/ui/src/button.tsx'] } };
+    const pack = await engine.buildContext(request);
+    const enriched = await engine.buildContext({
+      ...request,
+      intent: 'add',
+      explain: true,
+      rules: 'Respeta las convenciones.',
+      skill: {
+        name: 'button',
+        body: 'Añade variantes.',
+        requiredFiles: ['packages/ui/src/button.tsx'],
+        requiredSymbols: [],
+      },
+      taskScope: {
+        taskId: 'tsk_01ARZ3NDEKTSV4RRFFQ69G5FAV',
+        description: 'Actualiza el botón',
+        paths: ['packages/ui/**'],
+        checks: ['tests'],
+      },
+      dirtyFiles: ['packages/ui/src/button.tsx'],
+    });
+    const enrichedJson = JSON.parse(enriched.json);
+    expect(validate('context-pack', enrichedJson).ok).toBe(true);
+    expect(enrichedJson.request).toMatchObject({
+      skill: 'button',
+      task_id: 'tsk_01ARZ3NDEKTSV4RRFFQ69G5FAV',
+      intent: 'add',
+      explain: true,
+    });
+    expect(enriched.rendered).toContain('Respeta las convenciones.');
+    expect(enriched.intentSource).toBe('request');
+    expect(enriched.files).toEqual(enrichedJson.files);
+    expect(enriched.sections).toEqual(enrichedJson.sections);
+    const result = validate('context-pack', JSON.parse(pack.json));
+    if (!result.ok) throw new Error(formatIssues(result.issues));
+    expect((await engine.buildContext(request)).packHash).toBe(pack.packHash);
+    // Un mapa persistido no contiene MapState: buildContext debe reconstruirlo.
+    const writable = await openEngine(root);
+    await writable.refresh();
+    await writable.save();
+    const reopened = await openEngine(root, { readOnly: true });
+    expect((await reopened.buildContext(request)).packHash).toBe(pack.packHash);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
