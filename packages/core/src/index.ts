@@ -12,6 +12,7 @@ export const PACKAGE_NAME = '@foker/core';
 export interface NativeBinding {
   versionInfo(): VersionInfo;
   normalizePath(root: string, input: string): string;
+  matchGlobs(id: string, globs: string[]): boolean;
 }
 
 const require = createRequire(import.meta.url);
@@ -78,6 +79,20 @@ export function normalizePath(root: string, input: string): string {
   const binding = native();
   try {
     return binding.normalizePath(root, input);
+  } catch (error) {
+    throw FokerError.fromNative(error);
+  }
+}
+
+/**
+ * `true` si algún glob casa con el id, con la misma semántica que el Project Map: `*` no cruza `/`,
+ * `**` sí, y un glob sin `/` casa con el nombre del archivo a cualquier profundidad.
+ * @throws {FokerError} `FKR-INP-001` si un glob es inválido.
+ */
+export function matchGlobs(id: string, globs: string[]): boolean {
+  const binding = native();
+  try {
+    return binding.matchGlobs(id, globs);
   } catch (error) {
     throw FokerError.fromNative(error);
   }

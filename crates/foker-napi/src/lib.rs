@@ -73,3 +73,13 @@ pub fn normalize_path(root: String, input: String) -> napi::Result<String, Foker
             .map_err(|e| napi::Error::new(e.code(), e.to_string()))
     })
 }
+
+/// `true` si algún glob casa con el id (misma semántica que el motor). Lanza `FKR-INP-001` si un
+/// glob es inválido.
+#[napi]
+pub fn match_globs(id: String, globs: Vec<String>) -> napi::Result<bool, FokerCode> {
+    guard(|| {
+        foker_map::glob::match_globs(&id, &globs)
+            .map_err(|e| napi::Error::new(FokerCode::Inp001, e.to_string()))
+    })
+}

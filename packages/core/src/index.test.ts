@@ -6,6 +6,7 @@ import {
   checkBinding,
   FokerError,
   loadBinding,
+  matchGlobs,
   native,
   normalizePath,
   PACKAGE_NAME,
@@ -17,6 +18,7 @@ const fakeInfo = (coreVersion: string) => ({ coreVersion, nativeApi: 1, mapSchem
 const fake = (coreVersion: string) => ({
   versionInfo: () => fakeInfo(coreVersion),
   normalizePath: (_r: string, i: string) => i,
+  matchGlobs: () => false,
 });
 
 describe(PACKAGE_NAME, () => {
@@ -57,6 +59,7 @@ describe(PACKAGE_NAME, () => {
   it('propaga el código de un error nativo', () => {
     const failing = {
       normalizePath: (_r: string, i: string) => i,
+      matchGlobs: () => false,
       versionInfo: () => {
         throw Object.assign(new Error('pánico'), { code: 'FKR-INT-001' });
       },
@@ -104,5 +107,18 @@ describe('normalizePath (REQ-XPLAT-001…003)', () => {
       rmSync(outside, { recursive: true, force: true });
       rmSync(root, { recursive: true, force: true });
     }
+  });
+});
+
+describe('matchGlobs', () => {
+  it('usa la semántica del motor', () => {
+    expect(matchGlobs('apps/web/.env', ['.env'])).toBe(true);
+    expect(matchGlobs('src/lib/a.ts', ['src/*.ts'])).toBe(false);
+    expect(matchGlobs('src/lib/a.ts', ['src/**/*.ts'])).toBe(true);
+    expect(matchGlobs('a.ts', [])).toBe(false);
+  });
+
+  it('lanza FKR-INP-001 con globs inválidos', () => {
+    expect(() => matchGlobs('a', ['a['])).toThrowError(expect.objectContaining({ code: 'FKR-INP-001' }));
   });
 });
