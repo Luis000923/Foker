@@ -101,7 +101,7 @@ export function containerBackend(manifest: BenchmarkManifest, options: HostOptio
         name,
         '--read-only',
         '--tmpfs',
-        '/tmp:rw,nosuid,size=1g',
+        '/tmp:rw,exec,nosuid,size=1g',
         '--memory',
         '4g',
         '--cpus',

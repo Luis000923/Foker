@@ -13,6 +13,20 @@ import { tmpdir } from 'node:os';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { runCheck } from '@foker/engine';
+
+/** Entorno de los checks de evaluación: allowlist por defecto de la política más la opción de pnpm. */
+const CHECK_ENV_ALLOWLIST = [
+  'PATH',
+  'HOME',
+  'TEMP',
+  'TMP',
+  'LANG',
+  'LC_ALL',
+  'CI',
+  'NODE_OPTIONS',
+  'NODE_ENV',
+  'pnpm_config_verify_deps_before_run',
+] as const;
 import type { BenchmarkResult } from '@foker/schemas';
 
 export interface TestGroup {
@@ -151,13 +165,22 @@ export async function evaluateTask(options: {
         writeFileSync(destination, bytes);
       }
     }
+    // node_modules viene copiado del fixture: pnpm 11 lo ve desincronizado y lanzaría
+    // `pnpm install` (sin red ni TTY) antes de cada script. Las deps son del arnés, no se verifican.
+    const checkEnv = { ...process.env, pnpm_config_verify_deps_before_run: 'false' };
+    const envAllowlist = [...CHECK_ENV_ALLOWLIST];
     const checks: Awaited<ReturnType<typeof runCheck>>[] = [];
     for (const command of [
       task.hidden_tests.fail_to_pass.command,
       task.hidden_tests.pass_to_pass.command,
       ...task.default_checks,
     ]) {
-      checks.push(await runCheck({ run: command }, { root: clean, timeoutMs: options.timeoutMs ?? 300_000 }));
+      checks.push(
+        await runCheck(
+          { run: command },
+          { root: clean, timeoutMs: options.timeoutMs ?? 300_000, env: checkEnv, envAllowlist },
+        ),
+      );
     }
     let submittedPass = true;
     if (task.submitted_tests) {
@@ -167,7 +190,7 @@ export async function evaluateTask(options: {
       } else {
         const delivered = await runCheck(
           { run: group.command },
-          { root: clean, timeoutMs: options.timeoutMs ?? 300_000 },
+          { root: clean, timeoutMs: options.timeoutMs ?? 300_000, env: checkEnv, envAllowlist },
         );
         checks.push(delivered);
         const original = mkdtempSync(join(tmpdir(), 'foker-mutation-'));
@@ -180,7 +203,7 @@ export async function evaluateTask(options: {
           }
           const mutation = await runCheck(
             { run: group.command },
-            { root: original, timeoutMs: options.timeoutMs ?? 300_000 },
+            { root: original, timeoutMs: options.timeoutMs ?? 300_000, env: checkEnv, envAllowlist },
           );
           checks.push(mutation);
           submittedPass =

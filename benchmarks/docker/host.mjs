@@ -1,9 +1,15 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, readdirSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 mkdirSync('/tmp/home', { recursive: true });
 if (existsSync('/work/.foker/bench-xdg')) process.env.XDG_CONFIG_HOME = '/work/.foker/bench-xdg';
+// node_modules se copia del fixture preinstalado: pnpm 11 lo ve desincronizado y lanzaría
+// `pnpm install` (sin red) antes de cada script, rompiendo tests y foker_check del agente.
+for (const dir of new Set(['/tmp/home/.config', process.env.XDG_CONFIG_HOME].filter(Boolean))) {
+  mkdirSync(`${dir}/pnpm`, { recursive: true });
+  writeFileSync(`${dir}/pnpm/config.yaml`, 'verifyDepsBeforeRun: false\n');
+}
 const [hostName, expectedVersion, ...args] = process.argv.slice(2);
 const version = spawnSync(hostName === 'codex' ? 'codex' : 'claude', ['--version'], { encoding: 'utf8' });
 if (
