@@ -1,0 +1,3 @@
+ FAIL  src/app.test.ts > calculator > adds numbers
+AssertionError: expected 3 to be 4
+ ❯ src/app.test.ts:12:8
