@@ -14,6 +14,8 @@ export interface Context {
   env: NodeJS.ProcessEnv;
   confirm?: (message: string) => Promise<boolean>;
   trustBaseDir?: string;
+  /** Lee stdin completo (hooks de anfitriones). */
+  stdin?: () => Promise<string>;
   display(message: string): void;
   cwd: string;
   flags: Record<string, boolean | string | string[]>;

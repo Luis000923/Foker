@@ -65,15 +65,22 @@ importers:
       '@foker/schemas':
         specifier: workspace:*
         version: link:../schemas
+      yaml:
+        specifier: 2.9.1
+        version: 2.9.1
+    devDependencies:
+      ajv:
+        specifier: 8.20.0
+        version: 8.20.0
 
   packages/mcp:
     dependencies:
-      '@foker/schemas':
-        specifier: workspace:*
-        version: link:../schemas
       '@foker/engine':
         specifier: workspace:*
         version: link:../engine
+      '@foker/schemas':
+        specifier: workspace:*
+        version: link:../schemas
       '@modelcontextprotocol/server':
         specifier: 2.3.0
         version: 2.3.0
