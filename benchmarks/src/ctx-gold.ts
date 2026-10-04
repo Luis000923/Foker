@@ -1,6 +1,6 @@
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { type ContextRequest, openEngine } from '@foker/core';
 import { generate } from '../fixtures/fixture-a/generate.mjs';
@@ -9,9 +9,54 @@ export interface GoldCase {
   id: string;
   fixture: 'fixture-a' | 'monorepo-pnpm';
   task: string;
+  split: 'calibration' | 'validation';
   anchors?: ContextRequest['anchors'];
   gold_modified: string[];
   gold_read?: string[];
+}
+/** Valida el formato local de la suite, sin modificar contratos del motor. */
+export function loadCases(source: string): GoldCase[] {
+  if (!source.trim()) throw new Error('Suite vacía');
+  const ids = new Set<string>();
+  return source
+    .trim()
+    .split('\n')
+    .map((line, index) => {
+      let item: GoldCase;
+      try {
+        item = JSON.parse(line) as GoldCase;
+      } catch {
+        throw new Error(`JSON inválido en línea ${index + 1}`);
+      }
+      const validPaths = (value: unknown): value is string[] =>
+        Array.isArray(value) &&
+        value.every(
+          (p) =>
+            typeof p === 'string' &&
+            p.length > 0 &&
+            !p.startsWith('/') &&
+            !p.includes('\\') &&
+            !p.split('/').some((part) => part === '..' || part === '.' || !part),
+        ) &&
+        new Set(value).size === value.length;
+      if (
+        !item ||
+        typeof item.id !== 'string' ||
+        !item.id.trim() ||
+        typeof item.task !== 'string' ||
+        !item.task.trim() ||
+        !['fixture-a', 'monorepo-pnpm'].includes(item.fixture) ||
+        !['calibration', 'validation'].includes(item.split) ||
+        !validPaths(item.gold_modified) ||
+        !item.gold_modified.length ||
+        (item.gold_read !== undefined && !validPaths(item.gold_read))
+      ) {
+        throw new Error(`Caso ctx-gold inválido en línea ${index + 1}`);
+      }
+      if (ids.has(item.id)) throw new Error(`Ids duplicados: ${item.id}`);
+      ids.add(item.id);
+      return item;
+    });
 }
 export function score(exposed: string[], gold: string[], goldRead: string[] = []) {
   const pack = new Set(exposed);
@@ -23,6 +68,28 @@ export function score(exposed: string[], gold: string[], goldRead: string[] = []
     precision: pack.size ? [...pack].filter((p) => relevant.has(p)).length / pack.size : 0,
   };
 }
+function summarizeSplits(rows: { split: GoldCase['split']; tokens: number; recall: number; precision: number }[]) {
+  return Object.fromEntries(
+    (['calibration', 'validation'] as const).map((split) => {
+      const subset = rows.filter((r) => r.split === split);
+      const ordered = subset.map((r) => r.tokens).sort((a, b) => a - b);
+      const middle = Math.floor(ordered.length / 2);
+      return [
+        split,
+        {
+          cases: subset.length,
+          recall: subset.length ? subset.reduce((sum, r) => sum + r.recall, 0) / subset.length : null,
+          precision: subset.length ? subset.reduce((sum, r) => sum + r.precision, 0) / subset.length : null,
+          median_tokens: subset.length
+            ? ordered.length % 2
+              ? ordered[middle]
+              : ((ordered[middle - 1] as number) + (ordered[middle] as number)) / 2
+            : null,
+        },
+      ];
+    }),
+  );
+}
 export async function evaluateContext(
   cases: GoldCase[],
   repo: string,
@@ -30,6 +97,7 @@ export async function evaluateContext(
   diagnose = false,
   params?: ContextRequest['params'],
 ) {
+  loadCases(cases.map((item) => JSON.stringify(item)).join('\n'));
   const temp = mkdtempSync(join(tmpdir(), 'foker-ctx-gold-'));
   try {
     const synthetic = join(temp, 'fixture-a');
@@ -91,6 +159,7 @@ export async function evaluateContext(
       rows.push({
         id: item.id,
         fixture: item.fixture,
+        split: item.split,
         ...score(exposed, item.gold_modified, item.gold_read),
         tokens: pack.budget.used,
         exposed,
@@ -114,6 +183,7 @@ export async function evaluateContext(
       median_tokens: median,
       target: recall >= 0.8 && median <= 8000,
       blocks_m3: recall < 0.6,
+      splits: summarizeSplits(rows),
       rows,
     };
   } finally {
@@ -125,20 +195,25 @@ export async function main(args: string[]): Promise<void> {
   const source = resolve(args[0] ?? join(repo, 'benchmarks/ctx-gold/cases.jsonl'));
   const budget = Number(args[1] ?? 8000);
   if (!Number.isInteger(budget) || budget <= 0) throw new Error('Presupuesto inválido');
-  const cases = readFileSync(source, 'utf8')
-    .trim()
-    .split('\n')
-    .map((line) => JSON.parse(line) as GoldCase);
+  const cases = loadCases(readFileSync(source, 'utf8'));
   const report = await evaluateContext(cases, repo, budget);
   const date = new Date().toISOString().slice(0, 10);
-  const base = join(repo, `benchmarks/reports/ctx-gold-${date}`);
-  mkdirSync(join(repo, 'benchmarks/reports'), { recursive: true });
+  const base = resolve(args[2] ?? join(repo, `benchmarks/reports/ctx-gold-${date}`));
+  mkdirSync(dirname(base), { recursive: true });
   writeFileSync(`${base}.json`, `${JSON.stringify(report, null, 2)}\n`);
   const summary = `Casos: ${report.cases}; recall@pack: ${report.recall.toFixed(4)}; precisión: ${report.precision.toFixed(4)}; mediana tokens: ${report.median_tokens}.\n\nREQ-CTX-003 TARGET recall ≥ 0,80: ${report.recall >= 0.8 ? 'SÍ' : 'NO'}; mediana ≤ 8000: ${report.median_tokens <= 8000 ? 'SÍ' : 'NO'}; recall < 0,6 bloquea M3: ${report.blocks_m3 ? 'SÍ' : 'NO'}.`;
   writeFileSync(
     `${base}.md`,
-    `# ctx-gold · ${date}\n\n${summary}\n\nMedia macro por caso. Fixture A: anclas solo si están declaradas; monorepo-pnpm: casos con anclas. Los tests nuevos aún ausentes del mapa cuentan como misses.\n\n| Caso | Recall | Precisión | Tokens |\n|---|---:|---:|---:|\n${report.rows.map((r) => `| ${r.id} | ${r.recall.toFixed(3)} | ${r.precision.toFixed(3)} | ${r.tokens} |`).join('\n')}\n`,
+    `# ctx-gold · ${date}\n\n${summary}\n\n${Object.entries(report.splits)
+      .map(
+        ([split, metrics]) =>
+          `${split}: ${metrics.cases} casos; recall ${metrics.recall?.toFixed(4) ?? 'sin casos'}; precisión ${metrics.precision?.toFixed(4) ?? 'sin casos'}; mediana tokens ${metrics.median_tokens ?? 'sin casos'}.`,
+      )
+      .join(
+        '\n\n',
+      )}\n\nMedia macro por caso. Fixture A: anclas solo si están declaradas; monorepo-pnpm: casos con anclas. Los tests nuevos aún ausentes del mapa cuentan como misses.\n\n| Caso | Split | Recall | Precisión | Tokens |\n|---|---|---:|---:|---:|\n${report.rows.map((r) => `| ${r.id} | ${r.split} | ${r.recall.toFixed(3)} | ${r.precision.toFixed(3)} | ${r.tokens} |`).join('\n')}\n`,
   );
   console.log(summary);
+  console.log(JSON.stringify(report.splits, null, 2));
   console.log(`Informes: ${base}.{json,md}`);
 }

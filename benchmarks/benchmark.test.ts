@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { validate } from '@foker/schemas';
 import { afterEach, expect, it } from 'vitest';
 import { fixtureFiles, generate } from './fixtures/fixture-a/generate.mjs';
-import { evaluateContext, type GoldCase, score } from './src/ctx-gold.js';
+import { evaluateContext, type GoldCase, loadCases, score } from './src/ctx-gold.js';
 import { type EvaluationTask, evaluateTask, tree } from './src/evaluate-task.js';
 import { readManifest } from './src/validate-manifest.js';
 import { validateResults } from './src/validate-results.js';
@@ -163,14 +163,14 @@ it('no acepta presupuesto desconocido ni checks con timeout', async () => {
   expect(result.success_breakdown.typecheck_lint).toBe(false);
   expect(result.success_breakdown.within_limits).toBe(false);
 });
-it('ctx-gold tiene 30 casos, diez monorepo, deriva el gold y cuenta L1/lecturas relevantes', async () => {
+it('ctx-gold tiene 60 casos, diez monorepo, deriva el gold y cuenta L1/lecturas relevantes', async () => {
   const cases = readFileSync(join(repo, 'benchmarks/ctx-gold/cases.jsonl'), 'utf8')
     .trim()
     .split('\n')
     .map((line) => JSON.parse(line) as GoldCase);
-  expect(cases).toHaveLength(30);
+  expect(cases).toHaveLength(60);
   expect(cases.filter((c) => c.fixture === 'monorepo-pnpm')).toHaveLength(10);
-  for (const item of cases.filter((c) => c.fixture === 'fixture-a')) {
+  for (const item of cases.filter((c) => c.fixture === 'fixture-a' && Number(c.id.slice(2)) <= 20)) {
     const meta = JSON.parse(
       readFileSync(join(repo, `benchmarks/fixtures/fixture-a/tasks/${item.id}/meta.json`), 'utf8'),
     );
@@ -182,6 +182,8 @@ it('ctx-gold tiene 30 casos, diez monorepo, deriva el gold y cuenta L1/lecturas 
   const report = await evaluateContext([firstMono], repo);
   expect(report.rows[0]?.tokens).toBeLessThanOrEqual(8000);
   expect(report.recall).toBe(1);
+  expect(report.splits[firstMono.split]?.recall).toBe(1);
+  expect(report.splits[firstMono.split === 'calibration' ? 'validation' : 'calibration']?.recall).toBeNull();
 });
 
 it('restaura scripts y manifests: typecheck sustituido por exit 0 no oculta errores', async () => {
@@ -255,14 +257,30 @@ it('el split de calibración es estratificado, disjunto y estable al reordenar c
     .trim()
     .split('\n')
     .map((line) => JSON.parse(line) as GoldCase);
-  const split = splitCases(cases, '37');
-  expect(splitCases([...cases].reverse(), '37')).toEqual(split);
-  expect(split.calibration).toHaveLength(21);
-  expect(split.validation).toHaveLength(9);
-  expect(split.calibration.filter((c) => c.fixture === 'fixture-a')).toHaveLength(14);
-  expect(split.validation.filter((c) => c.fixture === 'monorepo-pnpm')).toHaveLength(3);
+  const split = splitCases(cases);
+  expect(splitCases([...cases].reverse())).toEqual(split);
+  expect(split.calibration).toHaveLength(30);
+  expect(split.validation).toHaveLength(30);
+  expect(split.calibration.filter((c) => c.fixture === 'fixture-a')).toHaveLength(25);
+  expect(split.validation.filter((c) => c.fixture === 'monorepo-pnpm')).toHaveLength(5);
+  // Estratos de Fixture A: fixes, features, refactors y pruebas, respectivamente.
+  const strata = [
+    [...Array.from({ length: 8 }, (_, i) => i + 1), ...Array.from({ length: 12 }, (_, i) => i + 21)],
+    [...Array.from({ length: 6 }, (_, i) => i + 9), ...Array.from({ length: 9 }, (_, i) => i + 33)],
+    [...Array.from({ length: 4 }, (_, i) => i + 15), ...Array.from({ length: 6 }, (_, i) => i + 42)],
+    [19, 20, 48, 49, 50],
+  ];
+  for (const ids of strata) {
+    const group = cases.filter((c) => ids.some((id) => c.id === `a-${String(id).padStart(2, '0')}`));
+    expect(group).toHaveLength(ids.length);
+    const count = group.filter((c) => c.split === 'calibration').length;
+    expect(Math.abs(count - (group.length - count))).toBeLessThanOrEqual(1);
+  }
+
   expect(new Set([...split.calibration, ...split.validation].map((c) => c.id)).size).toBe(cases.length);
-  expect(splitCases(cases, '38')).not.toEqual(split);
+  expect(split.calibration.every((c) => c.split === 'calibration')).toBe(true);
+  expect(split.validation.every((c) => c.split === 'validation')).toBe(true);
+  expect(() => splitCases(split.calibration)).toThrow('Split vacío');
   expect(configurations().length).toBeLessThanOrEqual(200);
   expect(new Set(configurations().map((p) => JSON.stringify(p))).size).toBe(configurations().length);
   const baseline = { recall: 0.7, precision: 0.03, median_tokens: 7500 };
@@ -290,4 +308,38 @@ it('el evaluador conserva defaults y excluye el contorno L0 de precisión', asyn
   expect(l0.length).toBeGreaterThan(0);
   expect(row.exposed.some((id) => l0.includes(id))).toBe(false);
   expect(row.precision).toBe(score(row.exposed, item.gold_modified, item.gold_read).precision);
+});
+
+it('el loader ctx-gold rechaza splits ausentes o inválidos, ids duplicados y rutas inseguras', () => {
+  const cases = loadCases(readFileSync(join(repo, 'benchmarks/ctx-gold/cases.jsonl'), 'utf8'));
+  const item = cases[0];
+  expect(loadCases(cases.map((c) => JSON.stringify(c)).join('\n'))).toEqual(cases);
+  for (const split of [undefined, null, '', 'test']) {
+    expect(() => loadCases(JSON.stringify({ ...item, split }))).toThrow('Caso ctx-gold inválido');
+  }
+  for (const gold_modified of [[], ['../secreto'], ['/absoluto'], ['a', 'a'], [42]]) {
+    expect(() => loadCases(JSON.stringify({ ...item, gold_modified }))).toThrow('Caso ctx-gold inválido');
+  }
+  expect(() => loadCases('')).toThrow('Suite vacía');
+  expect(() => loadCases('no-json')).toThrow('línea 1');
+  expect(() => loadCases([item, item].map((c) => JSON.stringify(c)).join('\n'))).toThrow('Ids duplicados');
+});
+
+it('los treinta casos nuevos ctx-gold tienen rutas existentes y enunciados sin rutas ni símbolos', () => {
+  const root = temp();
+  generate(root);
+  const cases = loadCases(readFileSync(join(repo, 'benchmarks/ctx-gold/cases.jsonl'), 'utf8'));
+  const added = cases.filter((c) => c.fixture === 'fixture-a' && Number(c.id.slice(2)) >= 21);
+  expect(added).toHaveLength(30);
+  const files = tree(root);
+  for (const item of added) {
+    expect(item.anchors).toBeUndefined();
+    expect(item.task).not.toMatch(/packages\/|\.tsx?\b|[a-z][A-Z]/);
+    expect(item.gold_modified.length).toBeLessThanOrEqual(4);
+    for (const path of [...item.gold_modified, ...(item.gold_read ?? [])]) {
+      expect(files.has(path), `${item.id}: ${path}`).toBe(true);
+    }
+  }
+  expect(added.some((c) => c.gold_modified.length === 4)).toBe(true);
+  expect(added.some((c) => c.gold_modified.some((p) => p.endsWith('.test.ts')))).toBe(true);
 });
