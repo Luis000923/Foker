@@ -7,7 +7,7 @@ pub const DEFAULT_MAX_FILE_BYTES: u64 = 1024 * 1024;
 pub const DEFAULT_MAX_FILES: usize = 50_000;
 
 /// Globs que asignan `files[].kind`; lo que no casa con ninguno es `source`.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize)]
 pub struct KindGlobs {
     /// Tests.
     pub test: Vec<String>,
@@ -47,7 +47,7 @@ impl KindGlobs {
 }
 
 /// Configuración del mapa.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
 pub struct MapConfig {
     /// Globs incluidos; vacío = todo el árbol.
     pub include: Vec<String>,

@@ -143,7 +143,7 @@ fn base_options(aliases: Vec<(String, Vec<AliasValue>)>) -> ResolveOptions {
     }
 }
 
-/// Resolutores por tsconfig, con caché compartida.
+/// Resolutores por tsconfig, cada uno con su caché.
 pub struct ResolverSet {
     root: PathBuf,
     /// tsconfig (id de directorio → resolutor), ordenados del más profundo al menos profundo.
@@ -179,7 +179,9 @@ impl ResolverSet {
                     config_file: m.path.clone(),
                     references: TsconfigReferences::Auto,
                 }));
-                (dir, fallback.clone_with_options(options))
+                // Caché propia: compartirla entre opciones distintas (tsconfig) da resultados que dependen
+                // del orden de ejecución en paralelo.
+                (dir, Resolver::new(options))
             })
             .collect();
         // Más profundo primero; a igual profundidad, `tsconfig.json` gana por orden de id.

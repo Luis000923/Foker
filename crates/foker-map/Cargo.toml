@@ -10,6 +10,9 @@ publish.workspace = true
 [dependencies]
 globset.workspace = true
 ignore.workspace = true
+libm.workspace = true
+blake3.workspace = true
+rayon.workspace = true
 oxc_resolver.workspace = true
 serde.workspace = true
 serde_json.workspace = true

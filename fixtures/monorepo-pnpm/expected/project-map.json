@@ -1,0 +1,1080 @@
+{
+  "$schema": "https://foker.dev/schemas/project-map/v1.json",
+  "config_hash": "blake3:a2add60c66630cdfc9fe8a1fd972738fdf22c54cfe2e50b64c28dadf628a4205",
+  "diagnostics": [],
+  "edges": [
+    {
+      "confidence": "resolved",
+      "from": "apps/web/src/app/dashboard/page.tsx",
+      "kind": "imports",
+      "to": "apps/web/src/lib/stats.ts"
+    },
+    {
+      "confidence": "resolved",
+      "from": "apps/web/src/app/dashboard/page.tsx",
+      "kind": "imports",
+      "to": "packages/ui/src/index.ts"
+    },
+    {
+      "confidence": "resolved",
+      "from": "apps/web/src/app/page.tsx",
+      "kind": "imports",
+      "to": "apps/web/src/lib/format.ts"
+    },
+    {
+      "confidence": "resolved",
+      "from": "apps/web/src/app/page.tsx",
+      "kind": "imports",
+      "to": "packages/ui/src/index.ts"
+    },
+    {
+      "confidence": "resolved",
+      "from": "packages/core/src/cart/cart.ts",
+      "kind": "imports",
+      "to": "packages/core/src/cart/audit.ts"
+    },
+    {
+      "confidence": "resolved",
+      "from": "packages/core/src/cart/cart.ts",
+      "kind": "imports",
+      "to": "packages/core/src/cart/types.ts"
+    },
+    {
+      "confidence": "resolved",
+      "from": "packages/core/src/legacy/total.cjs",
+      "kind": "imports",
+      "to": "packages/core/src/legacy/round.cjs"
+    },
+    {
+      "confidence": "resolved",
+      "from": "packages/ui/src/button.tsx",
+      "kind": "imports_external",
+      "to": "npm:react"
+    },
+    {
+      "confidence": "resolved",
+      "from": "packages/ui/src/card.tsx",
+      "kind": "imports_external",
+      "to": "npm:react"
+    },
+    {
+      "confidence": "resolved",
+      "from": "apps/web/src/app/page.tsx",
+      "kind": "imports_type",
+      "to": "packages/core/src/index.ts"
+    },
+    {
+      "confidence": "resolved",
+      "from": "packages/core/src/cart/audit.ts",
+      "kind": "imports_type",
+      "to": "packages/core/src/cart/cart.ts"
+    },
+    {
+      "confidence": "resolved",
+      "from": "packages/core/src/cart/cart.ts",
+      "kind": "imports_type",
+      "to": "packages/core/src/cart/types.ts"
+    },
+    {
+      "confidence": "declared",
+      "from": "pkg:@mono/web",
+      "kind": "package_depends",
+      "to": "pkg:@mono/core"
+    },
+    {
+      "confidence": "declared",
+      "from": "pkg:@mono/web",
+      "kind": "package_depends",
+      "to": "pkg:@mono/ui"
+    },
+    {
+      "confidence": "resolved",
+      "from": "packages/core/src/index.ts",
+      "kind": "reexports",
+      "to": "packages/core/src/cart/cart.ts"
+    },
+    {
+      "confidence": "resolved",
+      "from": "packages/core/src/index.ts",
+      "kind": "reexports",
+      "to": "packages/core/src/cart/types.ts"
+    },
+    {
+      "confidence": "resolved",
+      "from": "packages/core/src/index.ts",
+      "kind": "reexports",
+      "to": "packages/core/src/legacy/total.cjs"
+    },
+    {
+      "confidence": "resolved",
+      "from": "packages/ui/src/index.ts",
+      "kind": "reexports",
+      "to": "packages/ui/src/button.tsx"
+    },
+    {
+      "confidence": "resolved",
+      "from": "packages/ui/src/index.ts",
+      "kind": "reexports",
+      "to": "packages/ui/src/card.tsx"
+    },
+    {
+      "confidence": "resolved",
+      "from": "apps/web/src/app/dashboard/page.tsx",
+      "kind": "uses_symbol",
+      "to": "packages/ui/src/card.tsx#Card",
+      "weight": 2
+    },
+    {
+      "confidence": "resolved",
+      "from": "apps/web/src/app/page.tsx",
+      "kind": "uses_symbol",
+      "to": "apps/web/src/lib/format.ts#formatPrice",
+      "weight": 1
+    },
+    {
+      "confidence": "resolved",
+      "from": "apps/web/src/app/page.tsx",
+      "kind": "uses_symbol",
+      "to": "packages/core/src/cart/types.ts#CartItem",
+      "weight": 1
+    },
+    {
+      "confidence": "resolved",
+      "from": "apps/web/src/app/page.tsx",
+      "kind": "uses_symbol",
+      "to": "packages/ui/src/button.tsx#Button",
+      "weight": 2
+    },
+    {
+      "confidence": "resolved",
+      "from": "packages/core/src/cart/audit.ts",
+      "kind": "uses_symbol",
+      "to": "packages/core/src/cart/cart.ts#Cart",
+      "weight": 1
+    },
+    {
+      "confidence": "resolved",
+      "from": "packages/core/src/cart/cart.ts",
+      "kind": "uses_symbol",
+      "to": "packages/core/src/cart/audit.ts#audit",
+      "weight": 1
+    },
+    {
+      "confidence": "resolved",
+      "from": "packages/core/src/cart/cart.ts",
+      "kind": "uses_symbol",
+      "to": "packages/core/src/cart/types.ts#CartId",
+      "weight": 5
+    },
+    {
+      "confidence": "resolved",
+      "from": "packages/core/src/cart/cart.ts",
+      "kind": "uses_symbol",
+      "to": "packages/core/src/cart/types.ts#CartItem",
+      "weight": 4
+    },
+    {
+      "confidence": "resolved",
+      "from": "packages/core/src/cart/cart.ts",
+      "kind": "uses_symbol",
+      "to": "packages/core/src/cart/types.ts#CartStatus",
+      "weight": 2
+    }
+  ],
+  "external_modules": [
+    "npm:react"
+  ],
+  "files": [
+    {
+      "exports": [
+        "apps/web/src/app/dashboard/page.tsx#DashboardPage",
+        "apps/web/src/app/dashboard/page.tsx#dynamic"
+      ],
+      "hash": "blake3:7fe51bb34c1c77ec449ba262929cd7dcac57c372ef6fec1c777714d92f5043ce",
+      "id": "apps/web/src/app/dashboard/page.tsx",
+      "kind": "source",
+      "language": "tsx",
+      "lines": 9,
+      "package": "pkg:@mono/web",
+      "parse_status": "ok",
+      "rank": {
+        "global": 0.046727874031
+      },
+      "size_bytes": 268
+    },
+    {
+      "exports": [
+        "apps/web/src/app/page.tsx#HomePage"
+      ],
+      "hash": "blake3:421a1945183d0b151c8bf8805804c2113d48547caf2e8ec1daf37695ae8f6f9a",
+      "id": "apps/web/src/app/page.tsx",
+      "kind": "source",
+      "language": "tsx",
+      "lines": 13,
+      "package": "pkg:@mono/web",
+      "parse_status": "ok",
+      "rank": {
+        "global": 0.046727874031
+      },
+      "size_bytes": 406
+    },
+    {
+      "exports": [
+        "apps/web/src/lib/format.ts#CURRENCY",
+        "apps/web/src/lib/format.ts#formatPrice"
+      ],
+      "hash": "blake3:d6a2b825256023f55f73d5d31075a7e84cedba51b0a5a5764759614c3dc052b5",
+      "id": "apps/web/src/lib/format.ts",
+      "kind": "source",
+      "language": "typescript",
+      "lines": 6,
+      "package": "pkg:@mono/web",
+      "parse_status": "ok",
+      "rank": {
+        "global": 0.060218516418
+      },
+      "size_bytes": 167
+    },
+    {
+      "exports": [
+        "apps/web/src/lib/stats.ts#Stats",
+        "apps/web/src/lib/stats.ts#loadStats"
+      ],
+      "hash": "blake3:c794cf9b8bb36e78e1c202df38bfb850caa5377e8488fe0794fff65ce4902a3c",
+      "id": "apps/web/src/lib/stats.ts",
+      "kind": "source",
+      "language": "typescript",
+      "lines": 7,
+      "package": "pkg:@mono/web",
+      "parse_status": "ok",
+      "rank": {
+        "global": 0.059546093681
+      },
+      "size_bytes": 122
+    },
+    {
+      "exports": [
+        "packages/core/src/cart/audit.ts#audit"
+      ],
+      "hash": "blake3:e33db96dc78352dcef112fd24aef3b8a3e03f46341c06bf8f7b6f343a111b57c",
+      "id": "packages/core/src/cart/audit.ts",
+      "kind": "source",
+      "language": "typescript",
+      "lines": 7,
+      "package": "pkg:@mono/core",
+      "parse_status": "ok",
+      "rank": {
+        "global": 0.069154143884
+      },
+      "size_bytes": 180
+    },
+    {
+      "exports": [
+        "packages/core/src/cart/cart.ts#Cart",
+        "packages/core/src/cart/cart.ts#CartUtils",
+        "packages/core/src/cart/cart.ts#createCart"
+      ],
+      "hash": "blake3:017ba942508721aae65498bcf6257c7beebee9ba2a94c9ece7b306e11b126376",
+      "id": "packages/core/src/cart/cart.ts",
+      "kind": "source",
+      "language": "typescript",
+      "lines": 40,
+      "package": "pkg:@mono/core",
+      "parse_status": "ok",
+      "rank": {
+        "global": 0.119877230989
+      },
+      "size_bytes": 992
+    },
+    {
+      "exports": [
+        "packages/core/src/cart/types.ts#CartId",
+        "packages/core/src/cart/types.ts#CartItem",
+        "packages/core/src/cart/types.ts#CartStatus"
+      ],
+      "hash": "blake3:90c7c63c2732167da9fa382cef9709c75a4141379e7e556b8a649c4b400d157f",
+      "id": "packages/core/src/cart/types.ts",
+      "kind": "source",
+      "language": "typescript",
+      "lines": 11,
+      "package": "pkg:@mono/core",
+      "parse_status": "ok",
+      "rank": {
+        "global": 0.146088436846
+      },
+      "size_bytes": 157
+    },
+    {
+      "exports": [
+        "packages/core/src/cart/cart.ts#Cart",
+        "packages/core/src/cart/cart.ts#CartUtils",
+        "packages/core/src/cart/cart.ts#createCart",
+        "packages/core/src/cart/types.ts#CartItem",
+        "packages/core/src/legacy/total.cjs#total"
+      ],
+      "hash": "blake3:5dbb1c15b5a12e802c7c81b00cc5f41915eaa938f6609ad5a27c0abb31dc8ccd",
+      "id": "packages/core/src/index.ts",
+      "kind": "source",
+      "language": "typescript",
+      "lines": 3,
+      "package": "pkg:@mono/core",
+      "parse_status": "ok",
+      "rank": {
+        "global": 0.050711769389
+      },
+      "size_bytes": 136
+    },
+    {
+      "exports": [
+        "packages/core/src/legacy/round.cjs#round"
+      ],
+      "hash": "blake3:6eb3c7c6f745b81fdfc1a254f37709ffbe1671f1fd2236488296643279840f1d",
+      "id": "packages/core/src/legacy/round.cjs",
+      "kind": "source",
+      "language": "javascript",
+      "lines": 3,
+      "package": "pkg:@mono/core",
+      "parse_status": "ok",
+      "rank": {
+        "global": 0.09865965142
+      },
+      "size_bytes": 83
+    },
+    {
+      "exports": [
+        "packages/core/src/legacy/total.cjs#total"
+      ],
+      "hash": "blake3:0d64b2b23bcd80e84492070dcc26c57c296d98a0a2f6c889f3b6e14db4e6d8a9",
+      "id": "packages/core/src/legacy/total.cjs",
+      "kind": "source",
+      "language": "javascript",
+      "lines": 7,
+      "package": "pkg:@mono/core",
+      "parse_status": "ok",
+      "rank": {
+        "global": 0.061096208691
+      },
+      "size_bytes": 146
+    },
+    {
+      "exports": [
+        "packages/ui/src/button.tsx#Button",
+        "packages/ui/src/button.tsx#ButtonProps"
+      ],
+      "hash": "blake3:5716a289d3a0471fa64535155c536799809dc950d9713e034e63ab6512039330",
+      "id": "packages/ui/src/button.tsx",
+      "kind": "source",
+      "language": "tsx",
+      "lines": 13,
+      "package": "pkg:@mono/ui",
+      "parse_status": "ok",
+      "rank": {
+        "global": 0.084174787695
+      },
+      "size_bytes": 402
+    },
+    {
+      "exports": [
+        "packages/ui/src/card.tsx#Card",
+        "packages/ui/src/card.tsx#CardProps",
+        "packages/ui/src/card.tsx#useCardState"
+      ],
+      "hash": "blake3:c3d10e4857932d153d079b79fca16580cd37924734d0a1263c7b54f6037286e0",
+      "id": "packages/ui/src/card.tsx",
+      "kind": "source",
+      "language": "tsx",
+      "lines": 16,
+      "package": "pkg:@mono/ui",
+      "parse_status": "ok",
+      "rank": {
+        "global": 0.089503528527
+      },
+      "size_bytes": 318
+    },
+    {
+      "exports": [
+        "packages/ui/src/button.tsx#Button",
+        "packages/ui/src/button.tsx#ButtonProps",
+        "packages/ui/src/card.tsx#Card",
+        "packages/ui/src/card.tsx#CardProps",
+        "packages/ui/src/card.tsx#useCardState"
+      ],
+      "hash": "blake3:d844630a1ef34bc4304cf8bd3d2503cba9f72912fe0409e5bd72e444b9fff79a",
+      "id": "packages/ui/src/index.ts",
+      "kind": "source",
+      "language": "typescript",
+      "lines": 2,
+      "package": "pkg:@mono/ui",
+      "parse_status": "ok",
+      "rank": {
+        "global": 0.067513884398
+      },
+      "size_bytes": 77
+    }
+  ],
+  "foker_version": "0.0.0",
+  "generator": {
+    "engine": "0.0.0",
+    "parsers": {
+      "javascript": "0.25.0",
+      "tsx": "0.23.2",
+      "typescript": "0.23.2"
+    },
+    "resolver": "11.24.3"
+  },
+  "project": {
+    "name": "monorepo-pnpm",
+    "packages": [
+      {
+        "id": "pkg:@mono/core",
+        "name": "@mono/core",
+        "path": "packages/core",
+        "version": "0.1.0"
+      },
+      {
+        "id": "pkg:@mono/ui",
+        "name": "@mono/ui",
+        "path": "packages/ui",
+        "version": "0.1.0"
+      },
+      {
+        "id": "pkg:@mono/web",
+        "name": "@mono/web",
+        "path": "apps/web",
+        "version": "0.1.0"
+      },
+      {
+        "id": "pkg:monorepo-pnpm",
+        "name": "monorepo-pnpm",
+        "path": ".",
+        "version": null
+      }
+    ],
+    "workspace_kind": "pnpm"
+  },
+  "schema_version": 1,
+  "stats": {
+    "edges": 28,
+    "files": 13,
+    "parse_errors": 0,
+    "symbols": 30,
+    "unresolved_imports": 0
+  },
+  "symbols": [
+    {
+      "doc": null,
+      "exported": "default",
+      "id": "apps/web/src/app/dashboard/page.tsx#DashboardPage",
+      "kind": "function",
+      "name": "DashboardPage",
+      "parent": null,
+      "range": {
+        "end": {
+          "col": 1,
+          "line": 8
+        },
+        "start": {
+          "col": 0,
+          "line": 4
+        }
+      },
+      "signature": "export default async function DashboardPage()",
+      "tags": [
+        "async",
+        "next_route",
+        "react_component"
+      ]
+    },
+    {
+      "doc": null,
+      "exported": "named",
+      "id": "apps/web/src/app/dashboard/page.tsx#dynamic",
+      "kind": "variable",
+      "name": "dynamic",
+      "parent": null,
+      "range": {
+        "end": {
+          "col": 39,
+          "line": 2
+        },
+        "start": {
+          "col": 0,
+          "line": 2
+        }
+      },
+      "signature": "export const dynamic = 'force-dynamic'",
+      "tags": []
+    },
+    {
+      "doc": "Página de inicio.",
+      "exported": "default",
+      "id": "apps/web/src/app/page.tsx#HomePage",
+      "kind": "function",
+      "name": "HomePage",
+      "parent": null,
+      "range": {
+        "end": {
+          "col": 1,
+          "line": 12
+        },
+        "start": {
+          "col": 0,
+          "line": 9
+        }
+      },
+      "signature": "export default function HomePage({ items }: { items: CartItem[] }): JSX.Element",
+      "tags": [
+        "next_route",
+        "react_component"
+      ]
+    },
+    {
+      "doc": null,
+      "exported": "named",
+      "id": "apps/web/src/lib/format.ts#CURRENCY",
+      "kind": "variable",
+      "name": "CURRENCY",
+      "parent": null,
+      "range": {
+        "end": {
+          "col": 30,
+          "line": 5
+        },
+        "start": {
+          "col": 0,
+          "line": 5
+        }
+      },
+      "signature": "export const CURRENCY = 'EUR'",
+      "tags": []
+    },
+    {
+      "doc": "Formatea un precio en euros.",
+      "exported": "named",
+      "id": "apps/web/src/lib/format.ts#formatPrice",
+      "kind": "function",
+      "name": "formatPrice",
+      "parent": null,
+      "range": {
+        "end": {
+          "col": 1,
+          "line": 3
+        },
+        "start": {
+          "col": 0,
+          "line": 1
+        }
+      },
+      "signature": "export function formatPrice(cents: number): string",
+      "tags": []
+    },
+    {
+      "doc": null,
+      "exported": "named",
+      "id": "apps/web/src/lib/stats.ts#Stats",
+      "kind": "interface",
+      "name": "Stats",
+      "parent": null,
+      "range": {
+        "end": {
+          "col": 1,
+          "line": 2
+        },
+        "start": {
+          "col": 0,
+          "line": 0
+        }
+      },
+      "signature": "export interface Stats { count: number; }",
+      "tags": []
+    },
+    {
+      "doc": null,
+      "exported": "named",
+      "id": "apps/web/src/lib/stats.ts#loadStats",
+      "kind": "function",
+      "name": "loadStats",
+      "parent": null,
+      "range": {
+        "end": {
+          "col": 1,
+          "line": 6
+        },
+        "start": {
+          "col": 0,
+          "line": 4
+        }
+      },
+      "signature": "export async function loadStats(): Promise<Stats>",
+      "tags": [
+        "async"
+      ]
+    },
+    {
+      "doc": null,
+      "exported": "named",
+      "id": "packages/core/src/cart/audit.ts#audit",
+      "kind": "function",
+      "name": "audit",
+      "parent": null,
+      "range": {
+        "end": {
+          "col": 1,
+          "line": 6
+        },
+        "start": {
+          "col": 0,
+          "line": 3
+        }
+      },
+      "signature": "export function audit(cart: Cart, action: string): void",
+      "tags": []
+    },
+    {
+      "doc": "Carrito de la compra.",
+      "exported": "named",
+      "id": "packages/core/src/cart/cart.ts#Cart",
+      "kind": "class",
+      "name": "Cart",
+      "parent": null,
+      "range": {
+        "end": {
+          "col": 1,
+          "line": 24
+        },
+        "start": {
+          "col": 0,
+          "line": 5
+        }
+      },
+      "signature": "export class Cart",
+      "tags": []
+    },
+    {
+      "doc": "Añade un artículo.",
+      "exported": "none",
+      "id": "packages/core/src/cart/cart.ts#Cart.add",
+      "kind": "method",
+      "name": "add",
+      "parent": "packages/core/src/cart/cart.ts#Cart",
+      "range": {
+        "end": {
+          "col": 3,
+          "line": 15
+        },
+        "start": {
+          "col": 2,
+          "line": 12
+        }
+      },
+      "signature": "add(item: CartItem): void",
+      "tags": []
+    },
+    {
+      "doc": null,
+      "exported": "none",
+      "id": "packages/core/src/cart/cart.ts#Cart.constructor",
+      "kind": "method",
+      "name": "constructor",
+      "parent": "packages/core/src/cart/cart.ts#Cart",
+      "range": {
+        "end": {
+          "col": 37,
+          "line": 9
+        },
+        "start": {
+          "col": 2,
+          "line": 9
+        }
+      },
+      "signature": "constructor(readonly id: CartId)",
+      "tags": []
+    },
+    {
+      "doc": null,
+      "exported": "none",
+      "id": "packages/core/src/cart/cart.ts#Cart.empty",
+      "kind": "method",
+      "name": "empty",
+      "parent": "packages/core/src/cart/cart.ts#Cart",
+      "range": {
+        "end": {
+          "col": 3,
+          "line": 23
+        },
+        "start": {
+          "col": 2,
+          "line": 21
+        }
+      },
+      "signature": "static empty(id: CartId): Cart",
+      "tags": []
+    },
+    {
+      "doc": null,
+      "exported": "none",
+      "id": "packages/core/src/cart/cart.ts#Cart.status",
+      "kind": "property",
+      "name": "status",
+      "parent": "packages/core/src/cart/cart.ts#Cart",
+      "range": {
+        "end": {
+          "col": 38,
+          "line": 7
+        },
+        "start": {
+          "col": 2,
+          "line": 7
+        }
+      },
+      "signature": "status: CartStatus",
+      "tags": []
+    },
+    {
+      "doc": null,
+      "exported": "none",
+      "id": "packages/core/src/cart/cart.ts#Cart.total",
+      "kind": "method",
+      "name": "total",
+      "parent": "packages/core/src/cart/cart.ts#Cart",
+      "range": {
+        "end": {
+          "col": 3,
+          "line": 19
+        },
+        "start": {
+          "col": 2,
+          "line": 17
+        }
+      },
+      "signature": "total(): number",
+      "tags": []
+    },
+    {
+      "doc": null,
+      "exported": "named",
+      "id": "packages/core/src/cart/cart.ts#CartUtils",
+      "kind": "namespace",
+      "name": "CartUtils",
+      "parent": null,
+      "range": {
+        "end": {
+          "col": 1,
+          "line": 39
+        },
+        "start": {
+          "col": 0,
+          "line": 34
+        }
+      },
+      "signature": "export namespace CartUtils",
+      "tags": []
+    },
+    {
+      "doc": null,
+      "exported": "named",
+      "id": "packages/core/src/cart/cart.ts#CartUtils.MAX_ITEMS",
+      "kind": "variable",
+      "name": "MAX_ITEMS",
+      "parent": "packages/core/src/cart/cart.ts#CartUtils",
+      "range": {
+        "end": {
+          "col": 31,
+          "line": 35
+        },
+        "start": {
+          "col": 2,
+          "line": 35
+        }
+      },
+      "signature": "export const MAX_ITEMS = 100",
+      "tags": []
+    },
+    {
+      "doc": null,
+      "exported": "named",
+      "id": "packages/core/src/cart/cart.ts#CartUtils.isFull",
+      "kind": "function",
+      "name": "isFull",
+      "parent": "packages/core/src/cart/cart.ts#CartUtils",
+      "range": {
+        "end": {
+          "col": 3,
+          "line": 38
+        },
+        "start": {
+          "col": 2,
+          "line": 36
+        }
+      },
+      "signature": "export function isFull(cart: Cart): boolean",
+      "tags": []
+    },
+    {
+      "doc": null,
+      "exported": "named",
+      "id": "packages/core/src/cart/cart.ts#createCart",
+      "kind": "function",
+      "name": "createCart",
+      "parent": null,
+      "range": {
+        "end": {
+          "col": 45,
+          "line": 26
+        },
+        "start": {
+          "col": 0,
+          "line": 26
+        }
+      },
+      "signature": "export function createCart(id: CartId): Cart",
+      "tags": []
+    },
+    {
+      "doc": null,
+      "exported": "named",
+      "id": "packages/core/src/cart/cart.ts#createCart~2",
+      "kind": "function",
+      "name": "createCart",
+      "parent": null,
+      "range": {
+        "end": {
+          "col": 64,
+          "line": 27
+        },
+        "start": {
+          "col": 0,
+          "line": 27
+        }
+      },
+      "signature": "export function createCart(id: CartId, items: CartItem[]): Cart",
+      "tags": []
+    },
+    {
+      "doc": null,
+      "exported": "named",
+      "id": "packages/core/src/cart/cart.ts#createCart~3",
+      "kind": "function",
+      "name": "createCart",
+      "parent": null,
+      "range": {
+        "end": {
+          "col": 1,
+          "line": 32
+        },
+        "start": {
+          "col": 0,
+          "line": 28
+        }
+      },
+      "signature": "export function createCart(id: CartId, items: CartItem[] = []): Cart",
+      "tags": []
+    },
+    {
+      "doc": null,
+      "exported": "named",
+      "id": "packages/core/src/cart/types.ts#CartId",
+      "kind": "type_alias",
+      "name": "CartId",
+      "parent": null,
+      "range": {
+        "end": {
+          "col": 28,
+          "line": 5
+        },
+        "start": {
+          "col": 0,
+          "line": 5
+        }
+      },
+      "signature": "export type CartId = string",
+      "tags": []
+    },
+    {
+      "doc": null,
+      "exported": "named",
+      "id": "packages/core/src/cart/types.ts#CartItem",
+      "kind": "interface",
+      "name": "CartItem",
+      "parent": null,
+      "range": {
+        "end": {
+          "col": 1,
+          "line": 3
+        },
+        "start": {
+          "col": 0,
+          "line": 0
+        }
+      },
+      "signature": "export interface CartItem { id: string; price: number; }",
+      "tags": []
+    },
+    {
+      "doc": null,
+      "exported": "named",
+      "id": "packages/core/src/cart/types.ts#CartStatus",
+      "kind": "enum",
+      "name": "CartStatus",
+      "parent": null,
+      "range": {
+        "end": {
+          "col": 1,
+          "line": 10
+        },
+        "start": {
+          "col": 0,
+          "line": 7
+        }
+      },
+      "signature": "export enum CartStatus { Open = 'open', Closed = 'closed', }",
+      "tags": []
+    },
+    {
+      "doc": null,
+      "exported": "named",
+      "id": "packages/core/src/legacy/round.cjs#round",
+      "kind": "function",
+      "name": "round",
+      "parent": null,
+      "range": {
+        "end": {
+          "col": 2,
+          "line": 2
+        },
+        "start": {
+          "col": 0,
+          "line": 0
+        }
+      },
+      "signature": "exports.round = function round(value)",
+      "tags": []
+    },
+    {
+      "doc": null,
+      "exported": "default",
+      "id": "packages/core/src/legacy/total.cjs#total",
+      "kind": "function",
+      "name": "total",
+      "parent": null,
+      "range": {
+        "end": {
+          "col": 1,
+          "line": 4
+        },
+        "start": {
+          "col": 0,
+          "line": 2
+        }
+      },
+      "signature": "function total(values)",
+      "tags": []
+    },
+    {
+      "doc": "Botón base del sistema de diseño.",
+      "exported": "named",
+      "id": "packages/ui/src/button.tsx#Button",
+      "kind": "variable",
+      "name": "Button",
+      "parent": null,
+      "range": {
+        "end": {
+          "col": 3,
+          "line": 12
+        },
+        "start": {
+          "col": 0,
+          "line": 7
+        }
+      },
+      "signature": "export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(function Button({ variant = 'pr…",
+      "tags": [
+        "react_component"
+      ]
+    },
+    {
+      "doc": null,
+      "exported": "named",
+      "id": "packages/ui/src/button.tsx#ButtonProps",
+      "kind": "interface",
+      "name": "ButtonProps",
+      "parent": null,
+      "range": {
+        "end": {
+          "col": 1,
+          "line": 4
+        },
+        "start": {
+          "col": 0,
+          "line": 2
+        }
+      },
+      "signature": "export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> { variant?: 'primary' | 'ghost'; }",
+      "tags": []
+    },
+    {
+      "doc": null,
+      "exported": "named",
+      "id": "packages/ui/src/card.tsx#Card",
+      "kind": "function",
+      "name": "Card",
+      "parent": null,
+      "range": {
+        "end": {
+          "col": 1,
+          "line": 11
+        },
+        "start": {
+          "col": 0,
+          "line": 4
+        }
+      },
+      "signature": "export function Card({ title, children }: CardProps)",
+      "tags": [
+        "react_component"
+      ]
+    },
+    {
+      "doc": null,
+      "exported": "named",
+      "id": "packages/ui/src/card.tsx#CardProps",
+      "kind": "type_alias",
+      "name": "CardProps",
+      "parent": null,
+      "range": {
+        "end": {
+          "col": 64,
+          "line": 2
+        },
+        "start": {
+          "col": 0,
+          "line": 2
+        }
+      },
+      "signature": "export type CardProps = { title: string; children?: ReactNode }",
+      "tags": []
+    },
+    {
+      "doc": null,
+      "exported": "named",
+      "id": "packages/ui/src/card.tsx#useCardState",
+      "kind": "function",
+      "name": "useCardState",
+      "parent": null,
+      "range": {
+        "end": {
+          "col": 1,
+          "line": 15
+        },
+        "start": {
+          "col": 0,
+          "line": 13
+        }
+      },
+      "signature": "export function useCardState(initial = false)",
+      "tags": [
+        "react_hook"
+      ]
+    }
+  ]
+}
