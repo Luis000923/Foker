@@ -23,6 +23,11 @@
   "dependencies": {
     "@foker/engine": "workspace:*",
     "@foker/integrations": "workspace:*",
-    "@foker/mcp": "workspace:*"
+    "@foker/mcp": "workspace:*",
+    "@foker/core": "workspace:*",
+    "@foker/schemas": "workspace:*"
+  },
+  "bin": {
+    "foker": "./dist/bin.js"
   }
 }

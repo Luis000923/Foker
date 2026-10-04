@@ -54,6 +54,8 @@ export type ParseStatus = 'ok' | 'partial' | 'failed' | 'skipped';
  * Los campos omitidos toman los defaults de Foker (FOKER-SPEC §8.3, §11.3).
  */
 export interface EngineConfig {
+  /** Solo lee el disco: no aparta mapas corruptos ni guarda mapa o caché; save falla. Por defecto false. */
+  readOnly?: boolean;
   include?: string[];
   exclude?: string[];
   tsconfig?: string[];

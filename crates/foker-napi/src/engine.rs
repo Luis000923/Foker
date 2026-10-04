@@ -5,7 +5,7 @@ use std::sync::{Arc, RwLock};
 
 use foker_map::FokerCode;
 use foker_map::config::{KindGlobs, MapConfig};
-use foker_map::engine::{EngineError, MapEngine};
+use foker_map::engine::{EngineError, MapEngine, OpenMode};
 use foker_map::model::MapDiagnostic;
 use foker_map::path::normalize_lexical;
 use foker_map::query::{self, Direction, SearchKind};
@@ -41,6 +41,8 @@ pub struct KindGlobsConfig {
 /// Configuración del motor (sección `map` efectiva + globs de secretos de la política).
 #[napi(object)]
 pub struct EngineConfig {
+    /// Solo lee el disco: no aparta mapas corruptos ni guarda mapa o caché; save falla.
+    pub read_only: Option<bool>,
     /// Globs incluidos (vacío = todo).
     pub include: Option<Vec<String>>,
     /// Globs excluidos.
@@ -345,6 +347,11 @@ impl FokerEngine {
     /// Abre el motor para un root absoluto. Carga el mapa persistido si es válido.
     #[napi(factory)]
     pub async fn open(root: String, config: Option<EngineConfig>) -> napi::Result<FokerEngine> {
+        let mode = if config.as_ref().and_then(|c| c.read_only).unwrap_or(false) {
+            OpenMode::ReadOnly
+        } else {
+            OpenMode::ReadWrite
+        };
         let config = to_map_config(config).map_err(|e| {
             napi::Error::new(
                 napi::Status::InvalidArg,
@@ -352,7 +359,7 @@ impl FokerEngine {
             )
         })?;
         blocking(move || {
-            let engine = MapEngine::open(std::path::Path::new(&root), config)
+            let engine = MapEngine::open_with(std::path::Path::new(&root), config, mode)
                 .map_err(|e| engine_error(&e))?;
             Ok(FokerEngine {
                 inner: Arc::new(RwLock::new(engine)),

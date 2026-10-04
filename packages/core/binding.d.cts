@@ -49,6 +49,8 @@ export interface Diagnostic {
 
 /** Configuración del motor (sección `map` efectiva + globs de secretos de la política). */
 export interface EngineConfig {
+  /** Solo lee el disco: no aparta mapas corruptos ni guarda mapa o caché; save falla. */
+  readOnly?: boolean
   /** Globs incluidos (vacío = todo). */
   include?: Array<string>
   /** Globs excluidos. */
