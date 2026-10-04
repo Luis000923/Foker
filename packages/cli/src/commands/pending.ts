@@ -29,17 +29,6 @@ export const pendingCommands: Command[] = [
     ],
     1,
   ),
-  pending(
-    'context',
-    'Construye un Context Pack',
-    'FKR-036',
-    [
-      flag('anchor', 'string[]', 'Ruta o símbolo (repetible)'),
-      ...['intent', 'budget', 'skill', 'task', 'format'].map((n) => s(n, n)),
-      b('explain', 'Explica selección'),
-    ],
-    1,
-  ),
   pending('mcp', 'Arranca MCP stdio', 'FKR-050', [s('root', 'Raíz')]),
   pending('validate', 'Ejecuta checks', 'FKR-048', [
     s('profile', 'Perfil'),

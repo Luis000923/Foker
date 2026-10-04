@@ -1,4 +1,6 @@
 import type {
+  ContextPack,
+  ContextRequest,
   Diagnostic,
   EngineConfig,
   FileInfo,
@@ -16,6 +18,8 @@ import type {
 import { FokerError } from './errors.js';
 
 export type {
+  ContextPack,
+  ContextRequest,
   Diagnostic,
   EngineConfig,
   FileInfo,
@@ -114,6 +118,11 @@ export class Engine {
   /** Información de un símbolo, o `null`. */
   symbolInfo(id: string): SymbolInfo | null {
     return wrap(() => this.#native.symbolInfo(id));
+  }
+
+  /** Construye un Context Pack determinista. */
+  buildContext(request: ContextRequest): Promise<ContextPack> {
+    return wrapAsync(() => this.#native.buildContext(request));
   }
 
   /** Radio de impacto. */

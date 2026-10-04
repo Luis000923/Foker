@@ -17,6 +17,8 @@ export declare class FokerEngine {
   loadDiagnostics(): Array<Diagnostic>
   /** Refresca el mapa (incremental salvo `full`). */
   refresh(options?: RefreshOptions | undefined | null): Promise<RefreshReport>
+  /** Construye contexto delegando en foker-context, fuera del hilo de Node. */
+  buildContext(request: ContextRequest): Promise<ContextPack>
   /** Estado del mapa en memoria. */
   status(): MapStatus
   /** Cuenta archivos desactualizados respecto al disco sin reconstruir. */
@@ -33,6 +35,108 @@ export declare class FokerEngine {
   symbolInfo(id: string): SymbolInfo | null
   /** Radio de impacto de archivos y símbolos. */
   impact(request: ImpactRequest): ImpactReport
+}
+
+/** Contrato de contexto: ContextAnchors. */
+export interface ContextAnchors {
+  /** Campo files. */
+  files?: Array<string>
+  /** Campo symbols. */
+  symbols?: Array<string>
+}
+
+/** Contrato de contexto: ContextBudget. */
+export interface ContextBudget {
+  /** Campo limit. */
+  limit: number
+  /** Campo used. */
+  used: number
+  /** Campo estimator. */
+  estimator: string
+}
+
+/** Contrato de contexto: ContextExcluded. */
+export interface ContextExcluded {
+  /** Campo id. */
+  id: string
+  /** Campo reason. */
+  reason: 'BUDGET' | 'RANK_CUTOFF'
+  /** Campo score. */
+  score: number
+}
+
+/** Contrato de contexto: ContextPack. */
+export interface ContextPack {
+  /** Campo pack_version. */
+  packVersion: number
+  /** Campo pack_hash. */
+  packHash: string
+  /** Campo map_hash. */
+  mapHash: string
+  /** Campo intent. */
+  intent: 'fix' | 'add' | 'modify' | 'refactor' | 'test' | 'explain'
+  /** Campo intent_source. */
+  intentSource: 'request' | 'inferred'
+  /** Campo budget. */
+  budget: ContextBudget
+  /** Campo sections. */
+  sections: Array<PackSection>
+  /** Campo files. */
+  files: Array<PackFile>
+  /** Campo excluded. */
+  excluded: Array<ContextExcluded>
+  /** Campo diagnostics. */
+  diagnostics: Array<Diagnostic>
+  /** Campo rendered. */
+  rendered: string
+  /** Campo json. */
+  json: string
+}
+
+/** Contrato de contexto: ContextRequest. */
+export interface ContextRequest {
+  /** Campo task. */
+  task: string
+  /** Campo anchors. */
+  anchors?: ContextAnchors
+  /** Campo intent. */
+  intent?: 'fix' | 'add' | 'modify' | 'refactor' | 'test' | 'explain'
+  /** Campo budget_tokens. */
+  budgetTokens?: number
+  /** Campo explain. */
+  explain?: boolean
+  /** Campo rules. */
+  rules?: string
+  /** Campo skill. */
+  skill?: ContextSkill
+  /** Campo task_scope. */
+  taskScope?: ContextTaskScope
+  /** Campo dirty_files. */
+  dirtyFiles?: Array<string>
+}
+
+/** Contrato de contexto: ContextSkill. */
+export interface ContextSkill {
+  /** Campo name. */
+  name: string
+  /** Campo body. */
+  body: string
+  /** Campo required_files. */
+  requiredFiles: Array<string>
+  /** Campo required_symbols. */
+  requiredSymbols: Array<string>
+}
+
+/** Contrato de contexto: ContextTaskScope. */
+export interface ContextTaskScope {
+  /** Campo task_id. */
+  taskId: string
+  /** Campo description. */
+  description: string
+  /** Campo paths. */
+  paths: Array<string>
+  /** Campo checks. */
+  checks: Array<string>
 }
 
 /** Diagnóstico (código `FKR-…1xx`). */
@@ -170,6 +274,36 @@ export declare function matchGlobs(id: string, globs: Array<string>): boolean
  * Lanza `FKR-POL-001` si la ruta es inválida o sale del root.
  */
 export declare function normalizePath(root: string, input: string): string
+
+/** Contrato de contexto: PackFile. */
+export interface PackFile {
+  /** Campo id. */
+  id: string
+  /** Campo level. */
+  level: 'L0' | 'L1' | 'L2' | 'L3'
+  /** Campo tokens. */
+  tokens: number
+  /** Campo score. */
+  score: number
+  /** Campo reasons. */
+  reasons: Array<string>
+  /** Campo note. */
+  note?: string
+}
+
+/** Contrato de contexto: PackSection. */
+export interface PackSection {
+  /** Campo id. */
+  id: 'rules' | 'core' | 'skill' | 'task_scope' | 'related' | 'targets' | 'request'
+  /** Campo class. */
+  class: 'mandatory' | 'optional'
+  /** Campo stability. */
+  stability: 'static' | 'session' | 'task'
+  /** Campo tokens. */
+  tokens: number
+  /** Campo hash. */
+  hash: string
+}
 
 /** Posición base 0. */
 export interface Position {

@@ -1,7 +1,8 @@
+import { contextCommand } from './commands/context.js';
 import { mapCommand } from './commands/map.js';
 import { pendingCommands } from './commands/pending.js';
 import { flag } from './types.js';
-export const commands = [...pendingCommands.slice(0, 1), mapCommand, ...pendingCommands.slice(1)];
+export const commands = [...pendingCommands.slice(0, 1), mapCommand, contextCommand, ...pendingCommands.slice(1)];
 export const globalFlags = [
   flag('cwd', 'string', 'Directorio de trabajo'),
   flag('config', 'string', 'Ruta de configuración'),

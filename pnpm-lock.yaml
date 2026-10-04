@@ -26,9 +26,6 @@ importers:
       '@foker/core':
         specifier: workspace:*
         version: link:../core
-      '@foker/schemas':
-        specifier: workspace:*
-        version: link:../schemas
       '@foker/engine':
         specifier: workspace:*
         version: link:../engine
@@ -38,6 +35,9 @@ importers:
       '@foker/mcp':
         specifier: workspace:*
         version: link:../mcp
+      '@foker/schemas':
+        specifier: workspace:*
+        version: link:../schemas
 
   packages/core:
     devDependencies:
@@ -56,6 +56,9 @@ importers:
       '@foker/schemas':
         specifier: workspace:*
         version: link:../schemas
+      yaml:
+        specifier: 2.9.1
+        version: 2.9.1
 
   packages/integrations:
     dependencies:
