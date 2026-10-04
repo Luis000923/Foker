@@ -15,7 +15,8 @@
       "!packages/core/binding.cjs",
       "!packages/core/binding.d.cts",
       "!packages/schemas/src/generated",
-      "!packages/core/src/error-codes.generated.ts"
+      "!packages/core/src/error-codes.generated.ts",
+      "!fixtures"
     ]
   },
   "formatter": {
@@ -55,7 +56,9 @@
   },
   "overrides": [
     {
-      "includes": ["**/*.test.ts"],
+      "includes": [
+        "**/*.test.ts"
+      ],
       "linter": {
         "rules": {
           "suspicious": {

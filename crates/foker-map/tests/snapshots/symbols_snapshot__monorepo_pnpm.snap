@@ -1,0 +1,833 @@
+---
+source: crates/foker-map/tests/symbols_snapshot.rs
+expression: "extract(&fixture(\"monorepo-pnpm\"))"
+---
+{
+  "files": [
+    {
+      "exports": [],
+      "id": "apps/web/src/app/dashboard/page.tsx",
+      "import_refs": {
+        "Card": 2
+      },
+      "imports": [
+        {
+          "bindings": [
+            "Card as Card"
+          ],
+          "kind": "Static",
+          "specifier": "@mono/ui",
+          "type_only": false
+        },
+        {
+          "bindings": [],
+          "kind": "Dynamic",
+          "specifier": "../../lib/stats",
+          "type_only": false
+        }
+      ],
+      "lines": 9,
+      "parse_status": "ok",
+      "symbols": [
+        {
+          "doc": null,
+          "exported": "named",
+          "id": "apps/web/src/app/dashboard/page.tsx#dynamic",
+          "kind": "variable",
+          "name": "dynamic",
+          "parent": null,
+          "range": [
+            2,
+            0,
+            2,
+            39
+          ],
+          "signature": "export const dynamic = 'force-dynamic'",
+          "tags": []
+        },
+        {
+          "doc": null,
+          "exported": "default",
+          "id": "apps/web/src/app/dashboard/page.tsx#DashboardPage",
+          "kind": "function",
+          "name": "DashboardPage",
+          "parent": null,
+          "range": [
+            4,
+            0,
+            8,
+            1
+          ],
+          "signature": "export default async function DashboardPage()",
+          "tags": [
+            "async",
+            "next_route",
+            "react_component"
+          ]
+        }
+      ]
+    },
+    {
+      "exports": [],
+      "id": "apps/web/src/app/page.tsx",
+      "import_refs": {
+        "Button": 2,
+        "CartItem": 1,
+        "formatPrice": 1
+      },
+      "imports": [
+        {
+          "bindings": [
+            "Button as Button"
+          ],
+          "kind": "Static",
+          "specifier": "@mono/ui",
+          "type_only": false
+        },
+        {
+          "bindings": [
+            "formatPrice as formatPrice"
+          ],
+          "kind": "Static",
+          "specifier": "@/lib/format",
+          "type_only": false
+        },
+        {
+          "bindings": [
+            "CartItem as CartItem (type)"
+          ],
+          "kind": "Static",
+          "specifier": "@mono/core",
+          "type_only": true
+        }
+      ],
+      "lines": 13,
+      "parse_status": "ok",
+      "symbols": [
+        {
+          "doc": "Página de inicio.",
+          "exported": "default",
+          "id": "apps/web/src/app/page.tsx#HomePage",
+          "kind": "function",
+          "name": "HomePage",
+          "parent": null,
+          "range": [
+            9,
+            0,
+            12,
+            1
+          ],
+          "signature": "export default function HomePage({ items }: { items: CartItem[] }): JSX.Element",
+          "tags": [
+            "next_route",
+            "react_component"
+          ]
+        }
+      ]
+    },
+    {
+      "exports": [],
+      "id": "apps/web/src/lib/format.ts",
+      "import_refs": {},
+      "imports": [],
+      "lines": 6,
+      "parse_status": "ok",
+      "symbols": [
+        {
+          "doc": "Formatea un precio en euros.",
+          "exported": "named",
+          "id": "apps/web/src/lib/format.ts#formatPrice",
+          "kind": "function",
+          "name": "formatPrice",
+          "parent": null,
+          "range": [
+            1,
+            0,
+            3,
+            1
+          ],
+          "signature": "export function formatPrice(cents: number): string",
+          "tags": []
+        },
+        {
+          "doc": null,
+          "exported": "named",
+          "id": "apps/web/src/lib/format.ts#CURRENCY",
+          "kind": "variable",
+          "name": "CURRENCY",
+          "parent": null,
+          "range": [
+            5,
+            0,
+            5,
+            30
+          ],
+          "signature": "export const CURRENCY = 'EUR'",
+          "tags": []
+        }
+      ]
+    },
+    {
+      "exports": [],
+      "id": "apps/web/src/lib/stats.ts",
+      "import_refs": {},
+      "imports": [],
+      "lines": 7,
+      "parse_status": "ok",
+      "symbols": [
+        {
+          "doc": null,
+          "exported": "named",
+          "id": "apps/web/src/lib/stats.ts#Stats",
+          "kind": "interface",
+          "name": "Stats",
+          "parent": null,
+          "range": [
+            0,
+            0,
+            2,
+            1
+          ],
+          "signature": "export interface Stats { count: number; }",
+          "tags": []
+        },
+        {
+          "doc": null,
+          "exported": "named",
+          "id": "apps/web/src/lib/stats.ts#loadStats",
+          "kind": "function",
+          "name": "loadStats",
+          "parent": null,
+          "range": [
+            4,
+            0,
+            6,
+            1
+          ],
+          "signature": "export async function loadStats(): Promise<Stats>",
+          "tags": [
+            "async"
+          ]
+        }
+      ]
+    },
+    {
+      "exports": [],
+      "id": "packages/core/src/cart/audit.ts",
+      "import_refs": {
+        "Cart": 1
+      },
+      "imports": [
+        {
+          "bindings": [
+            "Cart as Cart (type)"
+          ],
+          "kind": "Static",
+          "specifier": "./cart",
+          "type_only": true
+        }
+      ],
+      "lines": 7,
+      "parse_status": "ok",
+      "symbols": [
+        {
+          "doc": null,
+          "exported": "named",
+          "id": "packages/core/src/cart/audit.ts#audit",
+          "kind": "function",
+          "name": "audit",
+          "parent": null,
+          "range": [
+            3,
+            0,
+            6,
+            1
+          ],
+          "signature": "export function audit(cart: Cart, action: string): void",
+          "tags": []
+        }
+      ]
+    },
+    {
+      "exports": [],
+      "id": "packages/core/src/cart/cart.ts",
+      "import_refs": {
+        "CartId": 5,
+        "CartItem": 4,
+        "CartStatus": 2,
+        "audit": 1
+      },
+      "imports": [
+        {
+          "bindings": [
+            "CartItem as CartItem (type)",
+            "CartId as CartId (type)"
+          ],
+          "kind": "Static",
+          "specifier": "./types",
+          "type_only": true
+        },
+        {
+          "bindings": [
+            "CartStatus as CartStatus"
+          ],
+          "kind": "Static",
+          "specifier": "./types",
+          "type_only": false
+        },
+        {
+          "bindings": [
+            "audit as audit"
+          ],
+          "kind": "Static",
+          "specifier": "./audit",
+          "type_only": false
+        }
+      ],
+      "lines": 40,
+      "parse_status": "ok",
+      "symbols": [
+        {
+          "doc": "Carrito de la compra.",
+          "exported": "named",
+          "id": "packages/core/src/cart/cart.ts#Cart",
+          "kind": "class",
+          "name": "Cart",
+          "parent": null,
+          "range": [
+            5,
+            0,
+            24,
+            1
+          ],
+          "signature": "export class Cart",
+          "tags": []
+        },
+        {
+          "doc": null,
+          "exported": "none",
+          "id": "packages/core/src/cart/cart.ts#Cart.status",
+          "kind": "property",
+          "name": "status",
+          "parent": "Cart",
+          "range": [
+            7,
+            2,
+            7,
+            38
+          ],
+          "signature": "status: CartStatus",
+          "tags": []
+        },
+        {
+          "doc": null,
+          "exported": "none",
+          "id": "packages/core/src/cart/cart.ts#Cart.constructor",
+          "kind": "method",
+          "name": "constructor",
+          "parent": "Cart",
+          "range": [
+            9,
+            2,
+            9,
+            37
+          ],
+          "signature": "constructor(readonly id: CartId)",
+          "tags": []
+        },
+        {
+          "doc": "Añade un artículo.",
+          "exported": "none",
+          "id": "packages/core/src/cart/cart.ts#Cart.add",
+          "kind": "method",
+          "name": "add",
+          "parent": "Cart",
+          "range": [
+            12,
+            2,
+            15,
+            3
+          ],
+          "signature": "add(item: CartItem): void",
+          "tags": []
+        },
+        {
+          "doc": null,
+          "exported": "none",
+          "id": "packages/core/src/cart/cart.ts#Cart.total",
+          "kind": "method",
+          "name": "total",
+          "parent": "Cart",
+          "range": [
+            17,
+            2,
+            19,
+            3
+          ],
+          "signature": "total(): number",
+          "tags": []
+        },
+        {
+          "doc": null,
+          "exported": "none",
+          "id": "packages/core/src/cart/cart.ts#Cart.empty",
+          "kind": "method",
+          "name": "empty",
+          "parent": "Cart",
+          "range": [
+            21,
+            2,
+            23,
+            3
+          ],
+          "signature": "static empty(id: CartId): Cart",
+          "tags": []
+        },
+        {
+          "doc": null,
+          "exported": "named",
+          "id": "packages/core/src/cart/cart.ts#createCart",
+          "kind": "function",
+          "name": "createCart",
+          "parent": null,
+          "range": [
+            26,
+            0,
+            26,
+            45
+          ],
+          "signature": "export function createCart(id: CartId): Cart",
+          "tags": []
+        },
+        {
+          "doc": null,
+          "exported": "named",
+          "id": "packages/core/src/cart/cart.ts#createCart~2",
+          "kind": "function",
+          "name": "createCart",
+          "parent": null,
+          "range": [
+            27,
+            0,
+            27,
+            64
+          ],
+          "signature": "export function createCart(id: CartId, items: CartItem[]): Cart",
+          "tags": []
+        },
+        {
+          "doc": null,
+          "exported": "named",
+          "id": "packages/core/src/cart/cart.ts#createCart~3",
+          "kind": "function",
+          "name": "createCart",
+          "parent": null,
+          "range": [
+            28,
+            0,
+            32,
+            1
+          ],
+          "signature": "export function createCart(id: CartId, items: CartItem[] = []): Cart",
+          "tags": []
+        },
+        {
+          "doc": null,
+          "exported": "named",
+          "id": "packages/core/src/cart/cart.ts#CartUtils",
+          "kind": "namespace",
+          "name": "CartUtils",
+          "parent": null,
+          "range": [
+            34,
+            0,
+            39,
+            1
+          ],
+          "signature": "export namespace CartUtils",
+          "tags": []
+        },
+        {
+          "doc": null,
+          "exported": "named",
+          "id": "packages/core/src/cart/cart.ts#CartUtils.MAX_ITEMS",
+          "kind": "variable",
+          "name": "MAX_ITEMS",
+          "parent": "CartUtils",
+          "range": [
+            35,
+            2,
+            35,
+            31
+          ],
+          "signature": "export const MAX_ITEMS = 100",
+          "tags": []
+        },
+        {
+          "doc": null,
+          "exported": "named",
+          "id": "packages/core/src/cart/cart.ts#CartUtils.isFull",
+          "kind": "function",
+          "name": "isFull",
+          "parent": "CartUtils",
+          "range": [
+            36,
+            2,
+            38,
+            3
+          ],
+          "signature": "export function isFull(cart: Cart): boolean",
+          "tags": []
+        }
+      ]
+    },
+    {
+      "exports": [],
+      "id": "packages/core/src/cart/types.ts",
+      "import_refs": {},
+      "imports": [],
+      "lines": 11,
+      "parse_status": "ok",
+      "symbols": [
+        {
+          "doc": null,
+          "exported": "named",
+          "id": "packages/core/src/cart/types.ts#CartItem",
+          "kind": "interface",
+          "name": "CartItem",
+          "parent": null,
+          "range": [
+            0,
+            0,
+            3,
+            1
+          ],
+          "signature": "export interface CartItem { id: string; price: number; }",
+          "tags": []
+        },
+        {
+          "doc": null,
+          "exported": "named",
+          "id": "packages/core/src/cart/types.ts#CartId",
+          "kind": "type_alias",
+          "name": "CartId",
+          "parent": null,
+          "range": [
+            5,
+            0,
+            5,
+            28
+          ],
+          "signature": "export type CartId = string",
+          "tags": []
+        },
+        {
+          "doc": null,
+          "exported": "named",
+          "id": "packages/core/src/cart/types.ts#CartStatus",
+          "kind": "enum",
+          "name": "CartStatus",
+          "parent": null,
+          "range": [
+            7,
+            0,
+            10,
+            1
+          ],
+          "signature": "export enum CartStatus { Open = 'open', Closed = 'closed', }",
+          "tags": []
+        }
+      ]
+    },
+    {
+      "exports": [
+        [
+          "*",
+          null,
+          "./cart/cart",
+          false
+        ],
+        [
+          "CartItem",
+          "CartItem",
+          "./cart/types",
+          true
+        ],
+        [
+          "legacyTotal",
+          "default",
+          "./legacy/total.cjs",
+          false
+        ]
+      ],
+      "id": "packages/core/src/index.ts",
+      "import_refs": {},
+      "imports": [
+        {
+          "bindings": [],
+          "kind": "ReexportAll",
+          "specifier": "./cart/cart",
+          "type_only": false
+        },
+        {
+          "bindings": [
+            "CartItem (type)"
+          ],
+          "kind": "ReexportNamed",
+          "specifier": "./cart/types",
+          "type_only": true
+        },
+        {
+          "bindings": [
+            "default"
+          ],
+          "kind": "ReexportNamed",
+          "specifier": "./legacy/total.cjs",
+          "type_only": false
+        }
+      ],
+      "lines": 3,
+      "parse_status": "ok",
+      "symbols": []
+    },
+    {
+      "exports": [],
+      "id": "packages/core/src/legacy/round.cjs",
+      "import_refs": {},
+      "imports": [],
+      "lines": 3,
+      "parse_status": "ok",
+      "symbols": [
+        {
+          "doc": null,
+          "exported": "named",
+          "id": "packages/core/src/legacy/round.cjs#round",
+          "kind": "function",
+          "name": "round",
+          "parent": null,
+          "range": [
+            0,
+            0,
+            2,
+            2
+          ],
+          "signature": "exports.round = function round(value)",
+          "tags": []
+        }
+      ]
+    },
+    {
+      "exports": [
+        [
+          "default",
+          "total",
+          null,
+          false
+        ]
+      ],
+      "id": "packages/core/src/legacy/total.cjs",
+      "import_refs": {},
+      "imports": [
+        {
+          "bindings": [],
+          "kind": "Require",
+          "specifier": "./round.cjs",
+          "type_only": false
+        }
+      ],
+      "lines": 7,
+      "parse_status": "ok",
+      "symbols": [
+        {
+          "doc": null,
+          "exported": "default",
+          "id": "packages/core/src/legacy/total.cjs#total",
+          "kind": "function",
+          "name": "total",
+          "parent": null,
+          "range": [
+            2,
+            0,
+            4,
+            1
+          ],
+          "signature": "function total(values)",
+          "tags": []
+        }
+      ]
+    },
+    {
+      "exports": [],
+      "id": "packages/ui/src/button.tsx",
+      "import_refs": {
+        "React": 2
+      },
+      "imports": [
+        {
+          "bindings": [
+            "* as React"
+          ],
+          "kind": "Static",
+          "specifier": "react",
+          "type_only": false
+        }
+      ],
+      "lines": 13,
+      "parse_status": "ok",
+      "symbols": [
+        {
+          "doc": null,
+          "exported": "named",
+          "id": "packages/ui/src/button.tsx#ButtonProps",
+          "kind": "interface",
+          "name": "ButtonProps",
+          "parent": null,
+          "range": [
+            2,
+            0,
+            4,
+            1
+          ],
+          "signature": "export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> { variant?: 'primary' | 'ghost'; }",
+          "tags": []
+        },
+        {
+          "doc": "Botón base del sistema de diseño.",
+          "exported": "named",
+          "id": "packages/ui/src/button.tsx#Button",
+          "kind": "variable",
+          "name": "Button",
+          "parent": null,
+          "range": [
+            7,
+            0,
+            12,
+            3
+          ],
+          "signature": "export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(function Button({ variant = 'pr…",
+          "tags": [
+            "react_component"
+          ]
+        }
+      ]
+    },
+    {
+      "exports": [],
+      "id": "packages/ui/src/card.tsx",
+      "import_refs": {
+        "ReactNode": 1
+      },
+      "imports": [
+        {
+          "bindings": [
+            "ReactNode as ReactNode (type)"
+          ],
+          "kind": "Static",
+          "specifier": "react",
+          "type_only": true
+        }
+      ],
+      "lines": 16,
+      "parse_status": "ok",
+      "symbols": [
+        {
+          "doc": null,
+          "exported": "named",
+          "id": "packages/ui/src/card.tsx#CardProps",
+          "kind": "type_alias",
+          "name": "CardProps",
+          "parent": null,
+          "range": [
+            2,
+            0,
+            2,
+            64
+          ],
+          "signature": "export type CardProps = { title: string; children?: ReactNode }",
+          "tags": []
+        },
+        {
+          "doc": null,
+          "exported": "named",
+          "id": "packages/ui/src/card.tsx#Card",
+          "kind": "function",
+          "name": "Card",
+          "parent": null,
+          "range": [
+            4,
+            0,
+            11,
+            1
+          ],
+          "signature": "export function Card({ title, children }: CardProps)",
+          "tags": [
+            "react_component"
+          ]
+        },
+        {
+          "doc": null,
+          "exported": "named",
+          "id": "packages/ui/src/card.tsx#useCardState",
+          "kind": "function",
+          "name": "useCardState",
+          "parent": null,
+          "range": [
+            13,
+            0,
+            15,
+            1
+          ],
+          "signature": "export function useCardState(initial = false)",
+          "tags": [
+            "react_hook"
+          ]
+        }
+      ]
+    },
+    {
+      "exports": [
+        [
+          "Button",
+          "Button",
+          "./button",
+          false
+        ],
+        [
+          "ButtonProps",
+          "ButtonProps",
+          "./button",
+          true
+        ],
+        [
+          "*",
+          null,
+          "./card",
+          false
+        ]
+      ],
+      "id": "packages/ui/src/index.ts",
+      "import_refs": {},
+      "imports": [
+        {
+          "bindings": [
+            "Button",
+            "ButtonProps (type)"
+          ],
+          "kind": "ReexportNamed",
+          "specifier": "./button",
+          "type_only": false
+        },
+        {
+          "bindings": [],
+          "kind": "ReexportAll",
+          "specifier": "./card",
+          "type_only": false
+        }
+      ],
+      "lines": 2,
+      "parse_status": "ok",
+      "symbols": []
+    }
+  ],
+  "oversized": []
+}

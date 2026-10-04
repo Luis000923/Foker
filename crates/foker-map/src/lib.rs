@@ -7,6 +7,7 @@ pub mod config;
 pub mod discover;
 pub mod error;
 pub mod glob;
+pub mod parse;
 pub mod path;
 
 pub use error::FokerCode;
