@@ -4,6 +4,8 @@ pub mod cache;
 pub mod intent;
 pub mod normalize;
 pub mod pack;
+pub mod params;
+pub use params::ContextParams;
 pub mod rank;
 pub mod render;
 pub mod seeds;
@@ -42,7 +44,8 @@ pub(crate) fn build_with_seed_counts(
         .unwrap_or_else(|| intent::infer(&normalized.task));
     let tokens = normalize::tokenize(&normalized.task);
     let seeds = seeds::build(&state.map, &normalized, inputs, &tokens)?;
-    let ranked = rank::rank(&state.map, &seeds, intent);
+    let params = normalized.params.clone().unwrap_or_default();
+    let ranked = rank::rank_with_params(&state.map, &seeds, intent, &params);
     let fixed = render::fixed(inputs, &normalized, intent);
     let selection = select::select(
         state,
@@ -50,7 +53,12 @@ pub(crate) fn build_with_seed_counts(
         &ranked,
         &fixed,
         normalized.budget_tokens,
-        inputs.core_files,
+        if inputs.core_files == ContextInputs::default().core_files {
+            params.core_files
+        } else {
+            inputs.core_files
+        },
+        &params,
     )?;
     let mut fixed = fixed.into_iter();
     let sections_text = vec![
@@ -76,6 +84,11 @@ pub(crate) fn build_with_seed_counts(
         to_canonical_string(&serde_json::to_value(&selection.files).expect("archivos finitos"))
             .as_bytes(),
     );
+    if let Some(params) = &normalized.params {
+        bytes.extend_from_slice(
+            to_canonical_string(&serde_json::to_value(params).expect("params finitos")).as_bytes(),
+        );
+    }
     let counts = seeds.counts();
     Ok((
         ContextPack {

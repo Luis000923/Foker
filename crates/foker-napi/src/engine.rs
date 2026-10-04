@@ -349,6 +349,91 @@ pub struct ContextTaskScope {
     pub checks: Vec<String>,
 }
 
+/// Parámetros internos de calibración (sin CLI/MCP).
+#[napi(object)]
+pub struct ContextParams {
+    /// Interno: w_anchor.
+    pub w_anchor: Option<f64>,
+    /// Interno: mention_factor.
+    pub mention_factor: Option<f64>,
+    /// Interno: w_lex.
+    pub w_lex: Option<f64>,
+    /// Interno: bm25_top.
+    pub bm25_top: Option<f64>,
+    /// Interno: w_dirty.
+    pub w_dirty: Option<f64>,
+    /// Interno: w_task_scope.
+    pub w_task_scope: Option<f64>,
+    /// Interno: w_skill.
+    pub w_skill: Option<f64>,
+    /// Interno: r_fix.
+    pub r_fix: Option<f64>,
+    /// Interno: r_modify.
+    pub r_modify: Option<f64>,
+    /// Interno: r_test.
+    pub r_test: Option<f64>,
+    /// Interno: r_refactor.
+    pub r_refactor: Option<f64>,
+    /// Interno: r_add.
+    pub r_add: Option<f64>,
+    /// Interno: r_explain.
+    pub r_explain: Option<f64>,
+    /// Interno: test_factor.
+    pub test_factor: Option<f64>,
+    /// Interno: l2_count.
+    pub l2_count: Option<f64>,
+    /// Interno: anchor_fraction.
+    pub anchor_fraction: Option<f64>,
+    /// Interno: margin_fraction.
+    pub margin_fraction: Option<f64>,
+    /// Interno: l0_count.
+    pub l0_count: Option<f64>,
+    /// Interno: l0_min_fraction.
+    pub l0_min_fraction: Option<f64>,
+    /// Interno: core_files.
+    pub core_files: Option<f64>,
+    /// Interno: core_fraction.
+    pub core_fraction: Option<f64>,
+    /// Interno: bm25_k1.
+    pub bm25_k1: Option<f64>,
+    /// Interno: bm25_b.
+    pub bm25_b: Option<f64>,
+}
+impl TryFrom<ContextParams> for foker_context::ContextParams {
+    type Error = foker_context::ContextError;
+    fn try_from(value: ContextParams) -> Result<Self, Self::Error> {
+        let defaults = Self::default();
+        Self {
+            w_anchor: value.w_anchor.unwrap_or(defaults.w_anchor),
+            mention_factor: value.mention_factor.unwrap_or(defaults.mention_factor),
+            w_lex: value.w_lex.unwrap_or(defaults.w_lex),
+            w_dirty: value.w_dirty.unwrap_or(defaults.w_dirty),
+            w_task_scope: value.w_task_scope.unwrap_or(defaults.w_task_scope),
+            w_skill: value.w_skill.unwrap_or(defaults.w_skill),
+            r_fix: value.r_fix.unwrap_or(defaults.r_fix),
+            r_modify: value.r_modify.unwrap_or(defaults.r_modify),
+            r_test: value.r_test.unwrap_or(defaults.r_test),
+            r_refactor: value.r_refactor.unwrap_or(defaults.r_refactor),
+            r_add: value.r_add.unwrap_or(defaults.r_add),
+            r_explain: value.r_explain.unwrap_or(defaults.r_explain),
+            test_factor: value.test_factor.unwrap_or(defaults.test_factor),
+            anchor_fraction: value.anchor_fraction.unwrap_or(defaults.anchor_fraction),
+            margin_fraction: value.margin_fraction.unwrap_or(defaults.margin_fraction),
+            l0_min_fraction: value.l0_min_fraction.unwrap_or(defaults.l0_min_fraction),
+            core_fraction: value.core_fraction.unwrap_or(defaults.core_fraction),
+            bm25_k1: value.bm25_k1.unwrap_or(defaults.bm25_k1),
+            bm25_b: value.bm25_b.unwrap_or(defaults.bm25_b),
+            ..defaults
+        }
+        .with_counts([
+            value.bm25_top,
+            value.l2_count,
+            value.l0_count,
+            value.core_files,
+        ])
+    }
+}
+
 /// Contrato de contexto: ContextRequest.
 #[napi(object)]
 pub struct ContextRequest {
@@ -361,6 +446,8 @@ pub struct ContextRequest {
     pub intent: Option<String>,
     /// Campo budget_tokens.
     pub budget_tokens: Option<u32>,
+    /// Interno: calibración; no se expone en CLI/MCP.
+    pub params: Option<ContextParams>,
     /// Número máximo de archivos core; por defecto 15.
     pub core_files: Option<u32>,
     /// Campo explain.
@@ -577,6 +664,14 @@ impl FokerEngine {
                 files: None,
                 symbols: None,
             });
+            let mut params = request
+                .params
+                .map(foker_context::ContextParams::try_from)
+                .transpose()
+                .map_err(|e| napi::Error::new(e.code(), e.to_string()))?;
+            if let (Some(params), Some(core_files)) = (&mut params, request.core_files) {
+                params.core_files = core_files as usize;
+            }
             let req = foker_context::ContextRequest {
                 task: request.task,
                 anchors: foker_context::Anchors {
@@ -584,6 +679,7 @@ impl FokerEngine {
                     symbols: anchors.symbols.unwrap_or_default(),
                 },
                 intent,
+                params,
                 budget_tokens: request
                     .budget_tokens
                     .map(|v| v as usize)

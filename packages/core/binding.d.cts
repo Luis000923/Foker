@@ -93,6 +93,56 @@ export interface ContextPack {
   json: string
 }
 
+/** Parámetros internos de calibración (sin CLI/MCP). */
+export interface ContextParams {
+  /** Interno: w_anchor. */
+  wAnchor?: number
+  /** Interno: mention_factor. */
+  mentionFactor?: number
+  /** Interno: w_lex. */
+  wLex?: number
+  /** Interno: bm25_top. */
+  bm25Top?: number
+  /** Interno: w_dirty. */
+  wDirty?: number
+  /** Interno: w_task_scope. */
+  wTaskScope?: number
+  /** Interno: w_skill. */
+  wSkill?: number
+  /** Interno: r_fix. */
+  rFix?: number
+  /** Interno: r_modify. */
+  rModify?: number
+  /** Interno: r_test. */
+  rTest?: number
+  /** Interno: r_refactor. */
+  rRefactor?: number
+  /** Interno: r_add. */
+  rAdd?: number
+  /** Interno: r_explain. */
+  rExplain?: number
+  /** Interno: test_factor. */
+  testFactor?: number
+  /** Interno: l2_count. */
+  l2Count?: number
+  /** Interno: anchor_fraction. */
+  anchorFraction?: number
+  /** Interno: margin_fraction. */
+  marginFraction?: number
+  /** Interno: l0_count. */
+  l0Count?: number
+  /** Interno: l0_min_fraction. */
+  l0MinFraction?: number
+  /** Interno: core_files. */
+  coreFiles?: number
+  /** Interno: core_fraction. */
+  coreFraction?: number
+  /** Interno: bm25_k1. */
+  bm25K1?: number
+  /** Interno: bm25_b. */
+  bm25B?: number
+}
+
 /** Contrato de contexto: ContextRequest. */
 export interface ContextRequest {
   /** Campo task. */
@@ -103,6 +153,8 @@ export interface ContextRequest {
   intent?: 'fix' | 'add' | 'modify' | 'refactor' | 'test' | 'explain'
   /** Campo budget_tokens. */
   budgetTokens?: number
+  /** Interno: calibración; no se expone en CLI/MCP. */
+  params?: ContextParams
   /** Número máximo de archivos core; por defecto 15. */
   coreFiles?: number
   /** Campo explain. */

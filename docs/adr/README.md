@@ -27,3 +27,4 @@ Copia de `spec/adr/`. Una decisión nueva o modificada exige un ADR nuevo con n�
 | [ADR-021](ADR-021-contrato-nativo-engine.md) | Contrato nativo del motor | Aceptada |
 | [ADR-022](ADR-022-checks-windows-cmd.md) | Checks mediante shims de Windows | Aceptada |
 | [ADR-023](ADR-023-estimacion-tokens-skills.md) | `estimateTokens` en la API nativa para validar Skills | Aceptada |
+| [ADR-024](ADR-024-calibracion-context-engine.md) | Calibración del Context Engine con ctx-gold | Rechazada (cambio de defaults) |

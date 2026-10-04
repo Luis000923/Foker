@@ -84,6 +84,7 @@ pub fn build(
     inputs: &ContextInputs,
     tokens: &Tokens,
 ) -> Result<Seeds, ContextError> {
+    let params = req.params.clone().unwrap_or_default();
     let mut seeds = Seeds {
         weights: vec![0.0; map.files.len()],
         anchors: BTreeSet::new(),
@@ -91,12 +92,12 @@ pub fn build(
         diagnostics: Vec::new(),
     };
     for id in &req.anchors.files {
-        if !seeds.add(map, id, 1.0, "ANCHOR") {
+        if !seeds.add(map, id, params.w_anchor, "ANCHOR") {
             seeds.warn("FKR-CTX-102", Some(id), "ancla de archivo inexistente");
         }
     }
     for name in &req.anchors.symbols {
-        seeds.symbol(map, name, 1.0, "ANCHOR");
+        seeds.symbol(map, name, params.w_anchor, "ANCHOR");
     }
     for candidate in &tokens.paths {
         let normalized = foker_map::path::normalize_lexical(candidate).ok();
@@ -104,7 +105,12 @@ pub fn build(
             if normalized.as_deref() == Some(&file.id)
                 || file.id.rsplit('/').next() == Some(candidate.as_str())
             {
-                seeds.add(map, &file.id, 0.8, "PATH_MENTION");
+                seeds.add(
+                    map,
+                    &file.id,
+                    params.mention_factor * params.w_anchor,
+                    "PATH_MENTION",
+                );
             }
         }
     }
@@ -114,14 +120,19 @@ pub fn build(
             .iter()
             .filter(|s| s.name == *candidate && s.exported != Exported::None)
         {
-            seeds.add(map, symbol.file(), 0.8, "SYMBOL_MENTION");
+            seeds.add(
+                map,
+                symbol.file(),
+                params.mention_factor * params.w_anchor,
+                "SYMBOL_MENTION",
+            );
         }
     }
-    for hit in Bm25::new(map).search(&tokens.terms) {
+    for hit in Bm25::new(map).search_with_params(&tokens.terms, &params) {
         seeds.add(
             map,
             &hit.id,
-            0.6 * hit.score,
+            params.w_lex * hit.score,
             &format!("LEXICAL:{}", hit.terms[0]),
         );
         for term in hit.terms {
@@ -140,7 +151,7 @@ pub fn build(
             .collect::<Result<_, _>>()
             .map_err(|_| ContextError::InvalidInput("dirty_files no normalizable".into()))?;
         for id in ids {
-            seeds.add(map, &id, 0.3, "DIRTY");
+            seeds.add(map, &id, params.w_dirty, "DIRTY");
         }
     }
     if let Some(scope) = &inputs.task_scope {
@@ -148,7 +159,7 @@ pub fn build(
             .map_err(|e| ContextError::InvalidInput(e.to_string()))?;
         for file in &map.files {
             if matcher.is_match(&file.id) {
-                seeds.add(map, &file.id, 0.5, "TASK_SCOPE");
+                seeds.add(map, &file.id, params.w_task_scope, "TASK_SCOPE");
             }
         }
     }
@@ -160,13 +171,13 @@ pub fn build(
             .collect::<Result<_, _>>()
             .map_err(|_| ContextError::InvalidInput("required_files no normalizable".into()))?;
         for id in files {
-            if !seeds.add(map, &id, 0.5, "SKILL_CONTEXT") {
+            if !seeds.add(map, &id, params.w_skill, "SKILL_CONTEXT") {
                 seeds.warn("FKR-CTX-102", Some(&id), "contexto de skill inexistente");
             }
         }
         let symbols: BTreeSet<_> = skill.required_symbols.iter().collect();
         for name in symbols {
-            seeds.symbol(map, name, 0.5, "SKILL_CONTEXT");
+            seeds.symbol(map, name, params.w_skill, "SKILL_CONTEXT");
         }
     }
     if seeds.weights.iter().all(|w| *w == 0.0) {
@@ -216,5 +227,44 @@ mod tests {
             map.files.iter().map(|f| f.rank_global).collect::<Vec<_>>()
         );
         assert_eq!(fallback.diagnostics[0].code, "FKR-CTX-101");
+    }
+}
+
+#[cfg(test)]
+mod calibration_tests {
+    use super::*;
+    #[test]
+    fn anchor_weight_is_shared_by_file_symbol_and_mentions() {
+        let map = &crate::fixture_state().map;
+        let id = "packages/ui/src/button.tsx";
+        let symbol = map
+            .symbols
+            .iter()
+            .find(|s| s.file() == id && s.exported != Exported::None)
+            .unwrap();
+        let request = crate::ContextRequest {
+            task: id.into(),
+            anchors: crate::Anchors {
+                files: vec![id.into()],
+                symbols: vec![symbol.id.clone()],
+            },
+            params: Some(crate::ContextParams {
+                w_anchor: 2.0,
+                mention_factor: 0.25,
+                w_lex: 0.0,
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        let normalized = crate::normalize::request(&request, &ContextInputs::default()).unwrap();
+        let seeds = build(
+            map,
+            &normalized,
+            &ContextInputs::default(),
+            &crate::normalize::tokenize(id),
+        )
+        .unwrap();
+        let index = map.files.iter().position(|f| f.id == id).unwrap();
+        assert_eq!(seeds.weights[index], 4.5);
     }
 }

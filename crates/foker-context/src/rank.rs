@@ -25,8 +25,17 @@ pub fn eligible(file: &foker_map::model::MapFile) -> bool {
 }
 /// Ordena candidatos por PPR descendente, id ascendente.
 pub fn rank(map: &ProjectMap, seeds: &Seeds, intent: Intent) -> Vec<Candidate> {
+    rank_with_params(map, seeds, intent, &crate::ContextParams::default())
+}
+/// Ranking parametrizado para calibración interna.
+pub fn rank_with_params(
+    map: &ProjectMap,
+    seeds: &Seeds,
+    intent: Intent,
+    params: &crate::ContextParams,
+) -> Vec<Candidate> {
     let ids: Vec<_> = map.files.iter().map(|f| f.id.as_str()).collect();
-    let scores = WeightedGraph::from_map_edges(&ids, &map.edges, intent.reverse())
+    let scores = WeightedGraph::from_map_edges(&ids, &map.edges, params.reverse(intent))
         .pagerank(Some(&seeds.weights));
     let mut reasons_by_file = seeds.reasons.clone();
     let kinds: BTreeMap<_, _> = map.files.iter().map(|f| (f.id.as_str(), f.kind)).collect();
@@ -79,7 +88,7 @@ pub fn rank(map: &ProjectMap, seeds: &Seeds, intent: Intent) -> Vec<Candidate> {
             score: round12(
                 score
                     * if file.kind == FileKind::Test && (intent == Intent::Test || test_of_anchor) {
-                        1.5
+                        params.test_factor
                     } else {
                         1.0
                     },

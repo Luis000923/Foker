@@ -23,7 +23,13 @@ export function score(exposed: string[], gold: string[], goldRead: string[] = []
     precision: pack.size ? [...pack].filter((p) => relevant.has(p)).length / pack.size : 0,
   };
 }
-export async function evaluateContext(cases: GoldCase[], repo: string, budget = 8000) {
+export async function evaluateContext(
+  cases: GoldCase[],
+  repo: string,
+  budget = 8000,
+  diagnose = false,
+  params?: ContextRequest['params'],
+) {
   const temp = mkdtempSync(join(tmpdir(), 'foker-ctx-gold-'));
   try {
     const synthetic = join(temp, 'fixture-a');
@@ -39,9 +45,49 @@ export async function evaluateContext(cases: GoldCase[], repo: string, budget = 
       const pack = await engine.buildContext({
         task: item.task,
         budgetTokens: budget,
+        ...(params ? { params } : {}),
         ...(item.anchors ? { anchors: item.anchors } : {}),
       });
       const exposed = pack.files.filter((f) => f.level !== 'L0').map((f) => f.id);
+      const misses = [];
+      if (diagnose) {
+        const wide = await engine.buildContext({
+          task: item.task,
+          budgetTokens: 200000,
+          ...(params ? { params } : {}),
+          ...(item.anchors ? { anchors: item.anchors } : {}),
+        });
+        const ranking = [...wide.files].sort(
+          (a, b) => b.score - a.score || Buffer.compare(Buffer.from(a.id), Buffer.from(b.id)),
+        );
+        for (const id of [...new Set([...item.gold_modified, ...(item.gold_read ?? [])])].filter(
+          (id) => !exposed.includes(id),
+        )) {
+          const file = pack.files.find((f) => f.id === id);
+          const candidate = ranking.find((f) => f.id === id);
+          const excluded = pack.excluded.find((f) => f.id === id);
+          const exists = engine.fileInfo(id);
+          const seeded =
+            candidate?.reasons.some((r) =>
+              /^(ANCHOR|PATH_MENTION|SYMBOL_MENTION|LEXICAL:|DIRTY|TASK_SCOPE|SKILL_CONTEXT)/.test(r),
+            ) ?? false;
+          misses.push({
+            id,
+            gold: item.gold_modified.includes(id) ? 'modified' : 'read',
+            status: !exists
+              ? 'ausente del mapa (no recuperable con parámetros)'
+              : file?.level === 'L0'
+                ? 'L0 solamente'
+                : (excluded?.reason ??
+                  (candidate ? 'BUDGET (fuera de los 20 descartes publicados)' : 'exclusión dura / sin candidato')),
+            seeded,
+            rank: candidate ? ranking.indexOf(candidate) + 1 : null,
+            score: candidate?.score ?? null,
+            reasons: candidate?.reasons ?? [],
+            diagnostics: pack.diagnostics.filter((d) => d.subject === id),
+          });
+        }
+      }
       rows.push({
         id: item.id,
         fixture: item.fixture,
@@ -49,6 +95,9 @@ export async function evaluateContext(cases: GoldCase[], repo: string, budget = 
         tokens: pack.budget.used,
         exposed,
         gold_modified: item.gold_modified,
+        misses,
+        sections: pack.sections.map(({ id, tokens }) => ({ id, tokens })),
+        occupants: pack.files.map(({ id, level, tokens }) => ({ id, level, tokens })),
       });
     }
     if (!rows.length) throw new Error('Suite vacía');

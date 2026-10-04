@@ -19,6 +19,7 @@ import { FokerError } from './errors.js';
 
 export type {
   ContextPack,
+  ContextParams,
   ContextRequest,
   Diagnostic,
   EngineConfig,

@@ -691,3 +691,150 @@ fn real_filename_cannot_inject_headers_or_delimiters() {
     assert_eq!(rendered.matches("<foker:file ").count(), 1);
     assert!(!rendered.lines().any(|line| line.starts_with("## rules")));
 }
+
+#[test]
+fn calibration_params_preserve_defaults_and_hash_effective_overrides() {
+    let state = state();
+    let root = root();
+    let inputs = ContextInputs::default();
+    let request = button();
+    let baseline = build_context(state, &root, &request, &inputs).unwrap();
+    let mut explicit = request.clone();
+    explicit.params = Some(foker_context::ContextParams::default());
+    let same = build_context(state, &root, &explicit, &inputs).unwrap();
+    assert_eq!(baseline.to_canonical_json(), same.to_canonical_json());
+    let params = explicit.params.as_mut().unwrap();
+    // No dirty files: rendered idéntico, pero la configuración sigue siendo parte del hash.
+    params.w_dirty = 0.4;
+    let changed = build_context(state, &root, &explicit, &inputs).unwrap();
+    assert_eq!(baseline.rendered, changed.rendered);
+    assert_ne!(baseline.pack_hash, changed.pack_hash);
+    assert!(changed.request.params.is_some());
+    assert!(baseline.to_json_value()["request"].get("params").is_none());
+    let mut bytes = changed.rendered.as_bytes().to_vec();
+    bytes.extend_from_slice(
+        foker_map::canonical::to_canonical_string(&serde_json::to_value(&changed.files).unwrap())
+            .as_bytes(),
+    );
+    bytes.extend_from_slice(
+        foker_map::canonical::to_canonical_string(
+            &serde_json::to_value(&changed.request.params).unwrap(),
+        )
+        .as_bytes(),
+    );
+    assert_eq!(changed.pack_hash, foker_map::canonical::hash_bytes(&bytes));
+    let mut cache = foker_context::cache::ContextCache::default();
+    assert!(
+        !cache
+            .build(state, &root, &request, &inputs)
+            .unwrap()
+            .1
+            .cache_hit
+    );
+    assert!(
+        cache
+            .build(
+                state,
+                &root,
+                &ContextRequest {
+                    params: Some(foker_context::ContextParams::default()),
+                    ..request.clone()
+                },
+                &inputs
+            )
+            .unwrap()
+            .1
+            .cache_hit
+    );
+    assert!(
+        !cache
+            .build(state, &root, &explicit, &inputs)
+            .unwrap()
+            .1
+            .cache_hit
+    );
+    assert!(
+        cache
+            .build(state, &root, &explicit, &inputs)
+            .unwrap()
+            .1
+            .cache_hit
+    );
+}
+
+#[test]
+fn calibration_params_validate_and_control_selection() {
+    let state = state();
+    let root = root();
+    let inputs = ContextInputs::default();
+    for params in [
+        foker_context::ContextParams {
+            w_lex: f64::NAN,
+            ..Default::default()
+        },
+        foker_context::ContextParams {
+            r_fix: -1.0,
+            ..Default::default()
+        },
+        foker_context::ContextParams {
+            margin_fraction: 1.1,
+            ..Default::default()
+        },
+        foker_context::ContextParams {
+            bm25_top: 10001,
+            ..Default::default()
+        },
+        foker_context::ContextParams {
+            bm25_k1: 0.0,
+            ..Default::default()
+        },
+    ] {
+        assert!(matches!(
+            build_context(
+                state,
+                &root,
+                &ContextRequest {
+                    params: Some(params),
+                    ..button()
+                },
+                &inputs
+            ),
+            Err(ContextError::InvalidInput(_))
+        ));
+    }
+    let pack = build_context(
+        state,
+        &root,
+        &ContextRequest {
+            params: Some(foker_context::ContextParams {
+                core_files: 0,
+                l2_count: 0,
+                anchor_fraction: 0.0,
+                ..Default::default()
+            }),
+            ..button()
+        },
+        &inputs,
+    )
+    .unwrap();
+    assert_eq!(
+        pack.sections
+            .iter()
+            .find(|s| s.id == "core")
+            .unwrap()
+            .tokens,
+        0
+    );
+    assert!(
+        pack.files
+            .iter()
+            .filter(|f| !f.reasons.iter().any(|r| r == "ANCHOR"))
+            .all(|f| f.level != RenderLevel::L2)
+    );
+    assert!(
+        pack.files
+            .iter()
+            .filter(|f| f.reasons.iter().any(|r| r == "ANCHOR"))
+            .all(|f| f.level != RenderLevel::L3)
+    );
+}

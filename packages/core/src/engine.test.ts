@@ -87,3 +87,37 @@ describe('FokerEngine desde Node', () => {
     expect(error).toMatchObject({ code: 'FKR-CFG-002', recoverable: false });
   });
 });
+
+it('params internos preservan packs, alteran hash y validan límites sin truncar', async () => {
+  const localRoot = mkdtempSync(join(tmpdir(), 'foker-params-'));
+  try {
+    cpSync(fixture, localRoot, { recursive: true, filter: (src) => !src.includes('/expected') });
+    const local = await openEngine(localRoot);
+    const request = { task: 'Modifica Button', anchors: { files: ['packages/ui/src/button.tsx'] } };
+    const baseline = await local.buildContext(request);
+    expect(await local.buildContext({ ...request, params: { wAnchor: 1, wLex: 0.6, coreFiles: 15 } })).toEqual(
+      baseline,
+    );
+    const changed = await local.buildContext({ ...request, params: { wDirty: 0.4 } });
+    expect(changed.rendered).toBe(baseline.rendered);
+    expect(changed.packHash).not.toBe(baseline.packHash);
+    expect(JSON.parse(changed.json).request.params.w_dirty).toBe(0.4);
+    const noCore = await local.buildContext({ ...request, params: { coreFiles: 0 } });
+    expect(noCore.sections.find((s) => s.id === 'core')?.tokens).toBe(0);
+    const explicitCore = await local.buildContext({ ...request, coreFiles: 15, params: { coreFiles: 0 } });
+    expect(explicitCore).toEqual(baseline);
+    for (const params of [
+      { wLex: Number.NaN },
+      { wAnchor: -1 },
+      { marginFraction: 1.1 },
+      { bm25Top: 20.5 },
+      { coreFiles: -1 },
+      { l2Count: Number.POSITIVE_INFINITY },
+      { l0Count: 10001 },
+    ]) {
+      await expect(local.buildContext({ ...request, params })).rejects.toMatchObject({ code: 'FKR-INP-001' });
+    }
+  } finally {
+    rmSync(localRoot, { recursive: true, force: true });
+  }
+});

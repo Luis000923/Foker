@@ -154,6 +154,8 @@ pub fn request(
     files.dedup();
     symbols.sort();
     symbols.dedup();
+    let params = req.params.clone().unwrap_or_default();
+    params.validate()?;
     Ok(NormalizedRequest {
         task,
         anchors: Anchors { files, symbols },
@@ -163,6 +165,7 @@ pub fn request(
         task_id: inputs.task_scope.as_ref().map(|s| s.task_id.clone()),
         dirty_files: req.dirty_files,
         explain: req.explain,
+        params: (params != crate::ContextParams::default()).then_some(params),
     })
 }
 #[cfg(test)]

@@ -20,7 +20,10 @@
   ],
   "properties": {
     "pack_version": { "const": 1 },
-    "pack_hash": { "description": "BLAKE3 de rendered + files canónicos.", "$ref": "../common/v1.json#/$defs/hash" },
+    "pack_hash": {
+      "description": "BLAKE3 de rendered + files canónicos + params canónicos solo si no son defaults (ADR-021).",
+      "$ref": "../common/v1.json#/$defs/hash"
+    },
     "map_hash": { "description": "content_hash del Project Map usado.", "$ref": "../common/v1.json#/$defs/hash" },
     "request": { "$ref": "#/$defs/request" },
     "intent": { "$ref": "#/$defs/intent" },
@@ -113,7 +116,155 @@
         "skill": { "type": ["string", "null"] },
         "task_id": { "anyOf": [{ "$ref": "../common/v1.json#/$defs/taskId" }, { "type": "null" }] },
         "dirty_files": { "type": "boolean" },
-        "explain": { "type": "boolean" }
+        "explain": { "type": "boolean" },
+        "params": {
+          "description": "Interno: parámetros efectivos no predeterminados de calibración (ADR-021/FKR-037).",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "w_anchor",
+            "mention_factor",
+            "w_lex",
+            "bm25_top",
+            "w_dirty",
+            "w_task_scope",
+            "w_skill",
+            "r_fix",
+            "r_modify",
+            "r_test",
+            "r_refactor",
+            "r_add",
+            "r_explain",
+            "test_factor",
+            "l2_count",
+            "anchor_fraction",
+            "margin_fraction",
+            "l0_count",
+            "l0_min_fraction",
+            "core_files",
+            "core_fraction",
+            "bm25_k1",
+            "bm25_b"
+          ],
+          "properties": {
+            "w_anchor": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "mention_factor": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "w_lex": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "bm25_top": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 10000
+            },
+            "w_dirty": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "w_task_scope": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "w_skill": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "r_fix": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "r_modify": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "r_test": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "r_refactor": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "r_add": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "r_explain": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "test_factor": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "l2_count": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 10000
+            },
+            "anchor_fraction": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "margin_fraction": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "l0_count": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 10000
+            },
+            "l0_min_fraction": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "core_files": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 10000
+            },
+            "core_fraction": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "bm25_k1": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100,
+              "exclusiveMinimum": 0
+            },
+            "bm25_b": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          }
+        }
       }
     },
     "section": {
