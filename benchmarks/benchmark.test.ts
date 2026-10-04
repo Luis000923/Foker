@@ -22,9 +22,10 @@ afterEach(() => {
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
 
-it('valida manifiesto, rechaza commits inválidos y precios negativos, conserva pendientes', () => {
+it('valida manifiesto, rechaza commits inválidos y precios negativos, exige precio del modelo fijado', () => {
   const manifest = readManifest(join(repo, 'benchmarks/manifest.yaml'));
-  expect(manifest.model).toBeNull();
+  expect(manifest.model).toBe('claude-sonnet-5-5');
+  expect(manifest.prices.models.find((p) => p.model === manifest.model)?.output).toBe(10);
   expect(manifest.suites.smoke).toHaveLength(3);
   const bad = structuredClone(manifest);
   const firstRepo = bad.repos[0];

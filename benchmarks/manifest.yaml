@@ -1,4 +1,4 @@
-# PENDIENTE PREGUNTA-2: modelo exacto, presupuesto USD y precios por MTok.
+# Smoke aprobado: claude-sonnet-5-5, 2 USD por ejecución; precios USD por MTok (API 2026-09-25).
 # Commit cero: fixture sintético, no representa un repo remoto.
 {
   "schema_version": 1,
@@ -747,10 +747,10 @@
       ]
     }
   ],
-  "model": null,
+  "model": "claude-sonnet-5-5",
   "host": {
     "name": "claude-code",
-    "version": "PENDIENTE FKR-011"
+    "version": "2.1.289"
   },
   "foker_version": "0.0.0",
   "seeds": {
@@ -761,17 +761,17 @@
   "limits": {
     "max_turns": 60,
     "max_minutes": 30,
-    "max_cost_usd": null
+    "max_cost_usd": 2
   },
   "prices": {
-    "version": "pending-question-2-v1",
+    "version": "anthropic-2026-09-25",
     "models": [
       {
-        "model": null,
-        "input": null,
-        "cache_read": null,
-        "cache_write": null,
-        "output": null
+        "model": "claude-sonnet-5-5",
+        "input": 2,
+        "cache_read": 0.2,
+        "cache_write": 2.5,
+        "output": 10
       }
     ]
   },

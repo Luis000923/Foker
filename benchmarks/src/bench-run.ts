@@ -57,6 +57,8 @@ export async function main(argv: string[]): Promise<void> {
     throw new Error('Modelo exacto obligatorio: --allow-null-pricing no puede seleccionar un modelo');
   if (!/^\d+\.\d+\.\d+(?:[-+][\w.-]+)?$/.test(manifest.host.version))
     throw new Error('Versión exacta de Claude Code pendiente');
+  if (!process.env['ANTHROPIC_API_KEY'])
+    throw new Error('Falta ANTHROPIC_API_KEY: el contenedor del anfitrión solo recibe esa credencial');
   if (!args.includes('--yes')) {
     if (!stdin.isTTY) throw new Error('Se requiere confirmación interactiva o --yes');
     const rl = createInterface({ input: stdin, output: stdout });
