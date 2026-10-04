@@ -1,11 +1,10 @@
-import { execFile } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
-import { join, posix } from 'node:path';
-import { promisify } from 'node:util';
+import { join } from 'node:path';
 import { type ContextRequest, FokerError } from '@foker/core';
 import { parse as parseYaml } from 'yaml';
 
-const exec = promisify(execFile);
+import { gitDirtyFiles } from './git.js';
+
 async function optionalFile(path: string): Promise<string | undefined> {
   try {
     return await readFile(path, 'utf8');
@@ -43,26 +42,6 @@ export async function gatherContextInputs(
       skill.requiredSymbols = strings(parsed?.required_context?.symbols);
     }
   }
-  let dirtyFiles: string[] = [];
-  try {
-    // git devuelve rutas relativas a la raíz del repositorio; el root de Foker puede ser un subdirectorio.
-    const { stdout: prefixOut } = await exec('git', ['rev-parse', '--show-prefix'], { cwd: root, timeout: 5000 });
-    const prefix = prefixOut.trim().replaceAll('\\', '/');
-    const { stdout } = await exec('git', ['status', '--porcelain', '-z', '--untracked-files=all', '--', '.'], {
-      cwd: root,
-      timeout: 5000,
-    });
-    const entries = stdout.split('\0');
-    for (let i = 0; i < entries.length; i++) {
-      const entry = entries[i];
-      if (!entry) continue;
-      const path = posix.normalize(entry.slice(3).replaceAll('\\', '/'));
-      if (path.startsWith(prefix)) dirtyFiles.push(path.slice(prefix.length));
-      if (/^[RC]|^.[RC]/.test(entry)) i++;
-    }
-    dirtyFiles = [...new Set(dirtyFiles)].sort();
-  } catch {
-    dirtyFiles = [];
-  }
+  const dirtyFiles = await gitDirtyFiles(root);
   return { ...(rules === undefined ? {} : { rules }), ...(skill ? { skill } : {}), dirtyFiles };
 }

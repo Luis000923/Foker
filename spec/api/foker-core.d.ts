@@ -291,3 +291,6 @@ export declare function matchGlobs(id: string, globs: string[]): boolean;
 
 /** BLAKE3 del JSON canónico; JSON inválido: FKR-INP-001. */
 export declare function hashCanonicalJson(json: string): string;
+
+/** BLAKE3 de bytes; delegado a foker_map::canonical::hash_bytes. */
+export declare function hashBytes(bytes: Buffer): string;
