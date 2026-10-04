@@ -21,21 +21,35 @@
     "stats"
   ],
   "properties": {
-    "$schema": { "type": "string" },
-    "schema_version": { "const": 1 },
-    "foker_version": { "$ref": "../common/v1.json#/$defs/semver" },
+    "$schema": {
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "foker_version": {
+      "$ref": "../common/v1.json#/$defs/semver"
+    },
     "generator": {
       "type": "object",
       "additionalProperties": false,
       "required": ["engine", "parsers", "resolver"],
       "properties": {
-        "engine": { "description": "Versión de foker-map.", "$ref": "../common/v1.json#/$defs/semver" },
+        "engine": {
+          "description": "Versión de foker-map.",
+          "$ref": "../common/v1.json#/$defs/semver"
+        },
         "parsers": {
           "description": "Gramática tree-sitter → versión.",
           "type": "object",
-          "additionalProperties": { "type": "string" }
+          "additionalProperties": {
+            "type": "string"
+          }
         },
-        "resolver": { "description": "Versión de oxc_resolver.", "type": "string" }
+        "resolver": {
+          "description": "Versión de oxc_resolver.",
+          "type": "string"
+        }
       }
     },
     "generated_at": {
@@ -55,41 +69,96 @@
       "additionalProperties": false,
       "required": ["name", "workspace_kind", "packages"],
       "properties": {
-        "name": { "type": "string", "minLength": 1 },
-        "workspace_kind": { "enum": ["pnpm", "npm", "yarn", "single"] },
-        "packages": { "type": "array", "items": { "$ref": "#/$defs/package" } }
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "workspace_kind": {
+          "enum": ["pnpm", "npm", "yarn", "single"]
+        },
+        "packages": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/package"
+          }
+        }
       }
     },
-    "files": { "type": "array", "items": { "$ref": "#/$defs/file" } },
-    "symbols": { "type": "array", "items": { "$ref": "#/$defs/symbol" } },
-    "edges": { "type": "array", "items": { "$ref": "#/$defs/edge" } },
-    "external_modules": {
-      "description": "Paquetes npm importados, ordenados.",
+    "files": {
       "type": "array",
-      "items": { "$ref": "#/$defs/externalModuleId" }
+      "items": {
+        "$ref": "#/$defs/file"
+      }
+    },
+    "symbols": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/symbol"
+      }
+    },
+    "edges": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/edge"
+      }
+    },
+    "external_modules": {
+      "description": "Paquetes npm y módulos integrados de Node importados, ordenados.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/externalModuleId"
+      }
     },
     "diagnostics": {
       "description": "Imports no resueltos, errores de parseo, archivos omitidos por tamaño. Ordenados por (file, code, subject).",
       "type": "array",
-      "items": { "$ref": "../common/v1.json#/$defs/diagnostic" }
+      "items": {
+        "$ref": "../common/v1.json#/$defs/diagnostic"
+      }
     },
     "stats": {
       "type": "object",
       "additionalProperties": false,
       "required": ["files", "symbols", "edges", "duration_ms"],
       "properties": {
-        "files": { "type": "integer", "minimum": 0 },
-        "symbols": { "type": "integer", "minimum": 0 },
-        "edges": { "type": "integer", "minimum": 0 },
-        "parse_errors": { "type": "integer", "minimum": 0 },
-        "unresolved_imports": { "type": "integer", "minimum": 0 },
-        "duration_ms": { "description": "Excluido de content_hash.", "type": "integer", "minimum": 0 }
+        "files": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "symbols": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "edges": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "parse_errors": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unresolved_imports": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "duration_ms": {
+          "description": "Excluido de content_hash.",
+          "type": "integer",
+          "minimum": 0
+        }
       }
     }
   },
   "$defs": {
-    "packageId": { "type": "string", "pattern": "^pkg:.+$" },
-    "externalModuleId": { "type": "string", "pattern": "^npm:(@[a-z0-9-~][a-z0-9-._~]*/)?[a-z0-9-~][a-z0-9-._~]*$" },
+    "packageId": {
+      "type": "string",
+      "pattern": "^pkg:.+$"
+    },
+    "externalModuleId": {
+      "description": "npm:<paquete> o node:<módulo integrado>.",
+      "type": "string",
+      "pattern": "^(npm:(@[a-z0-9-][a-z0-9-._~]*/)?[a-z0-9-][a-z0-9-._~]*|node:[a-z0-9_/]+)$"
+    },
     "symbolId": {
       "description": "<file_id>#<nombre_calificado>[~n]. Exportación por defecto anónima: #default.",
       "type": "string",
@@ -100,10 +169,20 @@
       "additionalProperties": false,
       "required": ["id", "name", "path"],
       "properties": {
-        "id": { "$ref": "#/$defs/packageId" },
-        "name": { "type": "string", "minLength": 1 },
-        "path": { "description": "Directorio del paquete; \".\" para el root.", "type": "string" },
-        "version": { "type": ["string", "null"] }
+        "id": {
+          "$ref": "#/$defs/packageId"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "path": {
+          "description": "Directorio del paquete; \".\" para el root.",
+          "type": "string"
+        },
+        "version": {
+          "type": ["string", "null"]
+        }
       }
     },
     "file": {
@@ -123,19 +202,44 @@
         "exports"
       ],
       "properties": {
-        "id": { "$ref": "../common/v1.json#/$defs/fileId" },
-        "package": { "anyOf": [{ "$ref": "#/$defs/packageId" }, { "type": "null" }] },
-        "language": { "enum": ["typescript", "tsx", "javascript", "jsx"] },
-        "kind": { "enum": ["source", "test", "declaration", "config", "generated"] },
-        "hash": { "$ref": "../common/v1.json#/$defs/hash" },
-        "size_bytes": { "type": "integer", "minimum": 0 },
-        "lines": { "type": "integer", "minimum": 0 },
+        "id": {
+          "$ref": "../common/v1.json#/$defs/fileId"
+        },
+        "package": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/packageId"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "language": {
+          "enum": ["typescript", "tsx", "javascript", "jsx"]
+        },
+        "kind": {
+          "enum": ["source", "test", "declaration", "config", "generated"]
+        },
+        "hash": {
+          "$ref": "../common/v1.json#/$defs/hash"
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "lines": {
+          "type": "integer",
+          "minimum": 0
+        },
         "mtime_ns": {
           "description": "Solo para detección de cambios; excluido de content_hash.",
           "type": "integer",
           "minimum": 0
         },
-        "parse_status": { "enum": ["ok", "partial", "failed", "skipped"] },
+        "parse_status": {
+          "enum": ["ok", "partial", "failed", "skipped"]
+        },
         "rank": {
           "type": "object",
           "additionalProperties": false,
@@ -149,7 +253,12 @@
             }
           }
         },
-        "exports": { "type": "array", "items": { "$ref": "#/$defs/symbolId" } }
+        "exports": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/symbolId"
+          }
+        }
       }
     },
     "symbol": {
@@ -157,8 +266,13 @@
       "additionalProperties": false,
       "required": ["id", "name", "kind", "tags", "exported", "signature", "doc", "range", "parent"],
       "properties": {
-        "id": { "$ref": "#/$defs/symbolId" },
-        "name": { "type": "string", "minLength": 1 },
+        "id": {
+          "$ref": "#/$defs/symbolId"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
         "kind": {
           "enum": [
             "function",
@@ -175,10 +289,14 @@
         "tags": {
           "description": "Heurísticas no normativas.",
           "type": "array",
-          "items": { "enum": ["react_component", "react_hook", "next_route", "test_case", "async"] },
+          "items": {
+            "enum": ["react_component", "react_hook", "next_route", "test_case", "async"]
+          },
           "uniqueItems": true
         },
-        "exported": { "enum": ["none", "named", "default", "reexport"] },
+        "exported": {
+          "enum": ["none", "named", "default", "reexport"]
+        },
         "signature": {
           "description": "Firma sin cuerpo; máx. 400 caracteres más … si se trunca.",
           "type": "string",
@@ -189,8 +307,19 @@
           "type": ["string", "null"],
           "maxLength": 301
         },
-        "range": { "$ref": "../common/v1.json#/$defs/range" },
-        "parent": { "anyOf": [{ "$ref": "#/$defs/symbolId" }, { "type": "null" }] }
+        "range": {
+          "$ref": "../common/v1.json#/$defs/range"
+        },
+        "parent": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/symbolId"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
       }
     },
     "edge": {
@@ -211,9 +340,17 @@
             "package_depends"
           ]
         },
-        "from": { "type": "string", "minLength": 1 },
-        "to": { "type": "string", "minLength": 1 },
-        "confidence": { "enum": ["resolved", "heuristic", "declared"] },
+        "from": {
+          "type": "string",
+          "minLength": 1
+        },
+        "to": {
+          "type": "string",
+          "minLength": 1
+        },
+        "confidence": {
+          "enum": ["resolved", "heuristic", "declared"]
+        },
         "weight": {
           "description": "uses_symbol: nº de referencias al binding en el archivo.",
           "type": "integer",
@@ -222,20 +359,57 @@
       },
       "allOf": [
         {
-          "if": { "properties": { "kind": { "const": "uses_symbol" } } },
-          "then": { "required": ["weight"], "properties": { "to": { "$ref": "#/$defs/symbolId" } } }
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "uses_symbol"
+              }
+            }
+          },
+          "then": {
+            "required": ["weight"],
+            "properties": {
+              "to": {
+                "$ref": "#/$defs/symbolId"
+              }
+            }
+          }
         },
         {
-          "if": { "properties": { "kind": { "const": "imports_external" } } },
-          "then": { "properties": { "to": { "$ref": "#/$defs/externalModuleId" } } }
-        },
-        {
-          "if": { "properties": { "kind": { "const": "package_depends" } } },
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "imports_external"
+              }
+            }
+          },
           "then": {
             "properties": {
-              "from": { "$ref": "#/$defs/packageId" },
-              "to": { "$ref": "#/$defs/packageId" },
-              "confidence": { "const": "declared" }
+              "to": {
+                "$ref": "#/$defs/externalModuleId"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "package_depends"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "from": {
+                "$ref": "#/$defs/packageId"
+              },
+              "to": {
+                "$ref": "#/$defs/packageId"
+              },
+              "confidence": {
+                "const": "declared"
+              }
             }
           }
         }

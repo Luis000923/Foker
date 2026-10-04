@@ -1,0 +1,22 @@
+{
+  "src/main.ts": {
+    "./lib/a.js": "file:src/lib/a.ts",
+    "./lib": "file:src/lib/index.ts",
+    "~/lib/c": "file:src/lib/c.ts",
+    "@shared": "file:src/shared/index.ts",
+    "src/lib/d": "file:src/lib/d.ts",
+    "@rc/cond": "file:packages/cond/src/cond.ts",
+    "@rc/cond/sub": "file:packages/cond/src/sub.ts",
+    "@rc/main-field": "file:packages/main-field/lib/entry.ts",
+    "@rc/plain": "file:packages/plain/index.ts",
+    "@rc/plain/src/deep": "file:packages/plain/src/deep.ts",
+    "./missing": "unresolved",
+    "~/nope": "unresolved",
+    "node:fs": "external:node:fs",
+    "path": "external:node:path",
+    "react": "external:npm:react",
+    "react/jsx-runtime": "external:npm:react",
+    "./styles.css": "not-source:src/styles.css",
+    "./lib/types.js": "file:src/lib/types.ts"
+  }
+}

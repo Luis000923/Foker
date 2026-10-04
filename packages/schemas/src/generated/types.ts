@@ -31,6 +31,9 @@ confidence: ("resolved" | "heuristic" | "declared")
  */
 weight?: number
 }
+/**
+ * npm:<paquete> o node:<módulo integrado>.
+ */
 export type ExternalModuleId = string
 /**
  * Código FKR-<ÁREA>-<NNN> (FOKER-SPEC §18). Los 1xx son diagnósticos.
@@ -169,7 +172,7 @@ files: MapFile[]
 symbols: MapSymbol[]
 edges: MapEdge[]
 /**
- * Paquetes npm importados, ordenados.
+ * Paquetes npm y módulos integrados de Node importados, ordenados.
  */
 external_modules: ExternalModuleId[]
 /**
