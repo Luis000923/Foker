@@ -1,4 +1,4 @@
-import type { BenchmarkResult } from '@foker/schemas';
+import type { BenchmarkResult } from '../types.js';
 import { bootstrap, mean, wilcoxon } from './statistics.js';
 export function median(values: number[]): number {
   if (!values.length) return Number.NaN;

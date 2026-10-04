@@ -67,7 +67,7 @@
       "required": ["name", "version"],
       "properties": {
         "name": {
-          "enum": ["claude-code", "opencode"]
+          "enum": ["claude-code", "codex", "opencode"]
         },
         "version": {
           "type": "string",
@@ -202,6 +202,10 @@
           "description": "Informativo; solo en el brazo foker.",
           "type": ["number", "null"],
           "minimum": 0
+        },
+        "reported_cost_usd": {
+          "type": ["number", "null"],
+          "minimum": 0
         }
       }
     },
@@ -233,6 +237,9 @@
     },
     "notes": {
       "type": "string"
+    },
+    "billing": {
+      "enum": ["subscription", "api"]
     }
   }
 }

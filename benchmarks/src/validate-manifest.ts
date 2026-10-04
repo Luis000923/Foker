@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { type BenchmarkManifest, formatIssues, validate } from '@foker/schemas';
+import { formatIssues, validate } from '@foker/schemas';
+import type { BenchmarkManifest } from './types.js';
 
 // JSON es un subconjunto de YAML; el manifiesto usa este formato con comentarios de línea iniciales.
 export function readManifest(path: string): BenchmarkManifest {

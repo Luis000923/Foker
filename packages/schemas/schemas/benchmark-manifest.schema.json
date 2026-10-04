@@ -162,7 +162,7 @@
       "required": ["name", "version"],
       "properties": {
         "name": {
-          "const": "claude-code"
+          "enum": ["claude-code", "codex"]
         },
         "version": {
           "type": "string",

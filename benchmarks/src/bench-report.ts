@@ -1,9 +1,10 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { hashCanonicalJson } from '@foker/core';
-import { type BenchmarkResult, formatIssues, validate } from '@foker/schemas';
+import { formatIssues, validate } from '@foker/schemas';
 import { markdown } from './analysis/report.js';
 import { ROOT } from './harness/index.js';
+import type { BenchmarkResult } from './types.js';
 import { readManifest } from './validate-manifest.js';
 export function main(args: string[]): void {
   const files = args.filter((a) => a !== '--');

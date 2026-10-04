@@ -326,6 +326,18 @@ explain: boolean
  * Interno: parámetros efectivos no predeterminados de calibración (ADR-021/FKR-037).
  */
 params?: {
+/**
+ * Interno: expansión léxica es/en v1 (ADR-028); solo presente si difiere del default.
+ */
+lexical_expansion?: boolean
+/**
+ * Interno: corte relativo BM25 (ADR-028); solo presente si difiere del default.
+ */
+bm25_min_relative?: number
+/**
+ * Interno: corte relativo del ranking (ADR-028); solo presente si difiere del default.
+ */
+relevance_fraction?: number
 w_anchor: number
 mention_factor: number
 w_lex: number
@@ -725,7 +737,7 @@ commit: string
 arm: ("control" | "foker")
 repetition: number
 host: {
-name: ("claude-code" | "opencode")
+name: ("claude-code" | "codex" | "opencode")
 version: string
 }
 /**
@@ -782,6 +794,7 @@ tests_passed: number
  * Informativo; solo en el brazo foker.
  */
 ccr_relevante?: (number | null)
+reported_cost_usd?: (number | null)
 }
 success: boolean
 /**
@@ -795,6 +808,7 @@ protected_untouched: boolean
 within_limits: boolean
 }
 notes?: string
+billing?: ("subscription" | "api")
 }
 export interface BenchmarkManifest {
 schema_version: 1
@@ -962,7 +976,7 @@ gold_read?: [string, ...(string)[]]
 })[]]
 model: (string | null)
 host: {
-name: "claude-code"
+name: ("claude-code" | "codex")
 version: string
 }
 foker_version: Semver

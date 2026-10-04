@@ -247,13 +247,12 @@ docker build --build-arg CLAUDE_CODE_VERSION=<version-exacta> -t foker-bench:0.0
 # Podman acepta el mismo Dockerfile y argumentos.
 ```
 
-No pasar ANTHROPIC_API_KEY al build. El arnés detecta Docker/Podman y solo transmite
-la clave existente mediante `--env ANTHROPIC_API_KEY` al contenedor del anfitrión;
-no monta HOME, configuración ni secretos. La raíz es read-only, `/work` y `/tmp`
-son escribibles; límites actuales: 4 GiB, 2 CPU y 256 procesos. Cada tarea crea
-contenedores nuevos para preparación, anfitrión y evaluación. El timeout de pared
-usa `max_minutes` y mata el contenedor por nombre. `--max-turns` y
-`--max-budget-usd` aplican los otros límites; el evaluador vuelve a comprobarlos.
+No pasar credenciales al build. Claude recibe la variable presente por nombre:
+`--env CLAUDE_CODE_OAUTH_TOKEN` (prioritaria) o `--env ANTHROPIC_API_KEY`.
+La autenticación se reserva al anfitrión; no se monta HOME del usuario.
+La raíz es read-only, `/work` y `/tmp` son escribibles; límites: 4 GiB, 2 CPU y
+256 procesos. Cada tarea crea contenedores nuevos. max_minutes mata el anfitrión
+por nombre; Claude recibe max_turns. max-budget-usd se usa únicamente con API.
 La evaluación usa red desactivada, baseline/dependencias confiables y tests ocultos
 montados exclusivamente en esa fase. Gold patches y tests ocultos no están en la imagen.
 
@@ -272,8 +271,9 @@ pnpm --filter @foker/benchmarks run bench:report -- benchmarks/results/bench-smo
 
 Las flags exactas están centralizadas en `harness/claudeArgs`: `-p`, output JSON,
 modelo, max-turns, strict-mcp-config, mcp-config, permission-mode acceptEdits y
-max-budget-usd cuando se conoce. No se ejecutó ni consultó Claude real/red;
-verificar estas flags con la versión fijada es parte del smoke externo.
+max-budget-usd cuando se conoce y se usa API. La ayuda local de Claude 2.1.289
+confirma estas opciones salvo max-turns, presente en el ejecutable pero omitida de
+la ayuda. No se ejecutaron llamadas reales para verificar su comportamiento.
 `acceptEdits` no garantiza que todos los comandos Bash se autoricen en headless:
 comprobarlo con las reglas efectivas de esa versión, sin saltarse permisos globalmente.
 
@@ -308,3 +308,43 @@ CCR relevante es informativo, sin umbral decisorio. No mezclar experimentos en u
 
 FKR-015 (≥10 tareas ×3 control), FKR-018 (≥40 ×2 ×3), la ejecución real y
 PREGUNTA-2/6 siguen pendientes; el smoke simulado no acredita eficacia H1/H2.
+
+## Smoke con suscripción (ADR-029)
+
+Cada ejecución consume cuota de la suscripción. Revisar primero el plan con
+`--dry-run`; `--yes` autoriza las llamadas del smoke. La imagen añade Codex
+**0.159.3** exacto, pero no se ha descargado ni construido en este trabajo sin red.
+
+Para Claude, preparar un manifiesto con host claude-code, versión y modelo exactos.
+Generar el token con `claude setup-token` y exportarlo como CLAUDE_CODE_OAUTH_TOKEN
+sin incluir su valor en argumentos, historial ni archivos del benchmark. También se
+admite ANTHROPIC_API_KEY; ninguna clave API es obligatoria.
+
+```sh
+./node_modules/.bin/tsc -p benchmarks/tsconfig.build.json
+node benchmarks/run.mjs bench-run --manifest /ruta/claude-manifest.yaml --host claude-code --suite smoke --repetitions 1 --run-id smoke-claude-sub --allow-null-pricing --yes
+```
+
+Para Codex, usar otro manifiesto con `host: {"name":"codex","version":"0.159.3"}`
+y modelo explícito. Los precios se mantienen null salvo que se aporten valores
+verificados para ese modelo. Indicar explícitamente un directorio con auth.json de
+una sesión de Codex/ChatGPT por suscripción; no se busca ~/.codex automáticamente.
+El directorio se monta readonly; la configuración personal no se carga.
+
+```sh
+node benchmarks/run.mjs bench-run --manifest /ruta/codex-manifest.yaml --host codex --codex-auth-dir /ruta/credenciales-codex --suite smoke --repetitions 1 --run-id smoke-codex-sub --allow-null-pricing --yes
+```
+
+`--host` debe coincidir con el manifiesto, incluida su versión exacta. Codex ejecuta
+`exec --json` y el brazo Foker configura MCP por `-c`; sus instrucciones/skills se
+preparan con el target codex. La ayuda local confirma JSONL, sin definir sus campos:
+el parser cubre turn.completed/usage y conserva como null los datos ausentes.
+No hay un flag de turnos verificado para Codex: solo se impone max_minutes y los
+turnos desconocidos impiden acreditar within_limits/Task Success (ADR-025).
+La ejecución real y el límite operativo de turnos Codex siguen pendientes.
+
+Los resultados incluyen billing subscription/api y reported_cost_usd null si el
+anfitrión no lo informa. cost_usd mide equivalente API con la tabla del manifiesto,
+no la factura de la suscripción. Sin precios queda null; --allow-null-pricing permite
+el smoke sin acreditar éxito bajo todos los límites. No mezclar modelos/anfitriones
+ni métodos de facturación en un informe experimental.

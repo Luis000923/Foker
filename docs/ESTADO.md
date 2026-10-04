@@ -65,7 +65,14 @@ M0, M2, M3, M4 y E6 completos en local; M1 con todo lo que no gasta API (manifie
   @foker/engine 95,89 %; umbrales V8, `pnpm coverage:rs` / `coverage:ts`, job nightly.
 - **ctx-gold 60 casos** con split estratificado 30/30; calibrate usa solo `calibration`.
   Recall (presupuesto 8000): calibration 0,622 · validation 0,600 · total 0,611 (TARGET 0,80).
-- Verificación local completa: 115 tests Rust (2 omitidos), 534 TS, clippy, Biome, tsc,
+- **Recall (ADR-028)**: expansión léxica es↔en v1 (80 grupos de vocabulario general) y corte
+  relativo del ranking (1 %), calibrado solo con `calibration`. Recall validation 0,600 → 0,750,
+  calibration 0,622 → 0,739; tokens medios del pack 6.650 → 5.243. TARGET 0,80 aún pendiente.
+- **Benchmark por suscripción (ADR-029)**: Claude Code con `CLAUDE_CODE_OAUTH_TOKEN`
+  (`claude setup-token`) o `ANTHROPIC_API_KEY`; anfitrión `codex` con `--codex-auth-dir`
+  explícito montado en solo lectura; `billing` subscription/api y coste como equivalente API.
+  Imagen Docker con Codex pendiente de reconstruir; smoke real pendiente de permiso (consume cuota).
+- Verificación local completa: 120 tests Rust (2 omitidos), 539 TS, clippy, Biome, tsc,
   check:deps, generate:check.
 
 ## Verificado localmente
@@ -97,7 +104,6 @@ Sesión 2026-10-03 (usuario luis):
 
 ## Siguiente paso
 
-1. Recall del Context Engine (ADR-024) calibrando con ctx-gold `calibration` y midiendo en `validation`.
-2. Arnés del benchmark por suscripción: `CLAUDE_CODE_OAUTH_TOKEN` (`claude setup-token`) y brazo
-   Codex con login ChatGPT; coste como equivalente API. El smoke consume cuota: requiere permiso.
+1. Smoke del benchmark por suscripción (6 ejecuciones; consume cuota): requiere permiso y token.
+2. Recall ≥ 0,80 en validation: ampliar ctx-gold y revisar fallos por caso sin sobreajustar.
 3. FKR-070: verificación manual de los cuatro anfitriones (incluido Codex).

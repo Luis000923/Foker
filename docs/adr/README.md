@@ -30,3 +30,6 @@ Copia de `spec/adr/`. Una decisión nueva o modificada exige un ADR nuevo con n�
 | [ADR-024](ADR-024-calibracion-context-engine.md) | Calibración del Context Engine con ctx-gold | Rechazada (cambio de defaults) |
 | [ADR-025](ADR-025-benchmark-metricas-desconocidas.md) | Null para métricas no observadas del benchmark | Aceptada (amplía ADR-018) |
 | [ADR-026](ADR-026-aislamiento-ci-multiplataforma.md) | Aislamiento multiplataforma en GitHub Actions | Aceptado |
+| [ADR-027](ADR-027-codex-paridad-sin-claves-api.md) | Codex y paridad por suscripción sin claves API | Aceptado |
+| [ADR-028](ADR-028-expansion-lexica-context-engine.md) | Expansión léxica es/en y corte relativo del ranking | Aceptada |
+| [ADR-029](ADR-029-benchmark-suscripciones.md) | Benchmark con autenticación por suscripción | Aceptada |

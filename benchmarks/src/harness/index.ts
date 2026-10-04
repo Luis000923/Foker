@@ -12,10 +12,11 @@ import {
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { estimateTokens, hashCanonicalJson } from '@foker/core';
-import { type BenchmarkManifest, type BenchmarkResult, formatIssues, validate } from '@foker/schemas';
+import { formatIssues, validate } from '@foker/schemas';
 import { generate } from '../../fixtures/fixture-a/generate.mjs';
 import { type EvaluationTask, type evaluateTask, tree } from '../evaluate-task.js';
-import { extractUsage, type HostOutput, traceMetrics } from './metrics.js';
+import type { BenchmarkManifest, BenchmarkResult } from '../types.js';
+import { extractUsage, type HostOutput, parseCodexOutput, traceMetrics } from './metrics.js';
 import { detectRuntime, execute, type ProcessResult } from './process.js';
 export const ROOT = process.env['FOKER_BENCH_ROOT'] ?? fileURLToPath(new URL('../../../', import.meta.url));
 export type Task = BenchmarkManifest['tasks'][number];
@@ -44,12 +45,46 @@ export function claudeArgs(
     ...(cost === null ? [] : ['--max-budget-usd', String(cost)]),
   ];
 }
+export function claudeCredential(env: NodeJS.ProcessEnv = process.env): string {
+  if (env['CLAUDE_CODE_OAUTH_TOKEN']) return 'CLAUDE_CODE_OAUTH_TOKEN';
+  if (env['ANTHROPIC_API_KEY']) return 'ANTHROPIC_API_KEY';
+  throw new Error(
+    'Falta autenticación: exporte CLAUDE_CODE_OAUTH_TOKEN generado con claude setup-token (suscripción), o ANTHROPIC_API_KEY (API).',
+  );
+}
+export function codexArgs(statement: string, model: string, _turns: number, arm: Arm): string[] {
+  return [
+    'exec',
+    '--json',
+    '--ephemeral',
+    '--ignore-user-config',
+    '--ignore-rules',
+    '--dangerously-bypass-approvals-and-sandbox',
+    '--model',
+    model,
+    ...(arm === 'foker'
+      ? [
+          '-c',
+          'mcp_servers.foker.command="/usr/local/bin/foker"',
+          '-c',
+          'mcp_servers.foker.args=["mcp","--root","/work"]',
+        ]
+      : []),
+    statement,
+  ];
+}
+export interface HostOptions {
+  codexAuthDir?: string;
+  billing?: 'subscription' | 'api';
+}
 export interface Backend {
   prepare?: (root: string, arm: Arm) => Promise<void>;
   host: (root: string, args: string[], timeoutMs: number) => Promise<ProcessResult>;
   evaluate: (options: Parameters<typeof evaluateTask>[0]) => ReturnType<typeof evaluateTask>;
 }
-export function containerBackend(manifest: BenchmarkManifest): Backend {
+export function containerBackend(manifest: BenchmarkManifest, options: HostOptions = {}): Backend {
+  if (manifest.host.name === 'codex' && (!options.codexAuthDir || /[,\n\r]/.test(options.codexAuthDir)))
+    throw new Error('Codex requiere --codex-auth-dir explícito, sin comas ni saltos de línea');
   const runtime = detectRuntime(),
     image = `foker-bench:${manifest.foker_version}`;
   const run = async (root: string, command: string[], timeoutMs: number, mounts: string[] = [], api = false) => {
@@ -76,7 +111,7 @@ export function containerBackend(manifest: BenchmarkManifest): Backend {
         'HOME=/tmp/home',
         '--env',
         'XDG_CONFIG_HOME=/tmp/xdg',
-        ...(api && process.env['ANTHROPIC_API_KEY'] ? ['--env', 'ANTHROPIC_API_KEY'] : []),
+        ...(api && manifest.host.name === 'claude-code' ? ['--env', claudeCredential()] : []),
         '--mount',
         `type=bind,src=${root},dst=/work`,
         ...mounts,
@@ -88,7 +123,7 @@ export function containerBackend(manifest: BenchmarkManifest): Backend {
       ROOT,
       timeoutMs,
       async () => {
-        // Await kill so evaluation cannot race a still running host container.
+        // Esperar la parada evita evaluar mientras el anfitrión sigue ejecutándose.
         const killed = await execute(runtime, ['kill', name], ROOT, 10_000);
         if (killed.exitCode !== 0) throw new Error(`No se pudo detener ${name}: ${killed.stderr}`);
       },
@@ -96,11 +131,23 @@ export function containerBackend(manifest: BenchmarkManifest): Backend {
   };
   return {
     prepare: async (root, arm) => {
-      const result = await run(root, ['node', '/opt/foker/benchmarks/docker/prepare.mjs', arm], 300_000);
+      const result = await run(
+        root,
+        ['node', '/opt/foker/benchmarks/docker/prepare.mjs', arm, manifest.host.name],
+        300_000,
+      );
       if (result.exitCode !== 0) throw new Error(`Preparación: ${result.stderr}`);
     },
     host: (root, args, timeout) =>
-      run(root, ['node', '/opt/foker/benchmarks/docker/host.mjs', manifest.host.version, ...args], timeout, [], true),
+      run(
+        root,
+        ['node', '/opt/foker/benchmarks/docker/host.mjs', manifest.host.name, manifest.host.version, ...args],
+        timeout,
+        manifest.host.name === 'codex' && options.codexAuthDir
+          ? ['--mount', `type=bind,src=${options.codexAuthDir},dst=/codex-auth,readonly`]
+          : [],
+        true,
+      ),
     evaluate: async (options) => {
       const file = join(dirname(options.work), 'evaluation.json');
       writeFileSync(file, JSON.stringify({ ...options, work: '/work', fixture: '/baseline', hiddenRoot: '/hidden' }));
@@ -133,6 +180,8 @@ export async function runTask(options: {
   runId?: string;
   backend?: Backend;
   resultsDir?: string;
+  codexAuthDir?: string;
+  billing?: 'subscription' | 'api';
 }): Promise<BenchmarkResult> {
   const { task, arm, repetition, manifest } = options;
   if (!manifest.model) throw new Error('Modelo exacto obligatorio incluso con --allow-null-pricing');
@@ -165,27 +214,39 @@ export async function runTask(options: {
   await git(['add', '.']);
   await git(['-c', 'user.name=Foker Benchmark', '-c', 'user.email=benchmark@invalid', 'commit', '-qm', 'Fixture A']);
   const commit = await git(['rev-parse', 'HEAD']);
-  const backend = options.backend ?? containerBackend(manifest);
+  const backend = options.backend ?? containerBackend(manifest, options);
   await backend.prepare?.(work, arm);
   cpSync(work, fixture, { recursive: true, verbatimSymlinks: true });
   const before = tree(fixture);
   const mcp = join(base, 'control-mcp.json');
   writeFileSync(mcp, '{"mcpServers":{}}\n');
-  // Empty config in control; no Foker MCP, instructions or skills are installed.
+  // El control usa MCP vacío, sin instrucciones ni skills de Foker.
   if (arm === 'control') writeFileSync(join(work, '.bench-mcp.json'), '{"mcpServers":{}}\n');
+  const billing =
+    options.billing ??
+    (manifest.host.name === 'codex' || process.env['CLAUDE_CODE_OAUTH_TOKEN'] ? 'subscription' : 'api');
   const started = new Date(),
     time = performance.now();
-  const host = await backend.host(
+  const rawHost = await backend.host(
     work,
-    claudeArgs(
-      task.statement,
-      manifest.model,
-      manifest.limits.max_turns,
-      arm === 'control' ? '/work/.bench-mcp.json' : '/work/.mcp.json',
-      manifest.limits.max_cost_usd,
-    ),
+    manifest.host.name === 'codex'
+      ? codexArgs(task.statement, manifest.model, manifest.limits.max_turns, arm)
+      : claudeArgs(
+          task.statement,
+          manifest.model,
+          manifest.limits.max_turns,
+          arm === 'control' ? '/work/.bench-mcp.json' : '/work/.mcp.json',
+          billing === 'subscription' ? null : manifest.limits.max_cost_usd,
+        ),
     manifest.limits.max_minutes * 60_000,
   );
+  // Evitar que una credencial reenviada aparezca en evidencias del anfitrión.
+  const redact = (text: string) =>
+    ['CLAUDE_CODE_OAUTH_TOKEN', 'ANTHROPIC_API_KEY'].reduce(
+      (value, key) => (process.env[key] ? value.split(process.env[key] as string).join('[credencial omitida]') : value),
+      text,
+    );
+  const host = { ...rawHost, stdout: redact(rawHost.stdout), stderr: redact(rawHost.stderr) };
   const latency = (performance.now() - time) / 1000;
   const evidence = join(base, 'evidence');
   mkdirSync(evidence);
@@ -194,7 +255,7 @@ export async function runTask(options: {
   writeFileSync(join(evidence, 'stderr.txt'), host.stderr);
   let output: HostOutput = {};
   try {
-    output = JSON.parse(host.stdout) as HostOutput;
+    output = manifest.host.name === 'codex' ? parseCodexOutput(host.stdout) : (JSON.parse(host.stdout) as HostOutput);
   } catch {
     /* timeout evidence retained */
   }
@@ -291,6 +352,7 @@ export async function runTask(options: {
     arm,
     repetition,
     host: manifest.host,
+    billing,
     model: manifest.model,
     foker_version: arm === 'foker' ? manifest.foker_version : null,
     started_at: started.toISOString(),
@@ -305,6 +367,7 @@ export async function runTask(options: {
       cache_write_tokens: usage?.cache_write_tokens ?? null,
       output_tokens: usage?.output_tokens ?? null,
       cost_usd: usage?.cost_usd ?? null,
+      reported_cost_usd: usage?.reported_cost_usd ?? null,
       latency_s: latency,
       files_exposed: exposed.files.size,
       files_modified: changed.length,

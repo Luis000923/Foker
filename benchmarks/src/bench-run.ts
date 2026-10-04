@@ -1,8 +1,8 @@
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, lstatSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { stdin, stdout } from 'node:process';
 import { createInterface } from 'node:readline/promises';
-import { ROOT, runTask } from './harness/index.js';
+import { claudeCredential, ROOT, runTask } from './harness/index.js';
 import { plan, runId } from './harness/plan.js';
 import { readManifest } from './validate-manifest.js';
 export async function main(argv: string[]): Promise<void> {
@@ -12,6 +12,8 @@ export async function main(argv: string[]): Promise<void> {
     return i < 0 ? fallback : args[i + 1];
   };
   const allowed = new Set([
+    '--host',
+    '--codex-auth-dir',
     '--suite',
     '--arm',
     '--repetitions',
@@ -24,6 +26,11 @@ export async function main(argv: string[]): Promise<void> {
   ]);
   for (const arg of args) if (arg.startsWith('--') && !allowed.has(arg)) throw new Error(`Opción desconocida: ${arg}`);
   const manifest = readManifest(resolve(value('--manifest') ?? join(ROOT, 'benchmarks/manifest.yaml')));
+  const selectedHost = value('--host', manifest.host.name);
+  if (selectedHost !== 'claude-code' && selectedHost !== 'codex') throw new Error('Anfitrión inválido');
+  if (selectedHost !== manifest.host.name)
+    throw new Error('--host debe coincidir con el anfitrión y la versión exacta del manifiesto');
+  const codexAuthDir = value('--codex-auth-dir');
   const suite = value('--suite', 'smoke'),
     arm = value('--arm', 'both');
   if (suite !== 'smoke' && suite !== 'full') throw new Error('Suite inválida');
@@ -40,7 +47,7 @@ export async function main(argv: string[]): Promise<void> {
     manifest.limits.max_cost_usd === null
       ? 'desconocido'
       : `$${(entries.length * manifest.limits.max_cost_usd).toFixed(2)}`;
-  console.log(`${id}: ${entries.length} ejecuciones; coste máximo estimado ${estimate}`);
+  console.log(`${id}: ${entries.length} ejecuciones; presupuesto equivalente API estimado ${estimate}`);
   if (args.includes('--dry-run')) {
     console.log(
       JSON.stringify(
@@ -51,14 +58,21 @@ export async function main(argv: string[]): Promise<void> {
     );
     return;
   }
+  if (manifest.host.name === 'claude-code') claudeCredential();
+  else if (
+    !codexAuthDir ||
+    !lstatSync(resolve(codexAuthDir)).isDirectory() ||
+    !existsSync(join(resolve(codexAuthDir), 'auth.json'))
+  )
+    throw new Error(
+      'Codex requiere --codex-auth-dir explícito con auth.json de una sesión por suscripción; no se consulta ~/.codex.',
+    );
   if (unknown && !args.includes('--allow-null-pricing'))
     throw new Error('Modelo/precios/límite pendientes: configure el manifiesto o --allow-null-pricing');
   if (!manifest.model)
     throw new Error('Modelo exacto obligatorio: --allow-null-pricing no puede seleccionar un modelo');
   if (!/^\d+\.\d+\.\d+(?:[-+][\w.-]+)?$/.test(manifest.host.version))
-    throw new Error('Versión exacta de Claude Code pendiente');
-  if (!process.env['ANTHROPIC_API_KEY'])
-    throw new Error('Falta ANTHROPIC_API_KEY: el contenedor del anfitrión solo recibe esa credencial');
+    throw new Error('Versión exacta del anfitrión pendiente');
   if (!args.includes('--yes')) {
     if (!stdin.isTTY) throw new Error('Se requiere confirmación interactiva o --yes');
     const rl = createInterface({ input: stdin, output: stdout });
@@ -79,5 +93,11 @@ export async function main(argv: string[]): Promise<void> {
   mkdirSync(work, { recursive: true });
   writeFileSync(join(work, 'manifest.json'), JSON.stringify(manifest, null, 2));
   for (const [i, entry] of entries.entries())
-    await runTask({ ...entry, manifest, runId: id, workDir: join(work, String(i)) });
+    await runTask({
+      ...entry,
+      manifest,
+      runId: id,
+      workDir: join(work, String(i)),
+      ...(codexAuthDir ? { codexAuthDir: resolve(codexAuthDir) } : {}),
+    });
 }

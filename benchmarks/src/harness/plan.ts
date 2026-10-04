@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import type { BenchmarkManifest } from '@foker/schemas';
+import type { BenchmarkManifest } from '../types.js';
 import type { Arm, Task } from './index.js';
 export function random(seed: number): () => number {
   let state = seed >>> 0;

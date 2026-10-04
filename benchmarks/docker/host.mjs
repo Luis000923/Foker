@@ -4,11 +4,22 @@ import { join } from 'node:path';
 
 mkdirSync('/tmp/home', { recursive: true });
 if (existsSync('/work/.foker/bench-xdg')) process.env.XDG_CONFIG_HOME = '/work/.foker/bench-xdg';
-const [expectedVersion, ...args] = process.argv.slice(2);
-const version = spawnSync('claude', ['--version'], { encoding: 'utf8' });
-if (version.status !== 0 || !version.stdout.trim().startsWith(`${expectedVersion} `))
-  throw new Error('La imagen no coincide con la versión de Claude del manifiesto');
-const r = spawnSync('claude', args, {
+const [hostName, expectedVersion, ...args] = process.argv.slice(2);
+const version = spawnSync(hostName === 'codex' ? 'codex' : 'claude', ['--version'], { encoding: 'utf8' });
+if (
+  version.status !== 0 ||
+  !(hostName === 'codex'
+    ? version.stdout.trim() === `codex-cli ${expectedVersion}`
+    : version.stdout.trim().startsWith(`${expectedVersion} `))
+)
+  throw new Error('La imagen no coincide con la versión del anfitrión del manifiesto');
+if (hostName === 'codex') {
+  mkdirSync('/tmp/codex', { recursive: true });
+  const { symlinkSync } = await import('node:fs');
+  symlinkSync('/codex-auth/auth.json', '/tmp/codex/auth.json');
+  process.env.CODEX_HOME = '/tmp/codex';
+}
+const r = spawnSync(hostName === 'codex' ? 'codex' : 'claude', args, {
   cwd: '/work',
   env: process.env,
   encoding: 'utf8',

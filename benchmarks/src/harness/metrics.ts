@@ -1,10 +1,11 @@
-import type { BenchmarkManifest } from '@foker/schemas';
+import type { BenchmarkManifest } from '../types.js';
 export interface HostOutput {
+  codex?: boolean;
   usage?: {
-    input_tokens?: number;
-    cache_read_input_tokens?: number;
-    cache_creation_input_tokens?: number;
-    output_tokens?: number;
+    input_tokens?: number | undefined;
+    cache_read_input_tokens?: number | undefined;
+    cache_creation_input_tokens?: number | undefined;
+    output_tokens?: number | undefined;
   };
   total_cost_usd?: number;
   num_turns?: number;
@@ -23,19 +24,19 @@ export function extractUsage(output: HostOutput, manifest: BenchmarkManifest) {
   };
   const input = token(u.input_tokens),
     cached = token(u.cache_read_input_tokens),
-    write = token(u.cache_creation_input_tokens),
+    write = output.codex ? null : token(u.cache_creation_input_tokens),
     out = token(u.output_tokens);
   const price = manifest.prices.models.find((p) => p.model === manifest.model);
   const cost =
-    !price || [price.input, price.cache_read, price.cache_write, price.output].includes(null)
+    !price || [price.input, price.cache_read, ...(output.codex ? [] : [price.cache_write]), price.output].includes(null)
       ? null
       : (input * (price.input as number) +
           cached * (price.cache_read as number) +
-          write * (price.cache_write as number) +
+          (write ?? 0) * (price.cache_write ?? 0) +
           out * (price.output as number)) /
         1e6;
   return {
-    input_tokens_total: input + cached + write,
+    input_tokens_total: input + cached + (write ?? 0),
     cached_tokens: cached,
     cache_write_tokens: write,
     output_tokens: out,
@@ -108,4 +109,33 @@ export function traceMetrics(
   const errors = new Set(results.filter((r) => r['is_error'] === true).map((r, i) => String(r['tool_use_id'] ?? i)))
     .size;
   return { files, retries, errors, packs };
+}
+
+// Codex emite eventos JSONL; thread.started no contiene métricas de uso.
+export function parseCodexOutput(text: string): HostOutput {
+  const output: HostOutput = { codex: true };
+  for (const line of text.split('\n').filter(Boolean)) {
+    let event: Record<string, unknown>;
+    try {
+      event = JSON.parse(line) as Record<string, unknown>;
+    } catch {
+      continue;
+    }
+    if (event['type'] === 'turn.failed' || event['type'] === 'error') output.is_error = true;
+    if (event['type'] !== 'turn.completed' || !event['usage']) continue;
+    const u = event['usage'] as Record<string, number>;
+    const input = u['input_tokens'],
+      cached = u['cached_input_tokens'];
+    const sum = (previous: number | undefined, current: number | undefined) =>
+      current === undefined || (output.usage && previous === undefined) ? undefined : (previous ?? 0) + current;
+    output.usage = {
+      input_tokens: sum(
+        output.usage?.input_tokens,
+        input === undefined || cached === undefined ? undefined : input - cached,
+      ),
+      cache_read_input_tokens: sum(output.usage?.cache_read_input_tokens, cached),
+      output_tokens: sum(output.usage?.output_tokens, u['output_tokens']),
+    };
+  }
+  return output;
 }
