@@ -21,6 +21,15 @@ Las llamadas con `task_id` renuevan el lease. Las tareas se atribuyen a `mcp:<cl
 
 Los errores de herramienta producen `isError: true` sin `structuredContent`: `content[0].text` contiene el JSON `{code,message,recoverable}`; rate limit añade `retry_after_ms`. Los errores internos y un root inválido son errores JSON-RPC. Un fallo de checks es un resultado de validación, no un error de protocolo. Para perfiles largos configura el timeout de herramientas del anfitrión (`MCP_TOOL_TIMEOUT` o equivalente) hasta 600 segundos.
 
+Según [ADR-030](adr/ADR-030-respuestas-mcp-compactas.md), `foker_task_begin`
+muestra como máximo 20 rutas ordenadas en `baseline.dirty_files`, sin rutas bajo
+`node_modules/` (incluidos directorios anidados). `dirty_files_total` cuenta todas
+las rutas originales y `dirty_files_truncated` indica que se omitieron rutas.
+El ledger local conserva el baseline completo y su hash; `foker_task_get` y el
+recurso de tarea permiten consultarlo. En `foker_check` y `foker_task_submit`,
+`output_tail` es opcional: se omite en checks `pass` y se devuelve sin ANSI para
+los demás estados. Los findings se conservan. La CLI humana mantiene la salida completa.
+
 ## Recursos
 
 | URI | Contenido | ttlMs |

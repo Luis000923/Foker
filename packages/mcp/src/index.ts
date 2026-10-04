@@ -1,6 +1,7 @@
 import { lstat, readdir, readFile, realpath, stat } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { basename, join, resolve } from 'node:path';
+import { stripVTControlCharacters } from 'node:util';
 import {
   assertUnprotectedScope,
   type ContextRequest,
@@ -95,6 +96,16 @@ async function assertPrivateState(root: string, relative = '.foker'): Promise<vo
   if (info.isDirectory())
     for (const entry of await readdir(path)) await assertPrivateState(root, `${relative}/${entry}`);
 }
+/** Proyección de transporte: conserva íntegros los resultados del motor y su evidencia. */
+function compactCheck<T extends { status: string; output_tail?: string }>(check: T) {
+  const { output_tail, ...rest } = check;
+  return {
+    ...rest,
+    ...(check.status !== 'pass' && output_tail !== undefined
+      ? { output_tail: stripVTControlCharacters(output_tail) }
+      : {}),
+  };
+}
 /** Una instancia por conexión; no conserva contexto de tarea implícito entre llamadas. */
 export async function createFokerServer(options: FokerServerOptions): Promise<McpServer> {
   const root = await checkedRoot(options.root);
@@ -152,7 +163,7 @@ function serverFactory(options: FokerServerOptions) {
           ...input,
           profile: input.profile ?? 'quick',
         });
-        return { data: { ok: result.status === 'pass', results: result.checks ?? [] } };
+        return { data: { ok: result.status === 'pass', results: (result.checks ?? []).map(compactCheck) } };
       }
       if (name === 'foker_task_submit') {
         const loaded = await loadConfig(root);
@@ -162,7 +173,15 @@ function serverFactory(options: FokerServerOptions) {
           ...executionOptions,
           ...(typeof args['summary'] === 'string' ? { summary: args['summary'] } : {}),
         });
-        return { data: result };
+        return {
+          data: {
+            ...result,
+            gates: result.gates.map((gate) => ({
+              ...gate,
+              ...(gate.checks ? { checks: gate.checks.map(compactCheck) } : {}),
+            })),
+          },
+        };
       }
       const { engine, loaded } = await map();
       if (name === 'foker_task_begin') {
@@ -173,12 +192,21 @@ function serverFactory(options: FokerServerOptions) {
         const project = JSON.parse(await engine.exportMapJson()) as ProjectMap;
         assertUnprotectedScope(input.scope.paths, loaded.policy.protected_paths, Object.keys(project.files));
         const task = await tasks.begin(input);
+        const dirtyFiles = task.baseline.dirty_files
+          .filter((path) => !path.split('/').includes('node_modules'))
+          .sort()
+          .slice(0, 20);
         return {
           data: {
             task_id: task.task_id,
             state: 'RUNNING',
             attempt: 1,
-            baseline: task.baseline,
+            baseline: {
+              ...task.baseline,
+              dirty_files: dirtyFiles,
+              dirty_files_total: task.baseline.dirty_files.length,
+              dirty_files_truncated: task.baseline.dirty_files.length > dirtyFiles.length,
+            },
             allowed_paths: task.scope.paths,
             protected_paths_in_scope: [],
             checks: profile.checks,

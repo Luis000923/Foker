@@ -1,5 +1,11 @@
 import { spawnSync } from 'node:child_process';
-import { cpSync, mkdirSync } from 'node:fs';
+import { appendFileSync, cpSync, existsSync, mkdirSync } from 'node:fs';
+
+// Exclusión local: no modifica los archivos versionados del fixture.
+if (existsSync('/work/.git')) {
+  mkdirSync('/work/.git/info', { recursive: true });
+  appendFileSync('/work/.git/info/exclude', '\nnode_modules/\n');
+}
 
 mkdirSync('/tmp/home', { recursive: true });
 cpSync('/opt/fixture/node_modules', '/work/node_modules', { recursive: true, verbatimSymlinks: true });

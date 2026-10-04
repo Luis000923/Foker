@@ -51,7 +51,7 @@
           "results": {
             "type": "array",
             "items": {
-              "$ref": "../common/v1.json#/$defs/checkResult"
+              "$ref": "#/$defs/mcpCheckResult"
             }
           },
           "diagnostics": {
@@ -461,7 +461,7 @@
             "const": 1
           },
           "baseline": {
-            "$ref": "../task/v1.json#/$defs/baseline"
+            "$ref": "#/$defs/mcpBaseline"
           },
           "allowed_paths": {
             "type": "array",
@@ -559,7 +559,7 @@
           "gates": {
             "type": "array",
             "items": {
-              "$ref": "../common/v1.json#/$defs/gateResult"
+              "$ref": "#/$defs/mcpGateResult"
             }
           },
           "evidence": {
@@ -590,6 +590,92 @@
       "type": "array",
       "items": {
         "$ref": "../common/v1.json#/$defs/diagnostic"
+      }
+    },
+    "mcpBaseline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["git_head", "dirty_files", "snapshot_hash"],
+      "properties": {
+        "git_head": {
+          "type": ["string", "null"],
+          "pattern": "^[0-9a-f]{40,64}$"
+        },
+        "dirty_files": {
+          "type": "array",
+          "items": {
+            "$ref": "../common/v1.json#/$defs/fileId"
+          }
+        },
+        "snapshot_hash": {
+          "description": "Hash de los hashes de archivos en alcance al empezar.",
+          "$ref": "../common/v1.json#/$defs/hash"
+        },
+        "dirty_files_total": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total original, incluidas rutas bajo node_modules."
+        },
+        "dirty_files_truncated": {
+          "type": "boolean",
+          "description": "La lista mostrada omite rutas del baseline original."
+        }
+      }
+    },
+    "mcpCheckResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["check", "status", "exit_code", "duration_ms", "findings"],
+      "properties": {
+        "check": {
+          "type": "string"
+        },
+        "status": {
+          "enum": ["pass", "fail", "timeout", "skipped"]
+        },
+        "exit_code": {
+          "type": ["integer", "null"]
+        },
+        "duration_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "findings": {
+          "type": "array",
+          "items": {
+            "$ref": "../common/v1.json#/$defs/finding"
+          }
+        },
+        "output_tail": {
+          "description": "Salida sin ANSI; solo se devuelve para checks que no pasan.",
+          "type": "string"
+        }
+      }
+    },
+    "mcpGateResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["gate", "status", "findings"],
+      "properties": {
+        "gate": {
+          "description": "G1 scope, G2 policy, G3 map, G4 checks, G5 skill (FOKER-SPEC §12.4).",
+          "enum": ["scope", "policy", "map", "checks", "skill"]
+        },
+        "status": {
+          "enum": ["pass", "fail", "blocked", "approval_required", "skipped"]
+        },
+        "findings": {
+          "type": "array",
+          "items": {
+            "$ref": "../common/v1.json#/$defs/finding"
+          }
+        },
+        "checks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/mcpCheckResult"
+          }
+        }
       }
     }
   }

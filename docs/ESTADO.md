@@ -78,9 +78,11 @@ M0, M2, M3, M4 y E6 completos en local; M1 con todo lo que no gasta API (manifie
   Éxito 2/3 en ambos brazos (a-09 falla en ambos: no adaptan el consumidor `ui/referenceSearch`).
   Foker gasta ~4,5x tokens de entrada (298k vs 66k por tarea exitosa; 0,16 vs 0,02 USD equivalentes).
   Causa medida: `foker_task_begin` devuelve ~9.100 tokens (`dirty_files` con 409 rutas de node_modules) y
-  `foker_task_submit` ~2.000–4.400 (`output_tail` de checks que pasan, con ANSI). Corrección en curso (ADR-030).
+  `foker_task_submit` ~2.000–4.400 (`output_tail` de checks que pasan, con ANSI). Corrección implementada en MCP y prepare (ADR-030); medición posterior pendiente.
   El control no puede ejecutar tests por Bash en `-p`: revisar equidad antes de la línea base.
-- Verificación local completa: 120 tests Rust (2 omitidos), 539 TS, clippy, Biome, tsc,
+- ADR-030: respuestas MCP compactas (`dirty_files` ≤ 20 rutas con totales, sin node_modules;
+  `output_tail` solo en checks no superados y sin ANSI) y node_modules excluido del git del fixture.
+- Verificación local completa: 120 tests Rust (2 omitidos), 542 TS, clippy, Biome, tsc,
   check:deps, generate:check.
 
 ## Verificado localmente

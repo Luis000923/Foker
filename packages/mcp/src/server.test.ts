@@ -316,3 +316,101 @@ it('recurso skills aplica disabled y devuelve FKR-SKL-001 si falta', async () =>
     await f.server.close();
   }
 });
+
+it('begin acota 1000 rutas sin modificar el baseline del motor', async () => {
+  const f = await fixture();
+  const original = engineApi.TaskStore.prototype.begin;
+  const dirty = Array.from(
+    { length: 1000 },
+    (_, i) => `${i < 500 ? 'node_modules' : 'src'}/${String(i).padStart(4, '0')}.ts`,
+  ).reverse();
+  let task: Awaited<ReturnType<typeof original>> | undefined;
+  const begin = vi.spyOn(engineApi.TaskStore.prototype, 'begin').mockImplementation(async function (
+    this: engineApi.TaskStore,
+    input,
+  ) {
+    task = await original.call(this, input);
+    task.baseline.dirty_files = dirty;
+    return task;
+  });
+  try {
+    const result = await f.call('foker_task_begin', { description: 'compacta', scope: { paths: ['index.ts'] } });
+    expect(result.isError).toBe(false);
+    expect(result.structuredContent).toMatchObject({
+      baseline: {
+        dirty_files: dirty
+          .filter((p) => p.startsWith('src/'))
+          .sort()
+          .slice(0, 20),
+        dirty_files_total: 1000,
+        dirty_files_truncated: true,
+        snapshot_hash: task?.baseline.snapshot_hash,
+      },
+    });
+    expect(JSON.stringify(result).length).toBeLessThan(4000);
+    expect(task?.baseline.dirty_files).toEqual(dirty);
+  } finally {
+    begin.mockRestore();
+    await f.client.close();
+    await f.server.close();
+  }
+});
+
+it('check y submit omiten output_tail en pass y eliminan ANSI en fail sin cambiar findings', async () => {
+  const f = await fixture();
+  const findings = [{ rule: 'test', message: 'Fallo medido' }];
+  const checks = [
+    {
+      check: 'ok',
+      status: 'pass' as const,
+      exit_code: 0,
+      duration_ms: 1,
+      findings: [],
+      output_tail: '\u001b[32méxito\u001b[0m',
+    },
+    {
+      check: 'bad',
+      status: 'fail' as const,
+      exit_code: 1,
+      duration_ms: 1,
+      findings,
+      output_tail: '\u001b[31mfallo\u001b[0m\u001b]8;;https://example.test\u0007 enlace\u001b]8;;\u0007',
+    },
+  ];
+  const gate = { gate: 'checks' as const, status: 'fail' as const, findings, checks };
+  const validate = vi.spyOn(engineApi, 'validateProfile').mockResolvedValue({ ...gate, log: '.foker/runs/adhoc/1' });
+  const submit = vi.spyOn(engineApi, 'submitTask').mockResolvedValue({
+    task_id: 'tsk_00000000000000000000000000',
+    state: 'REJECTED',
+    attempt: 1,
+    gates: [gate],
+    evidence: '.foker/runs/tsk_00000000000000000000000000/1/evidence.json',
+    next_action: 'fix_and_resubmit',
+  });
+  try {
+    for (const [tool, args] of [
+      ['foker_check', {}],
+      ['foker_task_submit', { task_id: 'tsk_00000000000000000000000000' }],
+    ] as const) {
+      // submit renueva el lease antes de ejecutar el motor.
+      const touch = vi.spyOn(engineApi.TaskStore.prototype, 'touch').mockResolvedValue({} as never);
+      try {
+        const result = await f.call(tool, args);
+        expect(result.isError).toBe(false);
+        const data = result.structuredContent as { results?: typeof checks; gates?: Array<{ checks: typeof checks }> };
+        const returned = data.results ?? data.gates?.[0]?.checks;
+        expect(returned?.[0]).not.toHaveProperty('output_tail');
+        expect(returned?.[1]).toMatchObject({ output_tail: 'fallo enlace', findings });
+        expect(checks[0]?.output_tail).toContain('\u001b');
+        expect(checks[1]?.output_tail).toContain('\u001b');
+      } finally {
+        touch.mockRestore();
+      }
+    }
+  } finally {
+    validate.mockRestore();
+    submit.mockRestore();
+    await f.client.close();
+    await f.server.close();
+  }
+});

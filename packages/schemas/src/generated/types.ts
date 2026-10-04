@@ -1034,8 +1034,19 @@ packages?: string[]
 }
 export interface FokerCheckOutput {
 ok: boolean
-results: CheckResult[]
+results: McpCheckResult[]
 diagnostics?: Diagnostics
+}
+export interface McpCheckResult {
+check: string
+status: ("pass" | "fail" | "timeout" | "skipped")
+exit_code: (number | null)
+duration_ms: number
+findings: Finding[]
+/**
+ * Salida sin ANSI; solo se devuelve para checks que no pasan.
+ */
+output_tail?: string
 }
 export interface FokerContextInput {
 task: string
@@ -1156,11 +1167,24 @@ export interface FokerTaskBeginOutput {
 task_id: TaskId
 state: "RUNNING"
 attempt: 1
-baseline: TaskBaseline
+baseline: McpBaseline
 allowed_paths: Glob[]
 protected_paths_in_scope: string[]
 checks: string[]
 diagnostics?: Diagnostics
+}
+export interface McpBaseline {
+git_head: (string | null)
+dirty_files: FileId[]
+snapshot_hash: Hash
+/**
+ * Total original, incluidas rutas bajo node_modules.
+ */
+dirty_files_total?: number
+/**
+ * La lista mostrada omite rutas del baseline original.
+ */
+dirty_files_truncated?: boolean
 }
 export interface FokerTaskGetInput {
 task_id: TaskId
@@ -1200,11 +1224,20 @@ export interface FokerTaskSubmitOutput {
 task_id: TaskId
 state: TaskState
 attempt: number
-gates: GateResult[]
+gates: McpGateResult[]
 /**
  * Ruta relativa al root del evidence.json.
  */
 evidence: string
 next_action: ("done" | "fix_and_resubmit" | "await_human_approval" | "blocked_contact_human" | "failed")
 diagnostics?: Diagnostics
+}
+export interface McpGateResult {
+/**
+ * G1 scope, G2 policy, G3 map, G4 checks, G5 skill (FOKER-SPEC §12.4).
+ */
+gate: ("scope" | "policy" | "map" | "checks" | "skill")
+status: ("pass" | "fail" | "blocked" | "approval_required" | "skipped")
+findings: Finding[]
+checks?: McpCheckResult[]
 }
