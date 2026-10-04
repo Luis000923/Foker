@@ -4,7 +4,7 @@
 
 ## Hito actual
 
-M0 y M2 completos en local. Siguiente: M3 · Context Engine (FKR-030…037). M1 (benchmark) bloqueado por PREGUNTA-2/6.
+M0, M2, M3 (salvo FKR-037) y M4 completos en local. Siguiente: E6 (skills, integraciones, sync, init, plantilla, doctor). M1 y FKR-037 bloqueados por PREGUNTA-2/6.
 
 ## Issues
 
@@ -27,6 +27,14 @@ M0 y M2 completos en local. Siguiente: M3 · Context Engine (FKR-030…037). M1 
 | FKR-027 | Refresco incremental | hecho | feat/FKR-027-incremental | REQ-MAP-001 proptest; 24 ms sin cambios en 10k archivos |
 | FKR-028 | `foker map` | hecho | feat/FKR-060-cli | Codex; `--check`/`--dry-run` en solo lectura |
 | FKR-029 | Consultas + `FokerEngine` | hecho | feat/FKR-029-consultas | Contrato: mapa valida contra el esquema; ADR-021 |
+| FKR-030…035 | Context Engine | hecho | feat/FKR-030-context-engine | REQ-CTX-001 (50 ejecuciones), REQ-CTX-004 p95 221 ms en 10k |
+| FKR-036 | `foker context` + buildContext | hecho | feat/FKR-036-context-cli | Pack valida contra el esquema |
+| FKR-037 | Calibración con ctx-gold | bloqueado | — | Requiere FKR-017 (M1) |
+| FKR-040…042 | Config, trust, ejecutor seguro | hecho | feat/FKR-040-config-trust-exec | ADR-022 (shims .cmd en Windows) |
+| FKR-043/044 | Parsers de hallazgos, escáner de secretos | hecho | feat/FKR-043-parsers-secretos | 24 reglas |
+| FKR-045/046 | Ledger + FSM, baseline | hecho | feat/FKR-045-ledger-baseline | Evidencia inmutable, baseline autenticada |
+| FKR-047/048 | Gates G1–G5, `foker task`/`validate` | hecho | feat/FKR-047-gates-cli | REQ-TSK-001 E2E con agente simulado |
+| FKR-050…055 | Servidor MCP | hecho | feat/FKR-050-mcp | SDK v2 2.3.0; E2E 2026-07-28 y 2025-11-25 |
 | FKR-060 | Esqueleto de CLI | hecho | feat/FKR-060-cli | Codex; `docs/cli.md` generado (REQ-DOC-001) |
 
 ## Verificado localmente
@@ -55,4 +63,4 @@ Sesión 2026-10-03 (usuario luis):
 
 ## Siguiente paso
 
-M3 · Context Engine: FKR-030 (normalización e intención) → FKR-036 (`foker context`).
+E6: FKR-061/062 (skills) → FKR-063…066 (adaptadores y `sync`) → FKR-067/068 (`init`, plantilla) → FKR-069 (`doctor`).
