@@ -64,4 +64,6 @@ Reglas del crate `foker-napi`:
 - Cada función exportada envuelve su cuerpo en `guard()`, que convierte un pánico en `FKR-INT-001`.
 - Las funciones `#[napi]` escriben `napi::Result<T, FokerCode>` de forma literal; la macro no expande alias.
 
-Las demás plataformas se compilan en CI (`release.yml`).
+Las demás plataformas se compilan en CI (`release.yml`): Linux con `--use-napi-cross` (glibc ≥ 2.17),
+macOS y Windows en sus runners. `node scripts/smoke-native.mjs <target> <dir>` empaqueta `@foker/core`
+y su paquete de plataforma con `npm pack`, los instala en un directorio limpio y ejecuta `versionInfo()`.

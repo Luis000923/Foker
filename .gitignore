@@ -14,3 +14,4 @@ coverage/
 # Material de trabajo previo, fuera del repo (decisión del usuario 2026-10-03)
 /foker-vault/
 /*.txt
+/packages/core/npm/
