@@ -1,0 +1,21 @@
+diff --git a/packages/catalog/src/skuMatches.ts b/packages/catalog/src/skuMatches.ts
+index 4f08fa8..644cf32 100644
+--- a/packages/catalog/src/skuMatches.ts
++++ b/packages/catalog/src/skuMatches.ts
+@@ -1,4 +1,6 @@
+ /** Consulta la coincidencia entre una referencia y un término de búsqueda. */
+ export function skuMatches(sku: string, query: string) {
+-  return false;
++  return sku.toLowerCase().includes(query.trim().toLowerCase());
+ }
++
++export function skuMatchesForSummary(sku: string, query: string) { return skuMatches(sku, query); }
+diff --git a/packages/ui/src/referenceSearch.ts b/packages/ui/src/referenceSearch.ts
+index e155895..77ba0d9 100644
+--- a/packages/ui/src/referenceSearch.ts
++++ b/packages/ui/src/referenceSearch.ts
+@@ -1,2 +1,3 @@
++import { skuMatchesForSummary } from '../../catalog/src/skuMatches.js';
+ /** Proyección de datos para el resumen de compra. */
+-export function referenceSearch(sku: string, query: string) { return undefined; }
++export function referenceSearch(sku: string, query: string) { return skuMatchesForSummary(sku, query); }

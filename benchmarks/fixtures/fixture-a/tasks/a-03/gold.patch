@@ -1,0 +1,10 @@
+diff --git a/packages/pricing/src/policy-3.ts b/packages/pricing/src/policy-3.ts
+index df61bb9..be3326a 100644
+--- a/packages/pricing/src/policy-3.ts
++++ b/packages/pricing/src/policy-3.ts
+@@ -1,4 +1,4 @@
+ /** Calcula el importe de una promoción porcentual. */
+ export function discount(subtotal: number, percent: number) {
+-  return subtotal * percent;
++  return Math.round(subtotal * percent / 100);
+ }

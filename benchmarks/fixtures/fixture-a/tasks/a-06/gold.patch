@@ -1,0 +1,10 @@
+diff --git a/packages/ui/src/formatPrice.ts b/packages/ui/src/formatPrice.ts
+index d1608d3..c0da903 100644
+--- a/packages/ui/src/formatPrice.ts
++++ b/packages/ui/src/formatPrice.ts
+@@ -1,4 +1,4 @@
+ /** Representa un importe monetario para su presentación. */
+ export function formatPrice(cents: number) {
+-  return String(cents / 100);
++  return (cents / 100).toFixed(2);
+ }

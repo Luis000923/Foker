@@ -49,6 +49,7 @@ describe('registro', () => {
     expect([...SCHEMA_NAMES].sort()).toEqual(
       [
         'benchmark-result',
+        'benchmark-manifest',
         'cli-output',
         'common',
         'context-pack',

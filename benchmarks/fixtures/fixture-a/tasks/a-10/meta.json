@@ -1,0 +1,24 @@
+{
+  "id": "a-10",
+  "type": "feature",
+  "gold_modified": ["packages/cart/src/cartWeight.ts", "packages/orders/src/parcelWeight.ts"],
+  "hidden_tests": {
+    "fail_to_pass": {
+      "paths": ["benchmarks/fixtures/fixture-a/tasks/a-10/hidden-tests/a-10.test.ts"],
+      "destinations": ["packages/cart/src/__hidden__/a-10.test.ts"],
+      "command": ["pnpm", "exec", "vitest", "run", "packages/cart/src/__hidden__/a-10.test.ts"]
+    },
+    "pass_to_pass": {
+      "paths": ["benchmarks/fixtures/fixture-a/tasks/a-10/hidden-tests/a-10-regression.test.ts"],
+      "destinations": ["packages/cart/src/__hidden__/a-10-regression.test.ts"],
+      "command": ["pnpm", "exec", "vitest", "run", "packages/cart/src/__hidden__/a-10-regression.test.ts"]
+    }
+  },
+  "default_checks": [["pnpm", "run", "typecheck"], ["pnpm", "run", "lint"]],
+  "allow_protected": [],
+  "modified": ["packages/cart/src/cartWeight.ts", "packages/orders/src/parcelWeight.ts"],
+  "packages": ["cart", "orders"],
+  "hint": false,
+  "decoy": false,
+  "cross_package": true
+}

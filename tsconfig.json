@@ -5,13 +5,19 @@
     "noEmit": true,
     "customConditions": ["@foker/source"],
     "allowJs": true,
-    "checkJs": true
+    "checkJs": true,
+    "paths": {
+      "@foker/*": ["./packages/*/src/index.ts"]
+    }
   },
   "include": [
     "packages/*/src/**/*.ts",
     "packages/*/test/**/*.ts",
     "scripts/**/*.ts",
     "scripts/**/*.mjs",
-    "vitest.config.ts"
-  ]
+    "vitest.config.ts",
+    "benchmarks/src/**/*.ts",
+    "benchmarks/**/*.test.ts"
+  ],
+  "exclude": ["**/node_modules/**", "**/dist/**", "benchmarks/fixtures/fixture-a/tasks/**", "benchmarks/generated/**"]
 }

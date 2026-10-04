@@ -23,6 +23,7 @@ const files = {
   'foker-md': 'foker-md.schema.json',
   'cli-output': 'cli-output.schema.json',
   'benchmark-result': 'benchmark-result.schema.json',
+  'benchmark-manifest': 'benchmark-manifest.schema.json',
   'mcp-tools': 'mcp-tools.json',
 };
 
@@ -50,6 +51,7 @@ const TYPE_NAMES = {
   'foker-md': { '': 'FokerMdFrontmatter' },
   'cli-output': { '': 'CliOutput' },
   'benchmark-result': { '': 'BenchmarkResult' },
+  'benchmark-manifest': { '': 'BenchmarkManifest' },
   common: {},
   'mcp-tools': {},
 };
@@ -110,6 +112,7 @@ const root = {
     fokerMd: ref('foker-md'),
     cliOutput: ref('cli-output'),
     benchmarkResult: ref('benchmark-result'),
+    benchmarkManifest: ref('benchmark-manifest'),
     ...Object.fromEntries(
       mcp.tools.flatMap((/** @type {{name: string}} */ tool, /** @type {number} */ i) => [
         [`${tool.name}_input`, ref('mcp-tools', `#/tools/${i}/inputSchema`)],

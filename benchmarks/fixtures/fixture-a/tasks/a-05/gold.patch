@@ -1,0 +1,10 @@
+diff --git a/packages/orders/src/canCancel.ts b/packages/orders/src/canCancel.ts
+index 710b10c..c28096f 100644
+--- a/packages/orders/src/canCancel.ts
++++ b/packages/orders/src/canCancel.ts
+@@ -1,4 +1,4 @@
+ /** Consulta las acciones disponibles para un estado de pedido. */
+ export function canCancel(status: string) {
+-  return status !== 'shipped';
++  return status === 'pending';
+ }

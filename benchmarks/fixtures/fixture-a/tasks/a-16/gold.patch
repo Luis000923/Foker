@@ -1,0 +1,30 @@
+diff --git a/packages/orders/src/payableAmount.ts b/packages/orders/src/payableAmount.ts
+index ed4e5b5..b201900 100644
+--- a/packages/orders/src/payableAmount.ts
++++ b/packages/orders/src/payableAmount.ts
+@@ -1,3 +1,3 @@
+-import { netPrice } from '../../pricing/src/netPrice.js';
++import { clampCents } from '../../pricing/src/moneyPolicy.js';
+ /** Proyección de datos para el resumen de compra. */
+-export function payableAmount(amount: number) { return netPrice(amount, 0); }
++export function payableAmount(amount: number) { return clampCents(amount); }
+diff --git a/packages/pricing/src/moneyPolicy.ts b/packages/pricing/src/moneyPolicy.ts
+new file mode 100644
+index 0000000..9ea3250
+--- /dev/null
++++ b/packages/pricing/src/moneyPolicy.ts
+@@ -0,0 +1,2 @@
++/** Operación compartida del dominio. */
++export function clampCents(value: number) { return Math.max(0, value); }
+diff --git a/packages/pricing/src/netPrice.ts b/packages/pricing/src/netPrice.ts
+index 161d09e..e8c1572 100644
+--- a/packages/pricing/src/netPrice.ts
++++ b/packages/pricing/src/netPrice.ts
+@@ -1,4 +1,6 @@
+ /** Calcula un importe neto tras una promoción. */
++import { clampCents } from './moneyPolicy.js';
++export { clampCents } from './moneyPolicy.js';
+ export function netPrice(price: number, discount: number) {
+-  return Math.max(0, price - discount);
++  return clampCents(price - discount);
+ }

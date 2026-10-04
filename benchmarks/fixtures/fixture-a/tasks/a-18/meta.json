@@ -1,0 +1,32 @@
+{
+  "id": "a-18",
+  "type": "refactor",
+  "gold_modified": [
+    "packages/orders/src/moneyPolicy.ts",
+    "packages/orders/src/orderTotal.ts",
+    "packages/ui/src/receiptAmount.ts"
+  ],
+  "hidden_tests": {
+    "fail_to_pass": {
+      "paths": ["benchmarks/fixtures/fixture-a/tasks/a-18/hidden-tests/a-18.test.ts"],
+      "destinations": ["packages/orders/src/__hidden__/a-18.test.ts"],
+      "command": ["pnpm", "exec", "vitest", "run", "packages/orders/src/__hidden__/a-18.test.ts"]
+    },
+    "pass_to_pass": {
+      "paths": ["benchmarks/fixtures/fixture-a/tasks/a-18/hidden-tests/a-18-regression.test.ts"],
+      "destinations": ["packages/orders/src/__hidden__/a-18-regression.test.ts"],
+      "command": ["pnpm", "exec", "vitest", "run", "packages/orders/src/__hidden__/a-18-regression.test.ts"]
+    }
+  },
+  "default_checks": [["pnpm", "run", "typecheck"], ["pnpm", "run", "lint"]],
+  "allow_protected": [],
+  "modified": [
+    "packages/orders/src/moneyPolicy.ts",
+    "packages/orders/src/orderTotal.ts",
+    "packages/ui/src/receiptAmount.ts"
+  ],
+  "packages": ["orders", "ui"],
+  "hint": false,
+  "decoy": false,
+  "cross_package": true
+}

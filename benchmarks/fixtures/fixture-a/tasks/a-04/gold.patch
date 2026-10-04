@@ -1,0 +1,10 @@
+diff --git a/packages/users/src/policy-4.ts b/packages/users/src/policy-4.ts
+index b62206b..e6e640a 100644
+--- a/packages/users/src/policy-4.ts
++++ b/packages/users/src/policy-4.ts
+@@ -1,4 +1,4 @@
+ /** Convierte una dirección de contacto a su representación canónica. */
+ export function normalizeEmail(email: string) {
+-  return email.toLowerCase();
++  return email.trim().toLowerCase();
+ }

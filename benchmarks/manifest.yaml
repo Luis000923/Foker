@@ -1,0 +1,791 @@
+# PENDIENTE PREGUNTA-2: modelo exacto, presupuesto USD y precios por MTok.
+# Commit cero: fixture sintético, no representa un repo remoto.
+{
+  "schema_version": 1,
+  "repos": [
+    {
+      "name": "fixture-a",
+      "commit": "0000000000000000000000000000000000000000",
+      "fixture": "benchmarks/fixtures/fixture-a/generate.mjs"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "a-01",
+      "repo": "fixture-a",
+      "type": "fix",
+      "statement": "Corrige disponibilidad: cero unidades no est\u00e1 en stock.",
+      "gold_patch": "benchmarks/fixtures/fixture-a/tasks/a-01/gold.patch",
+      "hidden_tests": {
+        "fail_to_pass": {
+          "paths": [
+            "benchmarks/fixtures/fixture-a/tasks/a-01/hidden-tests/a-01.test.ts"
+          ],
+          "command": [
+            "pnpm",
+            "exec",
+            "vitest",
+            "run",
+            "packages/catalog/src/__hidden__/a-01.test.ts"
+          ]
+        },
+        "pass_to_pass": {
+          "paths": [
+            "benchmarks/fixtures/fixture-a/tasks/a-01/hidden-tests/a-01-regression.test.ts"
+          ],
+          "command": [
+            "pnpm",
+            "exec",
+            "vitest",
+            "run",
+            "packages/catalog/src/__hidden__/a-01-regression.test.ts"
+          ]
+        }
+      },
+      "gold_modified": [
+        "packages/catalog/src/inStock.ts"
+      ]
+    },
+    {
+      "id": "a-02",
+      "repo": "fixture-a",
+      "type": "fix",
+      "statement": "Corrige el total de l\u00ednea: precio en centavos multiplicado por cantidad.",
+      "gold_patch": "benchmarks/fixtures/fixture-a/tasks/a-02/gold.patch",
+      "hidden_tests": {
+        "fail_to_pass": {
+          "paths": [
+            "benchmarks/fixtures/fixture-a/tasks/a-02/hidden-tests/a-02.test.ts"
+          ],
+          "command": [
+            "pnpm",
+            "exec",
+            "vitest",
+            "run",
+            "packages/cart/src/__hidden__/a-02.test.ts"
+          ]
+        },
+        "pass_to_pass": {
+          "paths": [
+            "benchmarks/fixtures/fixture-a/tasks/a-02/hidden-tests/a-02-regression.test.ts"
+          ],
+          "command": [
+            "pnpm",
+            "exec",
+            "vitest",
+            "run",
+            "packages/cart/src/__hidden__/a-02-regression.test.ts"
+          ]
+        }
+      },
+      "gold_modified": [
+        "packages/cart/src/lineTotal.ts"
+      ]
+    },
+    {
+      "id": "a-03",
+      "repo": "fixture-a",
+      "type": "fix",
+      "statement": "Corrige el descuento porcentual y redondea a centavos.",
+      "gold_patch": "benchmarks/fixtures/fixture-a/tasks/a-03/gold.patch",
+      "hidden_tests": {
+        "fail_to_pass": {
+          "paths": [
+            "benchmarks/fixtures/fixture-a/tasks/a-03/hidden-tests/a-03.test.ts"
+          ],
+          "command": [
+            "pnpm",
+            "exec",
+            "vitest",
+            "run",
+            "packages/pricing/src/__hidden__/a-03.test.ts"
+          ]
+        },
+        "pass_to_pass": {
+          "paths": [
+            "benchmarks/fixtures/fixture-a/tasks/a-03/hidden-tests/a-03-regression.test.ts"
+          ],
+          "command": [
+            "pnpm",
+            "exec",
+            "vitest",
+            "run",
+            "packages/pricing/src/__hidden__/a-03-regression.test.ts"
+          ]
+        }
+      },
+      "gold_modified": [
+        "packages/pricing/src/discount.ts"
+      ]
+    },
+    {
+      "id": "a-04",
+      "repo": "fixture-a",
+      "type": "fix",
+      "statement": "Elimina espacios externos antes de normalizar emails.",
+      "gold_patch": "benchmarks/fixtures/fixture-a/tasks/a-04/gold.patch",
+      "hidden_tests": {
+        "fail_to_pass": {
+          "paths": [
+            "benchmarks/fixtures/fixture-a/tasks/a-04/hidden-tests/a-04.test.ts"
+          ],
+          "command": [
+            "pnpm",
+            "exec",
+            "vitest",
+            "run",
+            "packages/users/src/__hidden__/a-04.test.ts"
+          ]
+        },
+        "pass_to_pass": {
+          "paths": [
+            "benchmarks/fixtures/fixture-a/tasks/a-04/hidden-tests/a-04-regression.test.ts"
+          ],
+          "command": [
+            "pnpm",
+            "exec",
+            "vitest",
+            "run",
+            "packages/users/src/__hidden__/a-04-regression.test.ts"
+          ]
+        }
+      },
+      "gold_modified": [
+        "packages/users/src/normalizeEmail.ts"
+      ]
+    },
+    {
+      "id": "a-05",
+      "repo": "fixture-a",
+      "type": "fix",
+      "statement": "Solo los pedidos pendientes se pueden cancelar.",
+      "gold_patch": "benchmarks/fixtures/fixture-a/tasks/a-05/gold.patch",
+      "hidden_tests": {
+        "fail_to_pass": {
+          "paths": [
+            "benchmarks/fixtures/fixture-a/tasks/a-05/hidden-tests/a-05.test.ts"
+          ],
+          "command": [
+            "pnpm",
+            "exec",
+            "vitest",
+            "run",
+            "packages/orders/src/__hidden__/a-05.test.ts"
+          ]
+        },
+        "pass_to_pass": {
+          "paths": [
+            "benchmarks/fixtures/fixture-a/tasks/a-05/hidden-tests/a-05-regression.test.ts"
+          ],
+          "command": [
+            "pnpm",
+            "exec",
+            "vitest",
+            "run",
+            "packages/orders/src/__hidden__/a-05-regression.test.ts"
+          ]
+        }
+      },
+      "gold_modified": [
+        "packages/orders/src/canCancel.ts"
+      ]
+    },
+    {
+      "id": "a-06",
+      "repo": "fixture-a",
+      "type": "fix",
+      "statement": "Muestra siempre dos decimales en precios.",
+      "gold_patch": "benchmarks/fixtures/fixture-a/tasks/a-06/gold.patch",
+      "hidden_tests": {
+        "fail_to_pass": {
+          "paths": [
+            "benchmarks/fixtures/fixture-a/tasks/a-06/hidden-tests/a-06.test.ts"
+          ],
+          "command": [
+            "pnpm",
+            "exec",
+            "vitest",
+            "run",
+            "packages/ui/src/__hidden__/a-06.test.ts"
+          ]
+        },
+        "pass_to_pass": {
+          "paths": [
+            "benchmarks/fixtures/fixture-a/tasks/a-06/hidden-tests/a-06-regression.test.ts"
+          ],
+          "command": [
+            "pnpm",
+            "exec",
+            "vitest",
+            "run",
+            "packages/ui/src/__hidden__/a-06-regression.test.ts"
+          ]
+        }
+      },
+      "gold_modified": [
+        "packages/ui/src/formatPrice.ts"
+      ]
+    },
+    {
+      "id": "a-07",
+      "repo": "fixture-a",
+      "type": "fix",
+      "statement": "Evita cantidades restantes negativas al superar el stock.",
+      "gold_patch": "benchmarks/fixtures/fixture-a/tasks/a-07/gold.patch",
+      "hidden_tests": {
+        "fail_to_pass": {
+          "paths": [
+            "benchmarks/fixtures/fixture-a/tasks/a-07/hidden-tests/a-07.test.ts"
+          ],
+          "command": [
+            "pnpm",
+            "exec",
+            "vitest",
+            "run",
+            "packages/cart/src/__hidden__/a-07.test.ts"
+          ]
+        },
+        "pass_to_pass": {
+          "paths": [
+            "benchmarks/fixtures/fixture-a/tasks/a-07/hidden-tests/a-07-regression.test.ts"
+          ],
+          "command": [
+            "pnpm",
+            "exec",
+            "vitest",
+            "run",
+            "packages/cart/src/__hidden__/a-07-regression.test.ts"
+          ]
+        }
+      },
+      "gold_modified": [
+        "packages/cart/src/remainingQuantity.ts"
+      ]
+    },
+    {
+      "id": "a-08",
+      "repo": "fixture-a",
+      "type": "fix",
+      "statement": "Aplica env\u00edo gratis tambi\u00e9n cuando el subtotal es exactamente 5000 centavos.",
+      "gold_patch": "benchmarks/fixtures/fixture-a/tasks/a-08/gold.patch",
+      "hidden_tests": {
+        "fail_to_pass": {
+          "paths": [
+            "benchmarks/fixtures/fixture-a/tasks/a-08/hidden-tests/a-08.test.ts"
+          ],
+          "command": [
+            "pnpm",
+            "exec",
+            "vitest",
+            "run",
+            "packages/pricing/src/__hidden__/a-08.test.ts"
+          ]
+        },
+        "pass_to_pass": {
+          "paths": [
+            "benchmarks/fixtures/fixture-a/tasks/a-08/hidden-tests/a-08-regression.test.ts"
+          ],
+          "command": [
+            "pnpm",
+            "exec",
+            "vitest",
+            "run",
+            "packages/pricing/src/__hidden__/a-08-regression.test.ts"
+          ]
+        }
+      },
+      "gold_modified": [
+        "packages/pricing/src/shippingCost.ts"
+      ]
+    },
+    {
+      "id": "a-09",
+      "repo": "fixture-a",
+      "type": "feature",
+      "statement": "Implementa b\u00fasqueda parcial de SKU sin distinguir may\u00fasculas y recorta la consulta.",
+      "gold_patch": "benchmarks/fixtures/fixture-a/tasks/a-09/gold.patch",
+      "hidden_tests": {
+        "fail_to_pass": {
+          "paths": [
+            "benchmarks/fixtures/fixture-a/tasks/a-09/hidden-tests/a-09.test.ts"
+          ],
+          "command": [
+            "pnpm",
+            "exec",
+            "vitest",
+            "run",
+            "packages/catalog/src/__hidden__/a-09.test.ts"
+          ]
+        },
+        "pass_to_pass": {
+          "paths": [
+            "benchmarks/fixtures/fixture-a/tasks/a-09/hidden-tests/a-09-regression.test.ts"
+          ],
+          "command": [
+            "pnpm",
+            "exec",
+            "vitest",
+            "run",
+            "packages/catalog/src/__hidden__/a-09-regression.test.ts"
+          ]
+        }
+      },
+      "gold_modified": [
+        "packages/catalog/src/skuMatches.ts"
+      ]
+    },
+    {
+      "id": "a-10",
+      "repo": "fixture-a",
+      "type": "feature",
+      "statement": "Implementa la suma de pesos de art\u00edculos en gramos.",
+      "gold_patch": "benchmarks/fixtures/fixture-a/tasks/a-10/gold.patch",
+      "hidden_tests": {
+        "fail_to_pass": {
+          "paths": [
+            "benchmarks/fixtures/fixture-a/tasks/a-10/hidden-tests/a-10.test.ts"
+          ],
+          "command": [
+            "pnpm",
+            "exec",
+            "vitest",
+            "run",
+            "packages/cart/src/__hidden__/a-10.test.ts"
+          ]
+        },
+        "pass_to_pass": {
+          "paths": [
+            "benchmarks/fixtures/fixture-a/tasks/a-10/hidden-tests/a-10-regression.test.ts"
+          ],
+          "command": [
+            "pnpm",
+            "exec",
+            "vitest",
+            "run",
+            "packages/cart/src/__hidden__/a-10-regression.test.ts"
+          ]
+        }
+      },
+      "gold_modified": [
+        "packages/cart/src/cartWeight.ts"
+      ]
+    },
+    {
+      "id": "a-11",
+      "repo": "fixture-a",
+      "type": "feature",
+      "statement": "Implementa impuestos porcentuales redondeados a centavos.",
+      "gold_patch": "benchmarks/fixtures/fixture-a/tasks/a-11/gold.patch",
+      "hidden_tests": {
+        "fail_to_pass": {
+          "paths": [
+            "benchmarks/fixtures/fixture-a/tasks/a-11/hidden-tests/a-11.test.ts"
+          ],
+          "command": [
+            "pnpm",
+            "exec",
+            "vitest",
+            "run",
+            "packages/pricing/src/__hidden__/a-11.test.ts"
+          ]
+        },
+        "pass_to_pass": {
+          "paths": [
+            "benchmarks/fixtures/fixture-a/tasks/a-11/hidden-tests/a-11-regression.test.ts"
+          ],
+          "command": [
+            "pnpm",
+            "exec",
+            "vitest",
+            "run",
+            "packages/pricing/src/__hidden__/a-11-regression.test.ts"
+          ]
+        }
+      },
+      "gold_modified": [
+        "packages/pricing/src/taxAmount.ts"
+      ]
+    },
+    {
+      "id": "a-12",
+      "repo": "fixture-a",
+      "type": "feature",
+      "statement": "Implementa nombre visible, recortando componentes y evitando espacios sobrantes.",
+      "gold_patch": "benchmarks/fixtures/fixture-a/tasks/a-12/gold.patch",
+      "hidden_tests": {
+        "fail_to_pass": {
+          "paths": [
+            "benchmarks/fixtures/fixture-a/tasks/a-12/hidden-tests/a-12.test.ts"
+          ],
+          "command": [
+            "pnpm",
+            "exec",
+            "vitest",
+            "run",
+            "packages/users/src/__hidden__/a-12.test.ts"
+          ]
+        },
+        "pass_to_pass": {
+          "paths": [
+            "benchmarks/fixtures/fixture-a/tasks/a-12/hidden-tests/a-12-regression.test.ts"
+          ],
+          "command": [
+            "pnpm",
+            "exec",
+            "vitest",
+            "run",
+            "packages/users/src/__hidden__/a-12-regression.test.ts"
+          ]
+        }
+      },
+      "gold_modified": [
+        "packages/users/src/displayName.ts"
+      ]
+    },
+    {
+      "id": "a-13",
+      "repo": "fixture-a",
+      "type": "feature",
+      "statement": "Implementa URL de seguimiento escapando el identificador como componente URI.",
+      "gold_patch": "benchmarks/fixtures/fixture-a/tasks/a-13/gold.patch",
+      "hidden_tests": {
+        "fail_to_pass": {
+          "paths": [
+            "benchmarks/fixtures/fixture-a/tasks/a-13/hidden-tests/a-13.test.ts"
+          ],
+          "command": [
+            "pnpm",
+            "exec",
+            "vitest",
+            "run",
+            "packages/orders/src/__hidden__/a-13.test.ts"
+          ]
+        },
+        "pass_to_pass": {
+          "paths": [
+            "benchmarks/fixtures/fixture-a/tasks/a-13/hidden-tests/a-13-regression.test.ts"
+          ],
+          "command": [
+            "pnpm",
+            "exec",
+            "vitest",
+            "run",
+            "packages/orders/src/__hidden__/a-13-regression.test.ts"
+          ]
+        }
+      },
+      "gold_modified": [
+        "packages/orders/src/trackingUrl.ts"
+      ]
+    },
+    {
+      "id": "a-14",
+      "repo": "fixture-a",
+      "type": "feature",
+      "statement": "Implementa etiqueta de art\u00edculos con singular y plural.",
+      "gold_patch": "benchmarks/fixtures/fixture-a/tasks/a-14/gold.patch",
+      "hidden_tests": {
+        "fail_to_pass": {
+          "paths": [
+            "benchmarks/fixtures/fixture-a/tasks/a-14/hidden-tests/a-14.test.ts"
+          ],
+          "command": [
+            "pnpm",
+            "exec",
+            "vitest",
+            "run",
+            "packages/ui/src/__hidden__/a-14.test.ts"
+          ]
+        },
+        "pass_to_pass": {
+          "paths": [
+            "benchmarks/fixtures/fixture-a/tasks/a-14/hidden-tests/a-14-regression.test.ts"
+          ],
+          "command": [
+            "pnpm",
+            "exec",
+            "vitest",
+            "run",
+            "packages/ui/src/__hidden__/a-14-regression.test.ts"
+          ]
+        }
+      },
+      "gold_modified": [
+        "packages/ui/src/itemLabel.ts"
+      ]
+    },
+    {
+      "id": "a-15",
+      "repo": "fixture-a",
+      "type": "refactor",
+      "statement": "Refactoriza stockValue: extrae y exporta multiplyCents, conservando el comportamiento p\u00fablico.",
+      "gold_patch": "benchmarks/fixtures/fixture-a/tasks/a-15/gold.patch",
+      "hidden_tests": {
+        "fail_to_pass": {
+          "paths": [
+            "benchmarks/fixtures/fixture-a/tasks/a-15/hidden-tests/a-15.test.ts"
+          ],
+          "command": [
+            "pnpm",
+            "exec",
+            "vitest",
+            "run",
+            "packages/catalog/src/__hidden__/a-15.test.ts"
+          ]
+        },
+        "pass_to_pass": {
+          "paths": [
+            "benchmarks/fixtures/fixture-a/tasks/a-15/hidden-tests/a-15-regression.test.ts"
+          ],
+          "command": [
+            "pnpm",
+            "exec",
+            "vitest",
+            "run",
+            "packages/catalog/src/__hidden__/a-15-regression.test.ts"
+          ]
+        }
+      },
+      "gold_modified": [
+        "packages/catalog/src/stockValue.ts"
+      ]
+    },
+    {
+      "id": "a-16",
+      "repo": "fixture-a",
+      "type": "refactor",
+      "statement": "Refactoriza netPrice: extrae y exporta clampCents, conservando el comportamiento p\u00fablico.",
+      "gold_patch": "benchmarks/fixtures/fixture-a/tasks/a-16/gold.patch",
+      "hidden_tests": {
+        "fail_to_pass": {
+          "paths": [
+            "benchmarks/fixtures/fixture-a/tasks/a-16/hidden-tests/a-16.test.ts"
+          ],
+          "command": [
+            "pnpm",
+            "exec",
+            "vitest",
+            "run",
+            "packages/pricing/src/__hidden__/a-16.test.ts"
+          ]
+        },
+        "pass_to_pass": {
+          "paths": [
+            "benchmarks/fixtures/fixture-a/tasks/a-16/hidden-tests/a-16-regression.test.ts"
+          ],
+          "command": [
+            "pnpm",
+            "exec",
+            "vitest",
+            "run",
+            "packages/pricing/src/__hidden__/a-16-regression.test.ts"
+          ]
+        }
+      },
+      "gold_modified": [
+        "packages/pricing/src/netPrice.ts"
+      ]
+    },
+    {
+      "id": "a-17",
+      "repo": "fixture-a",
+      "type": "refactor",
+      "statement": "Refactoriza isAdmin: extrae y exporta hasRole, conservando el comportamiento p\u00fablico.",
+      "gold_patch": "benchmarks/fixtures/fixture-a/tasks/a-17/gold.patch",
+      "hidden_tests": {
+        "fail_to_pass": {
+          "paths": [
+            "benchmarks/fixtures/fixture-a/tasks/a-17/hidden-tests/a-17.test.ts"
+          ],
+          "command": [
+            "pnpm",
+            "exec",
+            "vitest",
+            "run",
+            "packages/users/src/__hidden__/a-17.test.ts"
+          ]
+        },
+        "pass_to_pass": {
+          "paths": [
+            "benchmarks/fixtures/fixture-a/tasks/a-17/hidden-tests/a-17-regression.test.ts"
+          ],
+          "command": [
+            "pnpm",
+            "exec",
+            "vitest",
+            "run",
+            "packages/users/src/__hidden__/a-17-regression.test.ts"
+          ]
+        }
+      },
+      "gold_modified": [
+        "packages/users/src/isAdmin.ts"
+      ]
+    },
+    {
+      "id": "a-18",
+      "repo": "fixture-a",
+      "type": "refactor",
+      "statement": "Refactoriza orderTotal: extrae y exporta sumCents, conservando el comportamiento p\u00fablico.",
+      "gold_patch": "benchmarks/fixtures/fixture-a/tasks/a-18/gold.patch",
+      "hidden_tests": {
+        "fail_to_pass": {
+          "paths": [
+            "benchmarks/fixtures/fixture-a/tasks/a-18/hidden-tests/a-18.test.ts"
+          ],
+          "command": [
+            "pnpm",
+            "exec",
+            "vitest",
+            "run",
+            "packages/orders/src/__hidden__/a-18.test.ts"
+          ]
+        },
+        "pass_to_pass": {
+          "paths": [
+            "benchmarks/fixtures/fixture-a/tasks/a-18/hidden-tests/a-18-regression.test.ts"
+          ],
+          "command": [
+            "pnpm",
+            "exec",
+            "vitest",
+            "run",
+            "packages/orders/src/__hidden__/a-18-regression.test.ts"
+          ]
+        }
+      },
+      "gold_modified": [
+        "packages/orders/src/orderTotal.ts"
+      ]
+    },
+    {
+      "id": "a-19",
+      "repo": "fixture-a",
+      "type": "test",
+      "statement": "A\u00f1ade tests de regresi\u00f3n para isPositiveQuantity en isPositiveQuantity.test.ts: 0 y 1.5 deben devolver false; 2 debe devolver true.",
+      "gold_patch": "benchmarks/fixtures/fixture-a/tasks/a-19/gold.patch",
+      "hidden_tests": {
+        "fail_to_pass": {
+          "paths": [
+            "benchmarks/fixtures/fixture-a/tasks/a-19/hidden-tests/a-19.test.ts"
+          ],
+          "command": [
+            "pnpm",
+            "exec",
+            "vitest",
+            "run",
+            "packages/catalog/src/__hidden__/a-19.test.ts"
+          ]
+        },
+        "pass_to_pass": {
+          "paths": [
+            "benchmarks/fixtures/fixture-a/tasks/a-19/hidden-tests/a-19-regression.test.ts"
+          ],
+          "command": [
+            "pnpm",
+            "exec",
+            "vitest",
+            "run",
+            "packages/catalog/src/__hidden__/a-19-regression.test.ts"
+          ]
+        }
+      },
+      "gold_modified": [
+        "packages/catalog/src/isPositiveQuantity.test.ts"
+      ]
+    },
+    {
+      "id": "a-20",
+      "repo": "fixture-a",
+      "type": "test",
+      "statement": "A\u00f1ade tests de regresi\u00f3n para isValidEmail en isValidEmail.test.ts: 'a@b.com' debe devolver true; 'bad' y 'a b@c.com' deben devolver false.",
+      "gold_patch": "benchmarks/fixtures/fixture-a/tasks/a-20/gold.patch",
+      "hidden_tests": {
+        "fail_to_pass": {
+          "paths": [
+            "benchmarks/fixtures/fixture-a/tasks/a-20/hidden-tests/a-20.test.ts"
+          ],
+          "command": [
+            "pnpm",
+            "exec",
+            "vitest",
+            "run",
+            "packages/users/src/__hidden__/a-20.test.ts"
+          ]
+        },
+        "pass_to_pass": {
+          "paths": [
+            "benchmarks/fixtures/fixture-a/tasks/a-20/hidden-tests/a-20-regression.test.ts"
+          ],
+          "command": [
+            "pnpm",
+            "exec",
+            "vitest",
+            "run",
+            "packages/users/src/__hidden__/a-20-regression.test.ts"
+          ]
+        }
+      },
+      "gold_modified": [
+        "packages/users/src/isValidEmail.test.ts"
+      ]
+    }
+  ],
+  "model": null,
+  "host": {
+    "name": "claude-code",
+    "version": "PENDIENTE FKR-011"
+  },
+  "foker_version": "0.0.0",
+  "seeds": {
+    "fixture": 42,
+    "order": 42,
+    "bootstrap": 42
+  },
+  "limits": {
+    "max_turns": 60,
+    "max_minutes": 30,
+    "max_cost_usd": null
+  },
+  "prices": {
+    "version": "pending-question-2-v1",
+    "models": [
+      {
+        "model": null,
+        "input": null,
+        "cache_read": null,
+        "cache_write": null,
+        "output": null
+      }
+    ]
+  },
+  "suites": {
+    "smoke": [
+      "a-01",
+      "a-09",
+      "a-15"
+    ],
+    "full": [
+      "a-01",
+      "a-02",
+      "a-03",
+      "a-04",
+      "a-05",
+      "a-06",
+      "a-07",
+      "a-08",
+      "a-09",
+      "a-10",
+      "a-11",
+      "a-12",
+      "a-13",
+      "a-14",
+      "a-15",
+      "a-16",
+      "a-17",
+      "a-18",
+      "a-19",
+      "a-20"
+    ]
+  }
+}
