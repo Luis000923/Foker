@@ -9,6 +9,12 @@
  */
 export declare const __napiBindingTarget: 'native' | 'wasm32-wasi' | 'wasm32-wasip1'
 
+/**
+ * Normaliza `input` respecto al root absoluto `root` (REQ-XPLAT-001…003).
+ * Lanza `FKR-POL-001` si la ruta es inválida o sale del root.
+ */
+export declare function normalizePath(root: string, input: string): string
+
 /** Devuelve las versiones del núcleo nativo. */
 export declare function versionInfo(): VersionInfo
 

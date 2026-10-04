@@ -4,6 +4,7 @@
 //! grafo de dependencias, calcula el PageRank global y persiste el mapa.
 
 pub mod error;
+pub mod path;
 
 pub use error::FokerCode;
 

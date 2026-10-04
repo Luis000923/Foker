@@ -1,0 +1,210 @@
+{
+  "$comment": "Corpus de REQ-XPLAT-001…003 (léxico). Valor esperado: id normalizado o FKR-POL-001. 'windows' aplica las reglas de nombres de Windows en cualquier SO.",
+  "cases": [
+    {
+      "input": "src/a.ts",
+      "unix": "src/a.ts",
+      "windows": "src/a.ts"
+    },
+    {
+      "input": "./src/a.ts",
+      "unix": "src/a.ts",
+      "windows": "src/a.ts"
+    },
+    {
+      "input": "src//a.ts",
+      "unix": "src/a.ts",
+      "windows": "src/a.ts"
+    },
+    {
+      "input": "src/a.ts/",
+      "unix": "src/a.ts",
+      "windows": "src/a.ts"
+    },
+    {
+      "input": "src\\lib\\a.ts",
+      "unix": "src/lib/a.ts",
+      "windows": "src/lib/a.ts"
+    },
+    {
+      "input": "src/./lib/../a.ts",
+      "unix": "src/a.ts",
+      "windows": "src/a.ts"
+    },
+    {
+      "input": "a/b/c/../../d",
+      "unix": "a/d",
+      "windows": "a/d"
+    },
+    {
+      "input": ".foker/project-map.json",
+      "unix": ".foker/project-map.json",
+      "windows": ".foker/project-map.json"
+    },
+    {
+      "input": ".env",
+      "unix": ".env",
+      "windows": ".env"
+    },
+    {
+      "input": "apps/web/src/app/[id]/page.tsx",
+      "unix": "apps/web/src/app/[id]/page.tsx",
+      "windows": "apps/web/src/app/[id]/page.tsx"
+    },
+    {
+      "input": "apps/web/src/app/(group)/page.tsx",
+      "unix": "apps/web/src/app/(group)/page.tsx",
+      "windows": "apps/web/src/app/(group)/page.tsx"
+    },
+    {
+      "input": "packages/ui/src/botón.tsx",
+      "unix": "packages/ui/src/botón.tsx",
+      "windows": "packages/ui/src/botón.tsx"
+    },
+    {
+      "input": "packages/ui/src/botón.tsx",
+      "unix": "packages/ui/src/botón.tsx",
+      "windows": "packages/ui/src/botón.tsx"
+    },
+    {
+      "input": "src/café menu.ts",
+      "unix": "src/café menu.ts",
+      "windows": "src/café menu.ts"
+    },
+    {
+      "input": "src/aux.ts",
+      "unix": "src/aux.ts",
+      "windows": "FKR-POL-001"
+    },
+    {
+      "input": "src/con.d.ts",
+      "unix": "src/con.d.ts",
+      "windows": "FKR-POL-001"
+    },
+    {
+      "input": "src/console.ts",
+      "unix": "src/console.ts",
+      "windows": "src/console.ts"
+    },
+    {
+      "input": "src/a:b.ts",
+      "unix": "src/a:b.ts",
+      "windows": "FKR-POL-001"
+    },
+    {
+      "input": "src/a.ts:Zone.Identifier",
+      "unix": "src/a.ts:Zone.Identifier",
+      "windows": "FKR-POL-001"
+    },
+    {
+      "input": "NUL",
+      "unix": "NUL",
+      "windows": "FKR-POL-001"
+    },
+    {
+      "input": "com1.txt",
+      "unix": "com1.txt",
+      "windows": "FKR-POL-001"
+    },
+    {
+      "input": "",
+      "unix": "FKR-POL-001",
+      "windows": "FKR-POL-001"
+    },
+    {
+      "input": ".",
+      "unix": "FKR-POL-001",
+      "windows": "FKR-POL-001"
+    },
+    {
+      "input": "./",
+      "unix": "FKR-POL-001",
+      "windows": "FKR-POL-001"
+    },
+    {
+      "input": "a/..",
+      "unix": "FKR-POL-001",
+      "windows": "FKR-POL-001"
+    },
+    {
+      "input": "..",
+      "unix": "FKR-POL-001",
+      "windows": "FKR-POL-001"
+    },
+    {
+      "input": "../a",
+      "unix": "FKR-POL-001",
+      "windows": "FKR-POL-001"
+    },
+    {
+      "input": "a/../../b",
+      "unix": "FKR-POL-001",
+      "windows": "FKR-POL-001"
+    },
+    {
+      "input": "a/../..",
+      "unix": "FKR-POL-001",
+      "windows": "FKR-POL-001"
+    },
+    {
+      "input": "src/../../etc/passwd",
+      "unix": "FKR-POL-001",
+      "windows": "FKR-POL-001"
+    },
+    {
+      "input": "..\\..\\Windows\\win.ini",
+      "unix": "FKR-POL-001",
+      "windows": "FKR-POL-001"
+    },
+    {
+      "input": "/etc/passwd",
+      "unix": "FKR-POL-001",
+      "windows": "FKR-POL-001"
+    },
+    {
+      "input": "/",
+      "unix": "FKR-POL-001",
+      "windows": "FKR-POL-001"
+    },
+    {
+      "input": "\\Windows\\System32",
+      "unix": "FKR-POL-001",
+      "windows": "FKR-POL-001"
+    },
+    {
+      "input": "C:/Windows",
+      "unix": "FKR-POL-001",
+      "windows": "FKR-POL-001"
+    },
+    {
+      "input": "C:\\Windows",
+      "unix": "FKR-POL-001",
+      "windows": "FKR-POL-001"
+    },
+    {
+      "input": "c:relative",
+      "unix": "FKR-POL-001",
+      "windows": "FKR-POL-001"
+    },
+    {
+      "input": "\\\\server\\share\\a.ts",
+      "unix": "FKR-POL-001",
+      "windows": "FKR-POL-001"
+    },
+    {
+      "input": "//server/share/a.ts",
+      "unix": "FKR-POL-001",
+      "windows": "FKR-POL-001"
+    },
+    {
+      "input": "\\\\?\\C:\\a.ts",
+      "unix": "FKR-POL-001",
+      "windows": "FKR-POL-001"
+    },
+    {
+      "input": "src/a\u0000.ts",
+      "unix": "FKR-POL-001",
+      "windows": "FKR-POL-001"
+    }
+  ]
+}

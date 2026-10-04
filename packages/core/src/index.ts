@@ -11,6 +11,7 @@ export const PACKAGE_NAME = '@foker/core';
 /** Superficie del addon nativo que usa este paquete. */
 export interface NativeBinding {
   versionInfo(): VersionInfo;
+  normalizePath(root: string, input: string): string;
 }
 
 const require = createRequire(import.meta.url);
@@ -67,4 +68,17 @@ export function native(): NativeBinding {
 /** Versiones del núcleo nativo. */
 export function versionInfo(): VersionInfo {
   return native().versionInfo();
+}
+
+/**
+ * Normaliza una ruta de entrada a id de archivo (REQ-XPLAT-001…003).
+ * @throws {FokerError} `FKR-POL-001` si es inválida, sale del root o atraviesa un symlink externo.
+ */
+export function normalizePath(root: string, input: string): string {
+  const binding = native();
+  try {
+    return binding.normalizePath(root, input);
+  } catch (error) {
+    throw FokerError.fromNative(error);
+  }
 }
