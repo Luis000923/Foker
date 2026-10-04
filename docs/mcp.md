@@ -43,7 +43,7 @@ Auditoría en `.foker/audit/AAAA-MM-DD.jsonl`: timestamp UTC, actor, herramienta
 Claude Code, `.mcp.json`:
 
 ```json
-{"mcpServers":{"foker":{"command":"npx","args":["--no-install","foker","mcp","--root","${CLAUDE_PROJECT_DIR}"]}}}
+{"mcpServers":{"foker":{"command":"npx","args":["--no-install","foker","mcp","--root","."]}}}
 ```
 
 OpenCode, fragmento de `opencode.json`:

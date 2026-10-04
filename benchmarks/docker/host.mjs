@@ -48,4 +48,5 @@ try {
 } catch {
   process.stdout.write(r.stdout ?? '');
 }
-process.exit(r.status ?? 1);
+// exitCode y no exit(): salir en seco truncaría stdout pendiente en la tubería (64 KiB, smoke FKR-011).
+process.exitCode = r.status ?? 1;

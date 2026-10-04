@@ -82,7 +82,7 @@ it('paridad por suscripción: cuatro targets, mismas tools MCP, reglas, skills y
       expect(server['command']).toBe('npx');
       const args = server['args'] as string[];
       expect(args.slice(0, -1)).toEqual(['--no-install', 'foker', 'mcp', '--root']);
-      expect(args.at(-1)).toBe(target === 'claude-code' ? '${CLAUDE_PROJECT_DIR}' : '.');
+      expect(args.at(-1)).toBe('.');
       const rules = findBlock(await read('AGENTS.md'))?.body ?? '';
       expect(hash(rules)).toBe(hash(agentsBlock()));
       const skills = await Promise.all(

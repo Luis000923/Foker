@@ -42,8 +42,9 @@ export const claudeCode: HostAdapter = {
         kind: 'json',
         path: '.mcp.json',
         set: [
-          // biome-ignore lint/suspicious/noTemplateCurlyInString: Claude Code expande ${CLAUDE_PROJECT_DIR} literal.
-          { pointer: ['mcpServers', 'foker'], value: { command: 'npx', args: [...MCP_ARGS, '${CLAUDE_PROJECT_DIR}'] } },
+          // Claude Code 2.1.289 no expande ${CLAUDE_PROJECT_DIR} al lanzar el servidor (smoke FKR-011):
+          // la raíz es el directorio de trabajo del anfitrión, como en los demás targets.
+          { pointer: ['mcpServers', 'foker'], value: { command: 'npx', args: [...MCP_ARGS, '.'] } },
         ],
         arrays: [],
       },

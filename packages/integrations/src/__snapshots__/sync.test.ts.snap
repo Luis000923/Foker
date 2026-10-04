@@ -205,7 +205,7 @@ config_file = "agents/foker-reviewer.toml"
         "foker",
         "mcp",
         "--root",
-        "\${CLAUDE_PROJECT_DIR}"
+        "."
       ]
     }
   }
@@ -376,7 +376,7 @@ subagente \`foker-implementer\`; para revisar, en \`foker-reviewer\`.
       "kind": "json",
       "owned": [
         {
-          "hash": "sha256:8f57b81984e777f4d548b4993cf2e5a9e5152692770fd987e5014d380eb20518",
+          "hash": "sha256:a766d2452e002a5a9a06ecfe14b4df2f6d0706b9cf38e64d7917b5814fcb6b2f",
           "pointer": "/mcpServers/foker"
         }
       ]
