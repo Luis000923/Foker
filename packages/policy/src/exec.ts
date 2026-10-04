@@ -12,11 +12,44 @@ export function redact(
   allowlist: readonly string[] = DEFAULT_POLICY.env_allowlist,
 ): string {
   const secrets = Object.entries(env)
-    .filter(([key, value]) => !allowlist.includes(key) && Boolean(value))
+    .filter(([key, value]) => !allowlist.includes(key) && redactableEnv(key, value))
     .map(([, value]) => value as string)
     .sort((a, b) => b.length - a.length);
   for (const secret of secrets) text = text.split(secret).join('[REDACTED:env]');
   return redactSecrets(text);
+}
+/** Variables de entorno de metadatos del shell y de npm/pnpm que no son secretos y aparecen en la salida. */
+export const NON_SECRET_ENV = new Set([
+  'PWD',
+  'OLDPWD',
+  'INIT_CWD',
+  'SHLVL',
+  '_',
+  'TERM',
+  'TERM_PROGRAM',
+  'COLORTERM',
+  'SHELL',
+  'USER',
+  'LOGNAME',
+  'HOSTNAME',
+  'LANGUAGE',
+  'NODE',
+  'npm_execpath',
+  'npm_node_execpath',
+  'npm_lifecycle_event',
+  'npm_lifecycle_script',
+  'npm_package_name',
+  'npm_package_version',
+  'npm_package_json',
+]);
+
+/**
+ * Un valor se redacta salvo que sea de una variable de metadatos conocida o tenga menos de 4 caracteres
+ * (redactar `1` destroza la salida y no protege nada). No se exime por la forma del valor: un secreto
+ * puede ser numérico o empezar por `/`.
+ */
+export function redactableEnv(key: string, value: string | undefined): value is string {
+  return Boolean(value) && (value as string).length >= 4 && !NON_SECRET_ENV.has(key);
 }
 const affectedMarker = '$' + '{affected_packages}';
 

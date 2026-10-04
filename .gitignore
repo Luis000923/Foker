@@ -18,3 +18,5 @@ coverage/
 
 /packages/engine/skills/
 /packages/integrations/roles/
+
+/packages/cli/templates/

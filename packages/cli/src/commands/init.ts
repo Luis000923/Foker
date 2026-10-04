@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import { basename, join, resolve } from 'node:path';
+import { lstat, mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
+import { basename, dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { FokerError, normalizePath, resolveConfig } from '@foker/engine';
 import { detectHosts, HOST_IDS } from '@foker/integrations';
 import { type FokerConfig, type FokerMdFrontmatter, formatIssues, validate } from '@foker/schemas';
@@ -84,6 +85,70 @@ export const RULES_TEMPLATE = `# Reglas del proyecto
 - No añadas dependencias sin justificarlo en la descripción de la tarea.
 `;
 
+/** Resuelve datos publicados o del checkout como roles/skills. Preflight antes de escribir. */
+async function prepareTemplate(root: string, name: string, force: boolean, spec?: FokerMdFrontmatter) {
+  const packaged = fileURLToPath(new URL('../../templates/nextjs-turbo/', import.meta.url));
+  const development = fileURLToPath(new URL('../../../../templates/nextjs-turbo/', import.meta.url));
+  const source = existsSync(packaged) ? packaged : development;
+  if (existsSync(root) && !force && (await readdir(root)).length) {
+    throw new FokerError(
+      'FKR-INP-001',
+      'La plantilla requiere un directorio vacío; usa --force para sobrescribir solo sus archivos.',
+    );
+  }
+  const files: { path: string; content: string; overwrite: boolean }[] = [];
+  async function walk(prefix = '') {
+    for (const entry of (await readdir(join(source, prefix), { withFileTypes: true })).sort((a, b) =>
+      a.name.localeCompare(b.name),
+    )) {
+      const path = prefix ? `${prefix}/${entry.name}` : entry.name;
+      if (entry.isDirectory()) await walk(path);
+      else if (entry.isFile()) {
+        let content = await readFile(join(source, path), 'utf8');
+        if (path === 'package.json') {
+          const pkg = JSON.parse(content);
+          pkg.name = name;
+          content = `${JSON.stringify(pkg, null, 2)}\n`;
+        }
+        if (path === 'foker.md') {
+          const frontmatter = {
+            foker_spec: 1,
+            name,
+            description: spec?.description ?? 'Aplicación web inicial',
+            template: { name: 'nextjs-turbo', ...(spec?.template?.options ? { options: spec.template.options } : {}) },
+          };
+          const result = validate('foker-md', frontmatter);
+          if (!result.ok) throw new FokerError('FKR-CFG-001', formatIssues(result.issues));
+          content = content
+            .replace(/^---\n[\s\S]*?\n---/, `---\n${stringify(frontmatter)}---`)
+            .replaceAll('foker-project', name);
+        }
+        files.push({ path, content, overwrite: existsSync(join(root, path)) });
+      }
+    }
+  }
+  await walk();
+  // Rechaza enlaces y colisiones de directorio en toda la ruta de destino.
+  for (const file of files) {
+    let path = join(root, file.path);
+    const destination = path;
+    while (true) {
+      const stat = await lstat(path).catch((error: NodeJS.ErrnoException) => {
+        if (error.code === 'ENOENT' || error.code === 'ENOTDIR') return undefined;
+        throw error;
+      });
+      if (stat && (stat.isSymbolicLink() || (path === destination ? !stat.isFile() : !stat.isDirectory()))) {
+        throw new FokerError('FKR-INP-001', `Destino inseguro o incompatible: ${path}`);
+      }
+      if (path === root) break;
+      const parent = dirname(path);
+      if (parent === path) break;
+      path = parent;
+    }
+  }
+  return files;
+}
+
 export const initCommand: Command = {
   name: 'init',
   description: 'Inicializa Foker en un repositorio (o crea uno desde plantilla) y ejecuta sync',
@@ -96,7 +161,7 @@ export const initCommand: Command = {
       'string',
       `Anfitriones separados por comas (${HOST_IDS.join(', ')}); por defecto los detectados o todos`,
     ),
-    flag('force', 'boolean', 'Sobrescribe foker.config.yaml y foker/rules.md si existen'),
+    flag('force', 'boolean', 'Sobrescribe archivos de la plantilla o config/reglas; conserva archivos ajenos'),
   ],
   async run(ctx) {
     const root = resolve(ctx.cwd, ctx.args[0] ?? '.');
@@ -107,8 +172,8 @@ export const initCommand: Command = {
     if (template && !(TEMPLATES as readonly string[]).includes(template)) {
       throw new FokerError('FKR-INP-001', `Plantilla desconocida: ${template}`);
     }
-    if (template) throw new FokerError('FKR-INP-001', 'La plantilla nextjs-turbo llega con FKR-068.');
-    if (!existsSync(root)) throw new FokerError('FKR-CFG-002', `No existe el directorio ${root}`);
+
+    if (!template && !existsSync(root)) throw new FokerError('FKR-CFG-002', `No existe el directorio ${root}`);
 
     const configPath = join(root, 'foker.config.yaml');
     if (existsSync(configPath) && !force) {
@@ -118,7 +183,17 @@ export const initCommand: Command = {
       );
     }
     const pkg = readJson(join(root, 'package.json'));
-    const name = spec?.name ?? (typeof pkg?.['name'] === 'string' ? (pkg['name'] as string) : basename(root));
+    const name =
+      spec?.name ??
+      (template
+        ? basename(root)
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-|-$/g, '')
+            .slice(0, 214)
+            .replace(/-$/, '') || 'foker-project'
+        : undefined) ??
+      (typeof pkg?.['name'] === 'string' ? (pkg['name'] as string) : basename(root));
     const targetsFlag = String(ctx.flags['targets'] ?? '');
     const detected = detectHosts((path) => existsSync(join(root, path)));
     const targets = targetsFlag
@@ -132,8 +207,20 @@ export const initCommand: Command = {
     const unknown = targets.filter((t) => !(HOST_IDS as readonly string[]).includes(t));
     if (unknown.length) throw new FokerError('FKR-INP-001', `Anfitrión desconocido: ${unknown.join(', ')}`);
 
+    const templateFiles = template ? await prepareTemplate(root, name, force, spec) : [];
+    const templateConfig = templateFiles.find((file) => file.path === 'foker.config.yaml');
     const config = {
-      ...initialConfig(root, name, spec?.description),
+      ...(templateConfig ? parse(templateConfig.content) : initialConfig(root, name, spec?.description)),
+      ...(template
+        ? {
+            project: { name, ...(spec?.description ? { description: spec.description } : {}) },
+            template: {
+              name: template,
+              version: parse(templateConfig?.content ?? '').template.version,
+              ...(spec?.template?.options ? { options: spec.template.options } : {}),
+            },
+          }
+        : {}),
       integrations: { targets: [...new Set(targets)].sort() },
     };
     const result = validate<FokerConfig>('foker-config', config);
@@ -147,25 +234,30 @@ export const initCommand: Command = {
     const rulesPath = join(root, 'foker/rules.md');
     const writeRules = force || !existsSync(rulesPath);
 
-    const files = [
-      'foker.config.yaml',
-      ...(writeRules ? ['foker/rules.md'] : []),
-      ...(needsIgnore ? ['.gitignore'] : []),
-    ];
+    const files = template
+      ? templateFiles.map((file) => file.path)
+      : ['foker.config.yaml', ...(writeRules ? ['foker/rules.md'] : []), ...(needsIgnore ? ['.gitignore'] : [])];
     if (!dryRun) {
+      for (const file of templateFiles) {
+        await mkdir(dirname(join(root, file.path)), { recursive: true });
+        await writeFile(join(root, file.path), file.content, 'utf8');
+      }
       await writeFile(configPath, configText, 'utf8');
-      if (writeRules) {
+      if (writeRules && !template) {
         await mkdir(join(root, 'foker'), { recursive: true });
         await writeFile(rulesPath, RULES_TEMPLATE, 'utf8');
       }
-      if (needsIgnore)
+      if (needsIgnore && !template)
         await writeFile(gitignorePath, `${gitignore}${gitignore && !gitignore.endsWith('\n') ? '\n' : ''}.foker/\n`);
     }
+    const warnings = templateFiles
+      .filter((file) => file.overwrite)
+      .map((file) => ({ code: 'FKR-INP-001', message: `Se sobrescribe ${file.path}` }));
     const { plan, applied } = await runSync(root, { dryRun, config: resolveConfig(result.value).config });
     if (plan.conflicts.length) {
       return {
         data: { root, files, conflicts: plan.conflicts },
-        warnings: [],
+        warnings,
         errors: plan.conflicts.map((c) => ({
           code: 'FKR-SYN-001',
           message: `${c.path}: ${c.reason}`,
@@ -180,8 +272,10 @@ export const initCommand: Command = {
       .join('\n')}\n${dryRun ? '' : '\nSiguiente: revisa foker.config.yaml y ejecuta foker trust y foker map.\n'}`;
     return {
       data: { root, targets: [...new Set(targets)].sort(), files, synced, applied },
-      warnings: [],
-      human,
+      warnings,
+      human:
+        human +
+        (template ? '\nNo se ejecuta pnpm install. Ejecútalo, revisa y versiona pnpm-lock.yaml antes de CI.\n' : ''),
       exitCode: 0,
     };
   },

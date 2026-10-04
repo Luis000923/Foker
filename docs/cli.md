@@ -42,7 +42,7 @@ Inicializa Foker en un repositorio (o crea uno desde plantilla) y ejecuta sync
 | --template | string | "" | Plantilla (nextjs-turbo) |
 | --from-spec | string | "" | Lee nombre, descripción y plantilla del frontmatter de foker.md |
 | --targets | string | "" | Anfitriones separados por comas (claude-code, opencode, antigravity); por defecto los detectados o todos |
-| --force | boolean | false | Sobrescribe foker.config.yaml y foker/rules.md si existen |
+| --force | boolean | false | Sobrescribe archivos de la plantilla o config/reglas; conserva archivos ajenos |
 
 ## foker map
 
