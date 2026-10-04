@@ -21,7 +21,7 @@ Guía de entorno y comandos: [`docs/development.md`](docs/development.md).
 ## Definition of Done
 
 - Código + tests + documentación del área actualizada.
-- `pnpm lint`, `pnpm typecheck`, `pnpm check:deps` y `pnpm test` en verde.
+- `pnpm verify` en verde (fmt, clippy, Biome, tsc, regla de dependencias, generados y tests).
 - `cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D warnings` y `cargo deny check` en verde.
 - Criterios de aceptación del issue cumplidos y verificados.
 

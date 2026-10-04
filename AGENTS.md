@@ -15,8 +15,7 @@ de ellos es PENDIENTE (ver `spec/RECONSTRUCCION.md`). No inventes su contenido.
 ## Flujo de trabajo
 
 - Una rama por issue: `feat/FKR-NNN-<slug>`. Commits Conventional Commits en español.
-- Definition of Done: código + tests + docs del área + `pnpm lint`, `pnpm typecheck`, `pnpm test` y
-  `cargo clippy --workspace --all-targets -- -D warnings` en verde.
+- Definition of Done: código + tests + docs del área + `pnpm verify` en verde.
 - Los módulos respetan el grafo de FOKER-SPEC §4.2. Un paquete nunca importa a otro situado a su derecha.
 - `foker-napi` no contiene lógica de dominio (REQ-NAPI-001).
 - No modifiques contratos (API nativa, esquemas JSON, formatos versionados) sin ADR.

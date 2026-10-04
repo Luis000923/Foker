@@ -25,6 +25,7 @@ Resumen de FOKER-SPEC §7.7 y §19.
 | `pnpm test` | `build:native` + `cargo nextest run` + `vitest run` |
 | `pnpm test:rust` / `pnpm test:ts` | Cada mitad por separado (`test:ts` necesita el addon compilado) |
 | `pnpm clean` | Borra `dist/` y `target/` |
+| `pnpm verify` | Todo lo que exige la Definition of Done: fmt, clippy, Biome, tsc, regla de dependencias, generados y tests |
 
 ## Organización del código TS
 

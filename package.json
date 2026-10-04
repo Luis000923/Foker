@@ -18,7 +18,8 @@
     "test:ts": "vitest run",
     "clean": "node scripts/clean.mjs",
     "check:deps": "node scripts/check-deps.mjs",
-    "build:native": "pnpm --filter @foker/core run build:native"
+    "build:native": "pnpm --filter @foker/core run build:native",
+    "verify": "cargo fmt --all --check && cargo clippy --workspace --all-targets -q -- -D warnings && pnpm lint && pnpm typecheck && pnpm check:deps && pnpm --filter @foker/schemas run generate:check && pnpm test"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",
