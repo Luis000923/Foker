@@ -23,6 +23,7 @@ export interface Context {
   log(message: string): void;
 }
 export interface Result {
+  errors?: Message[];
   human?: string;
   json?: boolean;
   data: unknown;

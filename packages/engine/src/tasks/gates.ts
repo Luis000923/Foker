@@ -10,21 +10,20 @@ import {
   PACKAGE_VERSION,
 } from '@foker/core';
 import { DEFAULT_POLICY, scanAddedLines, TrustStore } from '@foker/policy';
-import {
-  type CheckResult,
-  type Finding,
-  type FokerSkill,
-  type GateResult,
-  type ProjectMap,
-  type TaskChange,
-  type TaskEvidence,
-  type TaskRecord,
-  validate,
+import type {
+  CheckResult,
+  Finding,
+  FokerSkill,
+  GateResult,
+  ProjectMap,
+  TaskChange,
+  TaskEvidence,
+  TaskRecord,
 } from '@foker/schemas';
-import { parse } from 'yaml';
 import { loadConfig } from '../config.js';
 import { type FindingParser, runProfileCheck } from '../findings/index.js';
 import { gitDirtyFiles, gitRead } from '../git.js';
+import { effectiveWritePaths, loadSkill } from '../skills/index.js';
 import { BaselineTamperedError, diffSinceBaseline, treeSnapshot } from './baseline.js';
 import { TaskStore } from './index.js';
 
@@ -155,20 +154,9 @@ function profileChecks(loaded: Loaded, profile: string) {
   if (!found) throw new FokerError('FKR-VAL-001', `Perfil inexistente: ${profile}`);
   return found.checks;
 }
-async function skillFor(root: string, task: TaskRecord): Promise<FokerSkill | null> {
+async function skillFor(root: string, task: TaskRecord, options: Options = {}): Promise<FokerSkill | null> {
   if (!task.skill) return null;
-  if (!/^[a-z0-9][a-z0-9-]*$/.test(task.skill)) throw new FokerError('FKR-VAL-001', 'Nombre de skill inválido');
-  const path = normalizePath(root, `foker/skills/${task.skill}/foker.skill.yaml`);
-  const result = validate<FokerSkill>(
-    'foker-skill',
-    parse(
-      await readFile(join(root, path), 'utf8').catch(() => {
-        throw new FokerError('FKR-VAL-001', 'Skill inexistente');
-      }),
-    ),
-  );
-  if (!result.ok || result.value.name !== task.skill) throw new FokerError('FKR-VAL-001', 'Skill inválida');
-  return result.value;
+  return (await loadSkill(root, task.skill, options)).manifest;
 }
 async function baselineText(root: string, task: Pick<TaskRecord, 'baseline'>, path: string) {
   if (!task.baseline.git_head || task.baseline.dirty_files.includes(path)) return null;
@@ -263,7 +251,7 @@ async function evaluate(root: string, task: TaskRecord, options: Options): Promi
         result: 'BLOCKED',
       };
     }
-    const skill = await skillFor(root, task);
+    const skill = await skillFor(root, task, options);
     const approvedPaths = new Set(
       task.approvals.some((a) => a.action === 'approve')
         ? task.last_gates.flatMap((gate) =>
@@ -280,9 +268,7 @@ async function evaluate(root: string, task: TaskRecord, options: Options): Promi
     const secretFindings: Finding[] = [];
     const policy: GateResult = { gate: 'policy', status: 'pass', findings: [] };
     for (const change of changes) {
-      const inScope =
-        matchGlobs(change.path, task.scope.paths) &&
-        (!skill?.permissions.write_paths || matchGlobs(change.path, skill.permissions.write_paths));
+      const inScope = effectiveWritePaths(task.scope.paths, skill?.permissions ?? {})(change.path);
       if (!inScope && !approvedPaths.has(change.path)) {
         const approval = change.change === 'deleted' && loaded.policy.approval_required.file_deletions_outside_scope;
         if (!approval || scope.status === 'pass') scope.status = approval ? 'approval_required' : 'fail';
@@ -396,7 +382,7 @@ export async function submitTask(root: string, taskId: string, options: Options 
     if (changes !== null) {
       try {
         const loaded = await loadConfig(root, options.configPath ? { configPath: options.configPath } : {});
-        const skill = await skillFor(root, initial);
+        const skill = await skillFor(root, initial, options);
         for (const name of [...profileChecks(loaded, initial.profile), ...(skill?.validation.checks ?? [])])
           if (!loaded.config.validation.checks[name]) throw new FokerError('FKR-VAL-001', `Check inexistente: ${name}`);
       } catch (error) {

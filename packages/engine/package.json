@@ -12,13 +12,14 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "skills"
   ],
   "engines": {
     "node": ">=22.14.0"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json"
+    "build": "node ../../scripts/copy-skills.mjs && tsc -p tsconfig.json"
   },
   "dependencies": {
     "@foker/core": "workspace:*",

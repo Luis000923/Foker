@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, readdir, readFile, rm, symlink, writeFile } from 'node:
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import * as engineApi from '@foker/engine';
-import { hashCanonicalJson, loadConfig, TrustStore } from '@foker/engine';
+import { hashCanonicalJson, loadConfig, skillTemplate, TrustStore } from '@foker/engine';
 import { Client } from '@modelcontextprotocol/client';
 import { Client as LegacyClient } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/server';
@@ -19,7 +19,8 @@ async function fixture(legacy = false) {
   roots.push(root);
   await mkdir(join(root, 'foker/skills/demo'), { recursive: true });
   await writeFile(join(root, 'foker/rules.md'), '# Rules\n');
-  await writeFile(join(root, 'foker/skills/demo/SKILL.md'), '# Demo');
+  await writeFile(join(root, 'foker/skills/demo/SKILL.md'), skillTemplate('demo').markdown);
+  await writeFile(join(root, 'foker/skills/demo/foker.skill.yaml'), JSON.stringify(skillTemplate('demo').manifest));
   await writeFile(join(root, 'index.ts'), 'export const demo = 1;\n');
   await writeFile(
     join(root, 'foker.config.yaml'),
@@ -140,7 +141,13 @@ for (const legacy of [false, true])
         cacheScope: 'private',
       });
       expect((await f.client.listResourceTemplates()).resourceTemplates).toHaveLength(2);
-      for (const uri of ['foker://rules', 'foker://map/outline', 'foker://skills/demo', `foker://tasks/${id}`])
+      for (const uri of [
+        'foker://rules',
+        'foker://map/outline',
+        'foker://skills/demo',
+        'foker://skills/foker-workflow',
+        `foker://tasks/${id}`,
+      ])
         expect(await f.client.readResource({ uri })).toHaveProperty('cacheScope', 'private');
       expect(await tree(f.root)).toEqual(before);
       const entries = (
@@ -292,3 +299,20 @@ for (const legacy of [false, true])
       await f.server.close();
     }
   });
+
+it('recurso skills aplica disabled y devuelve FKR-SKL-001 si falta', async () => {
+  const f = await fixture();
+  try {
+    await expect(f.client.readResource({ uri: 'foker://skills/missing' })).rejects.toMatchObject({
+      data: { code: 'FKR-SKL-001' },
+    });
+    const path = join(f.root, 'foker.config.yaml');
+    await writeFile(path, `${await readFile(path, 'utf8')}\nskills: {disabled: [foker-workflow]}\n`);
+    await expect(f.client.readResource({ uri: 'foker://skills/foker-workflow' })).rejects.toMatchObject({
+      data: { code: 'FKR-SKL-001' },
+    });
+  } finally {
+    await f.client.close();
+    await f.server.close();
+  }
+});

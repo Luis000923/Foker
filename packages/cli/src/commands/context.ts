@@ -24,7 +24,10 @@ export const contextCommand: Command = {
     if (intent && !['fix', 'add', 'modify', 'refactor', 'test', 'explain'].includes(intent))
       throw new FokerError('FKR-INP-001', '--intent inválido.');
     const anchors = ctx.flags['anchor'] as string[];
-    const inputs = await gatherContextInputs(ctx.cwd, ctx.flags['skill'] ? { skill: String(ctx.flags['skill']) } : {});
+    const inputs = await gatherContextInputs(ctx.cwd, {
+      ...(ctx.flags['skill'] ? { skill: String(ctx.flags['skill']) } : {}),
+      ...(ctx.flags['config'] ? { configPath: String(ctx.flags['config']) } : {}),
+    });
     const loaded = await loadConfig(ctx.cwd, ctx.flags['config'] ? { configPath: String(ctx.flags['config']) } : {});
     const engine = await openEngine(ctx.cwd, { ...loaded.mapConfig, readOnly: true });
     const pack = await engine.buildContext({

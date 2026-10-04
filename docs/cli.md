@@ -6,6 +6,7 @@ Generado desde el registro de comandos. Regenerar con `UPDATE_SNAPSHOTS=1 ./node
 
 | Flag | Tipo | Default | Descripción |
 |---|---|---|---|
+| --dry-run | boolean | false | Previsualiza archivos sin escribir |
 | --cwd | string | "" | Directorio de trabajo |
 | --config | string | "" | Ruta de configuración |
 | --json | boolean | false | Salida JSON |
@@ -77,47 +78,6 @@ Arranca MCP stdio
 | Flag | Tipo | Default | Descripción |
 |---|---|---|---|
 | --root | string | "" | Raíz |
-
-## foker skill
-
-Gestiona skills
-
-| Flag | Tipo | Default | Descripción |
-|---|---|---|---|
-| --strict | boolean | false | Validación estricta |
-
-## foker skill list
-
-Skills: list
-
-| Flag | Tipo | Default | Descripción |
-|---|---|---|---|
-| --strict | boolean | false | Validación estricta |
-
-## foker skill show
-
-Skills: show
-
-| Flag | Tipo | Default | Descripción |
-|---|---|---|---|
-| --strict | boolean | false | Validación estricta |
-
-## foker skill validate
-
-Skills: validate
-
-| Flag | Tipo | Default | Descripción |
-|---|---|---|---|
-| --strict | boolean | false | Validación estricta |
-
-## foker skill new
-
-Skills: new
-
-| Flag | Tipo | Default | Descripción |
-|---|---|---|---|
-| --strict | boolean | false | Validación estricta |
-| --dry-run | boolean | false | Previsualiza archivos |
 
 ## foker sync
 
@@ -282,6 +242,38 @@ Tareas: verify
 | --reason | string | "" | Razón |
 | --summary | string | "" | Resumen del intento |
 | --yes | boolean | false | Confirma en CI explícito |
+
+## foker skill list
+
+Skills: list
+
+| Flag | Tipo | Default | Descripción |
+|---|---|---|---|
+| --strict | boolean | false | Validación estricta |
+
+## foker skill show
+
+Skills: show
+
+| Flag | Tipo | Default | Descripción |
+|---|---|---|---|
+| --strict | boolean | false | Validación estricta |
+
+## foker skill validate
+
+Skills: validate
+
+| Flag | Tipo | Default | Descripción |
+|---|---|---|---|
+| --strict | boolean | false | Validación estricta |
+
+## foker skill new
+
+Skills: new
+
+| Flag | Tipo | Default | Descripción |
+|---|---|---|---|
+| --strict | boolean | false | Validación estricta |
 
 ## Datos de context
 

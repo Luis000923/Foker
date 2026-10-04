@@ -12,6 +12,7 @@ export const PACKAGE_NAME = '@foker/core';
 
 /** Superficie del addon nativo que usa este paquete. */
 export interface NativeBinding {
+  estimateTokens?(text: string): number;
   hashBytes?(bytes: Buffer): string;
   hashCanonicalJson?(json: string): string;
   versionInfo(): VersionInfo;
@@ -125,6 +126,17 @@ export function hashBytes(bytes: Buffer): string {
     const hash = native().hashBytes;
     if (!hash) throw new FokerError('FKR-INT-002', 'El addon no expone hashBytes');
     return hash(bytes);
+  } catch (error) {
+    throw FokerError.fromNative(error);
+  }
+}
+
+/** Estimación de tokens del núcleo de contexto. */
+export function estimateTokens(text: string): number {
+  try {
+    const estimate = native().estimateTokens;
+    if (!estimate) throw new FokerError('FKR-INT-002', 'El addon no expone estimateTokens');
+    return estimate(text);
   } catch (error) {
     throw FokerError.fromNative(error);
   }

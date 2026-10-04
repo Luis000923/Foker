@@ -116,6 +116,7 @@ export async function main(argv: string[], env: NodeJS.ProcessEnv, io: IO): Prom
     errors.push({ code: failure.code, message: failure.message });
     if (debug && !mcpMode) io.stderr(`${failure.stack ?? failure.message}\n`);
   }
+  errors.push(...(result.errors ?? []));
   const duration = Math.max(0, Math.round(performance.now() - start));
   if (mcpMode && (errors.length || (!argv.includes('--help') && !argv.includes('-h') && !argv.includes('--version')))) {
     for (const error of errors)

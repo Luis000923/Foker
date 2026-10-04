@@ -102,3 +102,9 @@ pub fn hash_canonical_json(json: String) -> napi::Result<String, FokerCode> {
 pub fn hash_bytes(bytes: napi::bindgen_prelude::Buffer) -> napi::Result<String, FokerCode> {
     guard(|| Ok(foker_map::canonical::hash_bytes(&bytes)))
 }
+
+/// Estima tokens delegando exclusivamente en foker-context.
+#[napi]
+pub fn estimate_tokens(text: String) -> napi::Result<u32, FokerCode> {
+    guard(|| Ok(foker_context::estimate_tokens(&text).min(u32::MAX as usize) as u32))
+}

@@ -173,6 +173,9 @@ export interface EngineConfig {
   kinds?: KindGlobsConfig
 }
 
+/** Estima tokens delegando exclusivamente en foker-context. */
+export declare function estimateTokens(text: string): number
+
 /** Información de un archivo. */
 export interface FileInfo {
   /** Id. */

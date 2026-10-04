@@ -2,6 +2,7 @@ import { contextCommand } from './commands/context.js';
 import { mapCommand } from './commands/map.js';
 import { mcpCommand } from './commands/mcp.js';
 import { pendingCommands } from './commands/pending.js';
+import { skillCommands } from './commands/skills.js';
 import { taskCommands, validateCommand } from './commands/tasks.js';
 import { trustCommand } from './commands/trust.js';
 import { flag } from './types.js';
@@ -12,12 +13,14 @@ export const commands = [
   mcpCommand,
   ...pendingCommands
     .slice(1)
-    .filter((c) => c.name !== 'validate' && !c.name.startsWith('task'))
+    .filter((c) => c.name !== 'validate' && !c.name.startsWith('task') && !c.name.startsWith('skill'))
     .map((c) => (c.name === 'trust' ? trustCommand : c)),
   validateCommand,
   ...taskCommands,
+  ...skillCommands,
 ];
 export const globalFlags = [
+  flag('dry-run', 'boolean', 'Previsualiza archivos sin escribir'),
   flag('cwd', 'string', 'Directorio de trabajo'),
   flag('config', 'string', 'Ruta de configuración'),
   ...['json', 'quiet', 'debug', 'no-color', 'ci', 'non-interactive', 'version', 'help'].map((name) =>

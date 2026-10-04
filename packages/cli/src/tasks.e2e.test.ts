@@ -255,6 +255,10 @@ it('solo líneas añadidas: secreto preexistente no bloquea; fallback sin git s�
 it('G5 ejecuta checks de skill y sus permisos solo restringen el alcance', async () => {
   const f = await fixture();
   await mkdir(join(f.root, 'foker/skills/demo'), { recursive: true });
+  await writeFile(
+    join(f.root, 'foker/skills/demo/SKILL.md'),
+    '---\nname: demo\ndescription: Demo\n---\n## Procedimiento\nValidar.',
+  );
   const sidecar = {
     schema_version: 1,
     name: 'demo',
@@ -263,7 +267,7 @@ it('G5 ejecuta checks de skill y sus permisos solo restringen el alcance', async
     triggers: { keywords: ['demo'] },
     constraints: [],
     tools: ['foker_check'],
-    workflow_ref: 'SKILL.md',
+    workflow_ref: 'SKILL.md#procedimiento',
     validation: { checks: ['test'] },
     outputs: [{ kind: 'modified_files' }],
     permissions: { write_paths: ['agent.txt'] },

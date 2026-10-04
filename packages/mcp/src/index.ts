@@ -8,6 +8,7 @@ import {
   FokerError,
   gatherContextInputs,
   loadConfig,
+  loadSkill,
   normalizePath,
   openEngine,
   submitTask,
@@ -350,10 +351,7 @@ function serverFactory(options: FokerServerOptions) {
             .map(([id]) => `${id}: ${(engine.fileInfo(id)?.exports ?? []).join(', ')}`)
             .join('\n');
         } else if (/^foker:\/\/skills\/[a-z0-9]+(?:-[a-z0-9]+)*$/.test(uri))
-          text = await readFile(
-            join(root, normalizePath(root, `foker/skills/${uri.slice('foker://skills/'.length)}/SKILL.md`)),
-            'utf8',
-          );
+          text = (await loadSkill(root, uri.slice('foker://skills/'.length))).markdown;
         else if (/^foker:\/\/tasks\/tsk_[0-9A-HJKMNP-TV-Z]{26}$/.test(uri)) {
           await assertPrivateState(root);
           text = JSON.stringify(sanitize(await store(ctx).touch(uri.slice('foker://tasks/'.length))));

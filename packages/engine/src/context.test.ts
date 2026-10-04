@@ -4,7 +4,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { expect, it } from 'vitest';
+import { stringify } from 'yaml';
 import { gatherContextInputs } from './context.js';
+import { skillTemplate } from './skills/index.js';
 
 it('lee reglas y skill sin frontmatter y su contexto requerido', async () => {
   const root = mkdtempSync(join(tmpdir(), 'foker-inputs-'));
@@ -12,16 +14,19 @@ it('lee reglas y skill sin frontmatter y su contexto requerido', async () => {
     const directory = join(root, 'foker/skills/button');
     mkdirSync(directory, { recursive: true });
     writeFileSync(join(root, 'foker/rules.md'), 'Reglas del proyecto');
-    writeFileSync(join(directory, 'SKILL.md'), '---\nname: button\n---\nCuerpo de la skill');
+    writeFileSync(join(directory, 'SKILL.md'), `${skillTemplate('button').markdown}Cuerpo de la skill`);
     writeFileSync(
       join(directory, 'foker.skill.yaml'),
-      'required_context:\n  files: [src/button.ts]\n  symbols: [Button]\n',
+      stringify({
+        ...skillTemplate('button').manifest,
+        required_context: { files: ['src/button.ts'], symbols: ['Button'] },
+      }),
     );
     expect(await gatherContextInputs(root, { skill: 'button' })).toMatchObject({
       rules: 'Reglas del proyecto',
       skill: {
         name: 'button',
-        body: 'Cuerpo de la skill',
+        body: expect.stringContaining('Cuerpo de la skill'),
         requiredFiles: ['src/button.ts'],
         requiredSymbols: ['Button'],
       },
