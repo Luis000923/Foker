@@ -17,5 +17,15 @@ export default defineConfig({
     ],
     exclude: [...configDefaults.exclude, 'benchmarks/fixtures/fixture-a/tasks/**', 'benchmarks/generated/**'],
     environment: 'node',
+    coverage: {
+      provider: 'v8',
+      include: ['packages/policy/src/**/*.ts', 'packages/engine/src/**/*.ts'],
+      exclude: ['**/*.test.ts'],
+      reporter: ['text', 'json-summary', 'lcov'],
+      thresholds: {
+        'packages/policy/src/**': { lines: 80 },
+        'packages/engine/src/**': { lines: 80 },
+      },
+    },
   },
 });

@@ -12,10 +12,33 @@ certificación ni una garantía de que código aprobado sea seguro. Política de
 | C3 gates | `packages/engine/src/tasks/gates.ts`: alcance, política, mapa, checks y skill sobre diff/baseline. | Detecta antes de COMPLETED; no revierte daño ni exfiltración ya ocurrida. |
 | C4 aislamiento del SO | Sandbox del anfitrión o contenedor, administrado fuera de Foker. Doctor avisa en `packages/cli/src/commands/doctor.ts`. | Foker no crea ni certifica ese aislamiento. |
 
-**PENDIENTE REQ-SEC-001 (FKR-002, FKR-011/012)**: la spec exige contenedores sin secretos para
-agentes/checks de CI y benchmark. `.github/workflows/ci.yml` ejecuta tests directamente en runners;
-el arnés del benchmark no existe. Un runner no demuestra el requisito de contenedor. Localmente
-C4 es recomendación fuerte; no debe inferirse de un resultado verde de doctor.
+**REQ-SEC-001 en CI**: [ADR-026](adr/ADR-026-aislamiento-ci-multiplataforma.md)
+aplica el requisito en GitHub Actions: Linux usa `rust:1.98.0-bookworm`, imagen
+con versión exacta compatible con `rust-toolchain.toml`; macOS/Windows usan VM
+alojadas efímeras de GitHub, descartadas tras el job, como aislamiento equivalente.
+La allowlist es macos-15, macos-15-intel, windows-2025 y windows-11-arm; se prohíben
+runners self-hosted. Las matrices mixtas seleccionan el contenedor solo para Ubuntu.
+Una actualización exige cambiar la versión de imagen y el validador juntos.
+Los jobs de código no reciben secrets ni github.token, no montan volúmenes adicionales
+ni Docker del anfitrión, no permiten options/credentials de contenedor; checkout
+descarta credenciales y los permisos son `contents: read`. El job de notificación
+nightly solo ejecuta `gh issue create`, sin checkout ni código del repo, y dispone
+de `issues: write` y del token efímero de GitHub.
+
+Riesgo residual: el código en macOS/Windows accede al entorno y red de la VM durante
+el job, sin una segunda frontera de contenedor. El descarte limita persistencia,
+pero no evita exfiltración de datos accesibles ni abuso de recursos. Linux comparte
+kernel con el runner y el contenedor no restringe por sí solo la red. Se confía en
+la infraestructura alojada de GitHub y las acciones de terceros fijadas por SHA.
+
+`scripts/check-ci-sandbox.mjs` comprueba todos los workflows y se ejecuta en lint y Vitest.
+Valida el formato de bloques usado aquí, rechaza aliases YAML y exige aislamiento en todos
+los jobs salvo la notificación descrita. Comprueba cada checkout y rechaza permisos globales
+adicionales y el acceso al contexto completo de secretos. No sustituye actionlint ni audita acciones de terceros. Los checks
+invocados por `foker check`/`task submit` y `@foker/policy runCheck` heredan el contenedor Linux o la VM efímera
+del job; el ejecutor local no crea uno. C4 local sigue siendo recomendación fuerte.
+La ejecución real de estos workflows está pendiente; esta validación estática no demuestra
+el aislamiento de una ejecución en GitHub. El benchmark tiene su arnés separado.
 
 ## Amenazas T1–T18
 
@@ -38,7 +61,7 @@ Rutas relativas al repo de Foker; cada fila identifica controles existentes y l�
 | T13 escalada editando política | `DEFAULT_POLICY` en `packages/policy/src/policy.ts`, gate y hash de comandos en `packages/engine/src/config.ts`. | La protección cubre las rutas enumeradas, no todo foker/ indiscriminadamente; sin C4 hay riesgo de manipulación local. |
 | T14 git destructivo | Git de lectura: `packages/engine/src/git.ts`; deny/hook en `packages/integrations/src/` y CLI policy. | La detección de comandos conocidos no es un sandbox de shell. |
 | T15 abuso de red | network documenta intención de checks: schema/config/`packages/policy/src/exec.ts`. | `network: false` NO bloquea conexiones. Solo C4 puede imponerlo. |
-| T16 código inseguro | Checks configurables y gates: `packages/engine/src/tasks/gates.ts`; lint/headers en plantilla. | Depende de la cobertura de checks y revisión; contenedores CI PENDIENTE FKR-002/011/012. |
+| T16 código inseguro | Checks configurables y gates: `packages/engine/src/tasks/gates.ts`; lint/headers en plantilla. | Depende de la cobertura de checks y revisión; contenedores declarados en CI; ejecución externa pendiente. |
 | T17 evidencia manipulada | Cadena de eventos, hashes de baseline/evidencia: `packages/engine/src/tasks/{index,storage,baseline}.ts`; verify en gates.ts. | Hashes sin firma; editar coordinadamente artefactos sigue siendo posible. Verificar el árbol actual es necesario. |
 | T18 denegación de servicio | Límites de mapa en `crates/foker-map/src/config.rs`, timeouts/salida en policy exec, bucket/límite en MCP safety, maxActive en tasks. | No es cuota global de CPU/disco; max_active default 5 es configurable hasta 20. |
 

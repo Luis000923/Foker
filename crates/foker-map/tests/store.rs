@@ -203,3 +203,34 @@ fn read_only_preserves_corrupt_map_and_rejects_save() {
         assert!(!dir.path().join(".foker/cache").exists());
     }
 }
+
+#[test]
+fn errores_de_escritura_no_dejan_temporales() {
+    use foker_map::store::write_atomic;
+    let dir = tempfile::tempdir().unwrap();
+    project(dir.path());
+    let state = build(dir.path(), &MapConfig::default(), &mut ParseCache::new()).unwrap();
+    // Un directorio en el destino fuerza fallo de rename, incluso ejecutando como root.
+    fs::create_dir_all(dir.path().join(MAP_FILE)).unwrap();
+    let error = save_map(dir.path(), &state.map).unwrap_err();
+    assert!(matches!(error, StoreError::Write { .. }));
+    assert_eq!(error.code().as_str(), "FKR-MAP-004");
+    assert!(dir.path().join(MAP_FILE).is_dir());
+    assert!(
+        fs::read_dir(dir.path().join(".foker"))
+            .unwrap()
+            .all(|entry| !entry
+                .unwrap()
+                .file_name()
+                .to_string_lossy()
+                .contains(".tmp-"))
+    );
+    // Un archivo como padre rechaza escrituras y apertura del lock sin alterarlo.
+    let blocked = dir.path().join("bloqueado");
+    fs::write(&blocked, "conservar").unwrap();
+    assert!(write_atomic(&blocked.join("archivo"), b"nuevo").is_err());
+    let lock_error = MapLock::open(&blocked).err().unwrap();
+    assert!(matches!(lock_error, StoreError::Lock(_)));
+    assert_eq!(lock_error.code().as_str(), "FKR-MAP-004");
+    assert_eq!(fs::read_to_string(blocked).unwrap(), "conservar");
+}

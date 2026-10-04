@@ -3,6 +3,8 @@ target/
 node_modules/
 dist/
 coverage/
+*.lcov
+lcov.info
 *.node
 
 # Estado local de Foker

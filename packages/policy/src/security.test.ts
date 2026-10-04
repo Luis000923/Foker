@@ -56,10 +56,11 @@ it('éxito, fallo, ausente, env filtrado y argv literal', async () => {
       { root, env: { SECRETA: 'hidden-value', PATH: process.env['PATH'] }, affectedPackages: ['@foker/core'] },
     );
   expect((await run('process.exit(9)')).exit_code).toBe(9);
-  const output = await run('process.stdout.write(JSON.stringify(process.argv.slice(1))+String(process.env.SECRETA))', [
-    '${affected_packages}',
-    '; echo pwned',
-  ]);
+  // La escritura síncrona evita perder stdout al terminar el proceso hijo.
+  const output = await run(
+    "require('node:fs').writeSync(1,JSON.stringify(process.argv.slice(1))+String(process.env.SECRETA))",
+    ['${affected_packages}', '; echo pwned'],
+  );
   expect(output.status).toBe('pass');
   expect(output.output_tail).toContain('--filter=@foker/core');
   expect(output.output_tail).toContain('; echo pwned');
@@ -76,7 +77,7 @@ it('éxito, fallo, ausente, env filtrado y argv literal', async () => {
           run: [
             process.execPath,
             '-e',
-            'process.stdout.write(JSON.stringify(process.argv.slice(1)))',
+            "require('node:fs').writeSync(1,JSON.stringify(process.argv.slice(1)))",
             '--',
             '${affected_packages}',
           ],
@@ -129,4 +130,22 @@ it('no redacta metadatos del shell ni valores muy cortos, pero sí secretos de c
   const env = { SHLVL: '1', PWD: '/home/a/proyecto', PASSWORD: '12345678', KEY: '/abc/def/ghi', X: 'abc' };
   expect(redact('nivel 1 en /home/a/proyecto x=abc', env, [])).toBe('nivel 1 en /home/a/proyecto x=abc');
   expect(redact('valor 12345678 ruta /abc/def/ghi', env, [])).toBe('valor [REDACTED:env] ruta [REDACTED:env]');
+});
+
+it('ignora entradas de confianza mal formadas sin conceder permisos', async () => {
+  const root = await temp();
+  const store = new TrustStore(root);
+  await store.approve(root, 'hash', 'test');
+  for (const invalid of [{}, [null], [{ root_realpath: root, commands_hash: 'hash' }]]) {
+    await writeFile(store.path, JSON.stringify(invalid));
+    expect(await store.entries()).toEqual([]);
+    expect(await store.isTrusted(root, 'hash')).toBe(false);
+  }
+});
+it('rechaza argv y directorios de trabajo fuera del workspace', async () => {
+  const root = await temp();
+  for (const run of [[], ['${executable}'], [process.execPath, 'prefijo${affected_packages}']])
+    await expect(runCheck({ run }, { root })).rejects.toMatchObject({ code: 'FKR-INP-001' });
+  for (const cwd of ['..', root, 'sub\\directorio'])
+    await expect(runCheck({ run: [process.execPath], cwd }, { root })).rejects.toMatchObject({ code: 'FKR-POL-001' });
 });

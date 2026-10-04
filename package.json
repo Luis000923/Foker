@@ -16,6 +16,8 @@
     "test": "pnpm run build:native && pnpm run test:rust && pnpm run test:ts",
     "test:rust": "cargo nextest run --workspace",
     "test:ts": "vitest run",
+    "coverage:rs": "cargo llvm-cov -p foker-map --offline --summary-only --fail-under-lines 80 && cargo llvm-cov -p foker-context --offline --summary-only --ignore-filename-regex foker-map/ --fail-under-lines 80",
+    "coverage:ts": "vitest run packages/policy packages/engine packages/cli --coverage",
     "clean": "node scripts/clean.mjs",
     "check:deps": "node scripts/check-deps.mjs",
     "build:native": "pnpm --filter @foker/core run build:native",
@@ -25,6 +27,7 @@
   "devDependencies": {
     "@biomejs/biome": "2.5.15",
     "@types/node": "22.20.5",
+    "@vitest/coverage-v8": "5.0.3",
     "typescript": "7.0.2",
     "vitest": "5.0.3"
   }

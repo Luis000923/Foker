@@ -52,6 +52,7 @@ jobs:
           - target: aarch64-pc-windows-msvc
             os: windows-11-arm
     runs-on: ${{ matrix.os }}
+    container: ${{ startsWith(matrix.os, 'ubuntu') && 'rust:1.98.0-bookworm' || '' }}
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -100,6 +101,7 @@ jobs:
           - target: aarch64-pc-windows-msvc
             runner: windows-11-arm
     runs-on: ${{ matrix.runner }}
+    container: ${{ startsWith(matrix.runner, 'ubuntu') && 'rust:1.98.0-bookworm' || '' }}
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

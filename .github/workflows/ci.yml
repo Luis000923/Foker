@@ -21,6 +21,8 @@ jobs:
   lint:
     name: lint
     runs-on: ubuntu-24.04
+    container:
+      image: rust:1.98.0-bookworm
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -38,6 +40,8 @@ jobs:
         with:
           tool: cargo-deny
       - run: pnpm install --frozen-lockfile
+      - name: Aislamiento de CI (REQ-SEC-001)
+        run: node scripts/check-ci-sandbox.mjs
       - name: cargo fmt
         run: cargo fmt --all --check
       - name: cargo clippy
@@ -61,6 +65,7 @@ jobs:
       matrix:
         os: [ubuntu-24.04, ubuntu-24.04-arm, macos-15, windows-2025]
     runs-on: ${{ matrix.os }}
+    container: ${{ startsWith(matrix.os, 'ubuntu') && 'rust:1.98.0-bookworm' || '' }}
     timeout-minutes: 30
     steps:
       - name: Finales de línea LF en Windows

@@ -161,3 +161,67 @@ impl ContextParams {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn limites_enteros_no_truncan_ni_desbordan() {
+        let defaults = ContextParams::default();
+        let params = defaults
+            .clone()
+            .with_counts([Some(0.0), Some(10000.0), None, Some(7.0)])
+            .unwrap();
+        assert_eq!(
+            (
+                params.bm25_top,
+                params.l2_count,
+                params.l0_count,
+                params.core_files
+            ),
+            (0, 10000, defaults.l0_count, 7)
+        );
+        assert!(params.validate().is_ok());
+        for index in 0..4 {
+            for value in [-1.0, 0.5, 10001.0, f64::NAN, f64::INFINITY] {
+                let mut counts = [None; 4];
+                counts[index] = Some(value);
+                assert!(matches!(
+                    defaults.clone().with_counts(counts),
+                    Err(ContextError::InvalidInput(_))
+                ));
+            }
+        }
+    }
+
+    #[test]
+    fn rechaza_pesos_y_fracciones_fuera_de_rango() {
+        for value in [-1.0, 101.0, f64::NAN, f64::INFINITY] {
+            let params = ContextParams {
+                w_anchor: value,
+                ..Default::default()
+            };
+            assert!(params.validate().is_err());
+        }
+        for params in [
+            ContextParams {
+                anchor_fraction: 1.01,
+                ..Default::default()
+            },
+            ContextParams {
+                bm25_k1: 0.0,
+                ..Default::default()
+            },
+            ContextParams {
+                core_files: 10001,
+                ..Default::default()
+            },
+        ] {
+            assert!(matches!(
+                params.validate(),
+                Err(ContextError::InvalidInput(_))
+            ));
+        }
+    }
+}

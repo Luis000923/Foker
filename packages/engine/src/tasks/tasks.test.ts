@@ -296,3 +296,20 @@ it('alterar solo tree fuera del alcance bloquea submit por manipulación', async
   });
   expect(await store.verifyLedger(task.task_id)).toBe(true);
 });
+
+it.each([-1, 1.5, Number.NaN, Number.POSITIVE_INFINITY, 0x1000000000000])(
+  'rechaza reloj ULID inválido %s antes de consumir entropía',
+  (now) => {
+    let called = false;
+    expect(() =>
+      taskId(now, () => {
+        called = true;
+        return new Uint8Array(10);
+      }),
+    ).toThrow(RangeError);
+    expect(called).toBe(false);
+  },
+);
+it.each([0, 9, 11])('rechaza una fuente de entropía de %s bytes', (size) => {
+  expect(() => taskId(0, () => new Uint8Array(size))).toThrow('ULID exige 10 bytes aleatorios');
+});
