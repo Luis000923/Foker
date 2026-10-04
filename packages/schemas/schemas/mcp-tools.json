@@ -565,7 +565,7 @@
           "evidence": {
             "description": "Ruta relativa al root del evidence.json.",
             "type": "string",
-            "pattern": "^\\.foker/runs/tsk_[0-9A-HJKMNP-TV-Z]{26}/[1-5]/evidence\\.json$"
+            "pattern": "^\\.foker/runs/tsk_[0-9A-HJKMNP-TV-Z]{26}/[1-5]/evidence(\\.[0-9]+)?\\.json$"
           },
           "next_action": {
             "enum": ["done", "fix_and_resubmit", "await_human_approval", "blocked_contact_human", "failed"]

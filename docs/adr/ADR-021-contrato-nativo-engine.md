@@ -71,3 +71,7 @@ no depende del addon. Es una ampliación compatible de la API nativa v1.
 Se añade `ContextRequest.coreFiles?: number`, con default 15. El addon lo transmite a
 `ContextInputs.core_files`; cero desactiva los archivos de la sección core. La CLI pasa
 `context.core_files` efectivo sin reemplazar cero por el default.
+
+## Ampliación FKR-046
+Se añade `hashBytes(bytes: Buffer): string`, que delega en `foker_map::canonical::hash_bytes`.
+Es una ampliación compatible de la API nativa v1 para snapshots de archivos binarios.

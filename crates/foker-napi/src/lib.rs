@@ -96,3 +96,9 @@ pub fn hash_canonical_json(json: String) -> napi::Result<String, FokerCode> {
             .map_err(|e| napi::Error::new(FokerCode::Inp001, e.to_string()))
     })
 }
+
+/// BLAKE3 de bytes, delegado al núcleo del mapa.
+#[napi]
+pub fn hash_bytes(bytes: napi::bindgen_prelude::Buffer) -> napi::Result<String, FokerCode> {
+    guard(|| Ok(foker_map::canonical::hash_bytes(&bytes)))
+}

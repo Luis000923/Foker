@@ -28,6 +28,10 @@ Sin esos contratos no se puede validar configuración, mapa, packs, tareas ni he
     fuera del root, nombre no UTF-8), que §8.2 describe sin código.
   - `external_modules[]` admite `node:<módulo>` para los módulos integrados de Node además de `npm:<paquete>`.
   - Semántica de globs (`matchGlobs`): un glob sin `/` casa con el nombre a cualquier profundidad.
+  - Evidencias inmutables por validación: `evidence.json`, `evidence.2.json`, etc. dentro
+    del mismo intento, creadas con `wx`; `foker_task_submit.evidence` admite el sufijo numérico.
+  - `baseline.snapshot_hash` autentica `{snapshot, tree}` completo; un baseline alterado
+    o ilegible bloquea el submit con gate de política y razón `baseline_tampered`.
   - Herramientas MCP con `title` y salidas con `diagnostics` opcional para avisos de truncado (§10.5).
 - Si aparece el original, se compara campo a campo y cualquier diferencia se resuelve con un ADR nuevo.
 

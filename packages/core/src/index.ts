@@ -12,6 +12,7 @@ export const PACKAGE_NAME = '@foker/core';
 
 /** Superficie del addon nativo que usa este paquete. */
 export interface NativeBinding {
+  hashBytes?(bytes: Buffer): string;
   hashCanonicalJson?(json: string): string;
   versionInfo(): VersionInfo;
   normalizePath(root: string, input: string): string;
@@ -113,6 +114,17 @@ export function hashCanonicalJson(json: string): string {
     const hash = native().hashCanonicalJson;
     if (!hash) throw new FokerError('FKR-INT-002', 'El addon no expone hashCanonicalJson');
     return hash(json);
+  } catch (error) {
+    throw FokerError.fromNative(error);
+  }
+}
+
+/** BLAKE3 de bytes usando el núcleo nativo. */
+export function hashBytes(bytes: Buffer): string {
+  try {
+    const hash = native().hashBytes;
+    if (!hash) throw new FokerError('FKR-INT-002', 'El addon no expone hashBytes');
+    return hash(bytes);
   } catch (error) {
     throw FokerError.fromNative(error);
   }

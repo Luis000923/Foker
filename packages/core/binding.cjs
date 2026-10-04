@@ -779,6 +779,7 @@ function __napiStampBindingTarget(exportsObject, target) {
 module.exports.__napiBindingTarget = __napiStampBindingTarget(nativeBinding, __napiLoadedBindingTarget)
 module.exports = nativeBinding
 module.exports.FokerEngine = nativeBinding.FokerEngine
+module.exports.hashBytes = nativeBinding.hashBytes
 module.exports.hashCanonicalJson = nativeBinding.hashCanonicalJson
 module.exports.matchGlobs = nativeBinding.matchGlobs
 module.exports.normalizePath = nativeBinding.normalizePath

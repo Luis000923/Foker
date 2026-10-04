@@ -203,6 +203,9 @@ export interface FileInfo {
   symbols: Array<string>
 }
 
+/** BLAKE3 de bytes, delegado al núcleo del mapa. */
+export declare function hashBytes(bytes: Buffer): string
+
 /** BLAKE3 de JSON canónico; la canonicalización pertenece a foker-map. */
 export declare function hashCanonicalJson(json: string): string
 
