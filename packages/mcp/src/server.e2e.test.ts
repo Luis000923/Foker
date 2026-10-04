@@ -3,7 +3,7 @@ import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { promisify } from 'node:util';
-import { loadConfig, TrustStore } from '@foker/engine';
+import { loadConfig, skillTemplate, TrustStore } from '@foker/engine';
 import { Client } from '@modelcontextprotocol/client';
 import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
 import { Client as LegacyClient } from '@modelcontextprotocol/sdk/client/index.js';
@@ -28,7 +28,8 @@ for (const legacy of [false, true])
     await cp(resolve('fixtures/monorepo-pnpm'), root, { recursive: true });
     await mkdir(join(root, 'foker/skills/demo'), { recursive: true });
     await writeFile(join(root, 'foker/rules.md'), '# Reglas\n');
-    await writeFile(join(root, 'foker/skills/demo/SKILL.md'), '# Demo\n');
+    await writeFile(join(root, 'foker/skills/demo/SKILL.md'), skillTemplate('demo').markdown);
+    await writeFile(join(root, 'foker/skills/demo/foker.skill.yaml'), JSON.stringify(skillTemplate('demo').manifest));
     await writeFile(
       join(root, 'foker.config.yaml'),
       'version: 1\nvalidation:\n  profiles:\n    default: {checks: [secrets]}\n    quick: {checks: [secrets]}\n  checks:\n    secrets: {builtin: secret-scan}\n',

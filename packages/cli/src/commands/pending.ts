@@ -39,16 +39,6 @@ export const pendingCommands: Command[] = [
   ...['begin', 'submit', 'status', 'list', 'approve', 'reject', 'unblock', 'cancel', 'verify'].map((n) =>
     pending(`task ${n}`, `Tareas: ${n}`, 'FKR-048', taskFlags, n === 'list' ? 0 : 1),
   ),
-  pending('skill', 'Gestiona skills', 'FKR-061', [b('strict', 'Validación estricta')]),
-  ...['list', 'show', 'validate', 'new'].map((n) =>
-    pending(
-      `skill ${n}`,
-      `Skills: ${n}`,
-      'FKR-061',
-      [b('strict', 'Validación estricta'), ...(n === 'new' ? [b('dry-run', 'Previsualiza archivos')] : [])],
-      n === 'list' ? 0 : 1,
-    ),
-  ),
   pending('sync', 'Genera integraciones', 'FKR-066', [
     s('target', 'Anfitriones'),
     b('check', 'Comprueba diferencias'),

@@ -1,0 +1,20 @@
+schema_version: 1
+name: ts-strict-change
+version: 1.0.0
+purpose: Modifica TypeScript estricto conservando contratos y tipos precisos.
+triggers:
+  keywords: [ts-strict-change, typescript]
+constraints:
+  - Respetar el alcance y las rutas protegidas
+  - No ejecutar scripts de skills ni ampliar permisos
+tools: [foker_task_begin, foker_context, foker_check, foker_task_submit]
+workflow_ref: SKILL.md#procedimiento
+validation:
+  checks: [typecheck, lint, test]
+outputs:
+  - kind: modified_files
+    within_scope: true
+  - kind: tests
+    within_scope: true
+permissions:
+  network: false
