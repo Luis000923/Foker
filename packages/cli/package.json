@@ -1,0 +1,28 @@
+{
+  "name": "foker",
+  "version": "0.0.0",
+  "description": "CLI de Foker.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "exports": {
+    ".": {
+      "@foker/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=22.14.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@foker/engine": "workspace:*",
+    "@foker/integrations": "workspace:*",
+    "@foker/mcp": "workspace:*"
+  }
+}

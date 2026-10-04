@@ -1,0 +1,27 @@
+{
+  "name": "foker-monorepo",
+  "private": true,
+  "description": "Foker: infraestructura determinista para agentes de IA que desarrollan monorepos TypeScript.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "packageManager": "pnpm@11.9.0",
+  "engines": {
+    "node": ">=22.14.0"
+  },
+  "scripts": {
+    "build": "pnpm -r run build",
+    "typecheck": "tsc -p tsconfig.json",
+    "lint": "biome check .",
+    "format": "biome format --write .",
+    "test": "pnpm run test:rust && pnpm run test:ts",
+    "test:rust": "cargo nextest run --workspace",
+    "test:ts": "vitest run",
+    "clean": "node scripts/clean.mjs"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.15",
+    "@types/node": "22.20.5",
+    "typescript": "7.0.2",
+    "vitest": "5.0.3"
+  }
+}

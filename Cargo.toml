@@ -1,0 +1,26 @@
+[workspace]
+resolver = "3"
+members = ["crates/foker-map", "crates/foker-context", "crates/foker-napi"]
+
+[workspace.package]
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.98"
+license = "UNLICENSED"
+publish = false
+
+[workspace.dependencies]
+foker-map = { path = "crates/foker-map" }
+foker-context = { path = "crates/foker-context" }
+
+[workspace.lints.rust]
+unsafe_code = "deny"
+missing_docs = "warn"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+
+[profile.release]
+lto = true
+codegen-units = 1
+panic = "unwind"
