@@ -1,10 +1,10 @@
 # Estado de Foker
 
-Última actualización: 2026-10-03 · Rama actual: main
+Última actualización: 2026-10-03 · Rama actual: main · Desarrollo con Codex (implementación y `codex review`) + verificación propia
 
 ## Hito actual
 
-M0 · Fundaciones — criterio de salida (spec/ROADMAP-BACKLOG.md §2)
+M0 y M2 completos en local. Siguiente: M3 · Context Engine (FKR-030…037). M1 (benchmark) bloqueado por PREGUNTA-2/6.
 
 ## Issues
 
@@ -13,10 +13,21 @@ M0 · Fundaciones — criterio de salida (spec/ROADMAP-BACKLOG.md §2)
 | FKR-001 | Inicializar monorepo | hecho | feat/FKR-001-monorepo | pnpm 11 + cargo; 7 paquetes TS y 3 crates; TS 7, Biome 2.5, Vitest 5, nextest |
 | FKR-002 | CI base | hecho (local) | feat/FKR-002-ci-base | `ci.yml` validado con actionlint; pasos ejecutados en local. Falta verlo en GitHub |
 | FKR-003 | Regla de dependencias | hecho | feat/FKR-003-regla-dependencias | `scripts/check-deps.mjs` + tests negativos TS y Rust |
-| FKR-004 | `@foker/schemas` | bloqueado | — | Faltan los 8 `schemas/*.json` originales (ver PENDIENTES) |
+| FKR-004 | `@foker/schemas` | hecho | feat/FKR-004-schemas | Esquemas reconstruidos desde la spec (ADR-019), Ajv 2020, tipos generados |
 | FKR-005 | Addon napi + `versionInfo` | hecho | feat/FKR-005-addon-version | `FKR-INT-002`/`FKR-INT-003` probados. `VersionInfo` según §7.5, sin contrastar con el `.d.ts` original |
 | FKR-006 | Release dry-run 6 targets | hecho (local parcial) | feat/FKR-006-release-dry-run | Smoke linux-x64 y cross-build linux-arm64 (glibc 2.17) en local. Resto de targets solo en GitHub |
 | FKR-007 | ADRs y docs base | hecho | feat/FKR-007-docs-base | `docs/adr/`, README, CONTRIBUTING, architecture, development, roadmap |
+| FKR-020 | Descubrimiento de archivos | hecho | feat/FKR-020-descubrimiento | `.gitignore`, secretos nunca leídos, límites, symlinks |
+| FKR-021 | `normalizePath` | hecho | feat/FKR-021-normalize-path | Corpus de 41 casos POSIX/Windows + proptest |
+| FKR-022 | Extracción de símbolos | hecho | feat/FKR-022-simbolos | Recorrido del árbol (ADR-020); snapshots |
+| FKR-023 | Resolución con oxc_resolver | hecho | feat/FKR-023-resolucion | Dorado `resolution-cases` (REQ-MAP-004) |
+| FKR-024 | Grafo y PageRank | hecho | feat/FKR-024-grafo | Corrige no determinismo por caché compartida |
+| FKR-025 | JSON canónico y `content_hash` | hecho | feat/FKR-024-grafo | Dorado de `monorepo-pnpm` (REQ-MAP-002 en CI 3 SO pendiente) |
+| FKR-026 | Persistencia, lock, corrupción | hecho | feat/FKR-026-persistencia | |
+| FKR-027 | Refresco incremental | hecho | feat/FKR-027-incremental | REQ-MAP-001 proptest; 24 ms sin cambios en 10k archivos |
+| FKR-028 | `foker map` | hecho | feat/FKR-060-cli | Codex; `--check`/`--dry-run` en solo lectura |
+| FKR-029 | Consultas + `FokerEngine` | hecho | feat/FKR-029-consultas | Contrato: mapa valida contra el esquema; ADR-021 |
+| FKR-060 | Esqueleto de CLI | hecho | feat/FKR-060-cli | Codex; `docs/cli.md` generado (REQ-DOC-001) |
 
 ## Verificado localmente
 
@@ -35,10 +46,13 @@ Sesión 2026-10-03 (usuario luis):
 
 ## PENDIENTES y preguntas para el usuario
 
-- **spec/ es una RECONSTRUCCIÓN** (spec/RECONSTRUCCION.md). Faltan `api/foker-core.d.ts` y
-  `schemas/*.json`. Bloquean FKR-004 y el contrato exacto de FKR-005.
+- spec/ es una reconstrucción; contratos reescritos por decisión del usuario (ADR-019).
+- PREGUNTA-2 (presupuesto/modelo del benchmark) y PREGUNTA-6 (repos reales) bloquean M1.
+- Otra sesión trabaja en el worktree `../Foker-agentes` (rama `chore/sistema-agentes`).
+- El sandbox de Codex no tiene red: no puede ejecutar `pnpm` (descarga la versión fijada); se le
+  pide usar `./node_modules/.bin/*` y yo ejecuto `pnpm verify` antes de cada merge.
 - Decidido: solo local, sin remoto ni push. `foker-vault/` y los `.txt` de la raíz quedan fuera del repo.
 
 ## Siguiente paso
 
-Resolver FKR-004 (esquemas) y cerrar M0. Después: E2 Project Map (FKR-020…029) y E1 benchmark.
+M3 · Context Engine: FKR-030 (normalización e intención) → FKR-036 (`foker context`).
