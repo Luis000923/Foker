@@ -120,7 +120,7 @@ fn byte_determinism_fifty_executions_with_threads() {
     }
 }
 proptest! {
-    #![proptest_config(ProptestConfig::with_cases(80))]
+    #![proptest_config(ProptestConfig { cases: std::env::var("PROPTEST_CASES").ok().and_then(|v| v.parse().ok()).unwrap_or(80), ..ProptestConfig::default() })]
     #[test]
     fn never_exceeds_random_budget(budget in 1000usize..=20000, anchors in any::<bool>(), task in prop::sample::select(vec!["fix the cart total rounding", "Añade danger al botón", "xyzzy"])) {
         let mut req = if anchors { button() } else { ContextRequest::default() };

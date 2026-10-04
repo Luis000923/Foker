@@ -1,0 +1,8 @@
+{
+  "$comment": "Referencia de rendimiento para nightly (FOKER-SPEC §19.1). Un valor > 1,2 × referencia es una regresión. Valores iniciales = TARGET de la spec o 4 × la medición local de 2026-10-03; sustituir por la mediana de los primeros nightly en CI.",
+  "unchanged_check_ms": 100,
+  "full_build_ms": 1700,
+  "incremental_ms": 1400,
+  "save_ms": 900,
+  "build_context_p95_ms": 300
+}
