@@ -25,6 +25,8 @@ COPY benchmarks/docker/*.mjs /opt/foker/benchmarks/docker/
 # Los parches gold y tests ocultos se montan únicamente para evaluar.
 RUN ln -s /usr/local/lib/node_modules/pnpm/bin/pnpm.cjs /usr/local/bin/pnpm && ln -s /usr/local/lib/node_modules/pnpm/bin/pnpx.cjs /usr/local/bin/pnpx && ln -s /usr/local/lib/node_modules/@anthropic-ai/claude-code/bin/claude.exe /usr/local/bin/claude && chmod +x /opt/foker/packages/cli/dist/bin.js && ln -s /opt/foker/packages/cli/dist/bin.js /usr/local/bin/foker
 RUN ln -s /usr/local/lib/node_modules/@openai/codex/bin/codex.js /usr/local/bin/codex
+# npm deja pnpm.cjs/pnpx.cjs sin bit de ejecución: sin él runCheck no encuentra pnpm (FKR-VAL-004).
+RUN chmod 755 /usr/local/lib/node_modules/pnpm/bin/pnpm.cjs /usr/local/lib/node_modules/pnpm/bin/pnpx.cjs
 RUN useradd --uid 1000 --non-unique --create-home bench && chmod -R a+rX /opt/foker /opt/fixture
 ENV FOKER_BENCH_ROOT=/opt/foker
 USER bench

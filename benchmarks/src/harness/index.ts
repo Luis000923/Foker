@@ -27,6 +27,7 @@ export function claudeArgs(
   turns: number,
   mcp: string,
   cost: number | null,
+  allowedTools: string[] = [],
 ): string[] {
   return [
     '-p',
@@ -43,6 +44,8 @@ export function claudeArgs(
     '--permission-mode',
     'acceptEdits',
     ...(cost === null ? [] : ['--max-budget-usd', String(cost)]),
+    // En -p no hay quien apruebe: sin permiso explícito las tools MCP se deniegan (smoke FKR-011).
+    ...(allowedTools.length ? ['--allowedTools', allowedTools.join(',')] : []),
   ];
 }
 export function claudeCredential(env: NodeJS.ProcessEnv = process.env): string {
@@ -237,6 +240,7 @@ export async function runTask(options: {
           manifest.limits.max_turns,
           arm === 'control' ? '/work/.bench-mcp.json' : '/work/.mcp.json',
           billing === 'subscription' ? null : manifest.limits.max_cost_usd,
+          arm === 'foker' ? ['mcp__foker'] : [],
         ),
     manifest.limits.max_minutes * 60_000,
   );
