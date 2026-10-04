@@ -79,14 +79,6 @@ Arranca MCP stdio
 |---|---|---|---|
 | --root | string | "" | Raíz |
 
-## foker doctor
-
-Diagnostica el entorno
-
-| Flag | Tipo | Default | Descripción |
-|---|---|---|---|
-| --fix | boolean | false | Aplica correcciones seguras |
-
 ## foker trust
 
 Confía en el workspace
@@ -275,6 +267,14 @@ Evalúa una acción contra la política (lo usan los hooks generados por sync)
 | --event | string | "" | Evento del hook (stop) |
 | --path | string | "" | Ruta a evaluar |
 | --command | string | "" | Comando de shell a evaluar |
+
+## foker doctor
+
+Diagnóstico: Node, addon, git, configuración, trust, sync, reglas, otros MCP y sandbox
+
+| Flag | Tipo | Default | Descripción |
+|---|---|---|---|
+| --fix | boolean | false | Aplica solo correcciones seguras (crear .foker/, añadirlo a .gitignore) |
 
 ## Datos de context
 

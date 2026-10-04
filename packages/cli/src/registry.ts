@@ -1,4 +1,5 @@
 import { contextCommand } from './commands/context.js';
+import { doctorCommand } from './commands/doctor.js';
 import { mapCommand } from './commands/map.js';
 import { mcpCommand } from './commands/mcp.js';
 import { pendingCommands } from './commands/pending.js';
@@ -22,6 +23,7 @@ export const commands = [
   ...skillCommands,
   syncCommand,
   policyCheckCommand,
+  doctorCommand,
 ];
 export const globalFlags = [
   flag('dry-run', 'boolean', 'Previsualiza archivos sin escribir'),
