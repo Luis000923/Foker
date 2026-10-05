@@ -1,6 +1,7 @@
 import { readdir } from 'node:fs/promises';
 import { join, posix } from 'node:path';
 import { FokerError, matchGlobs, normalizePath } from '@foker/core';
+import type { ContextPack } from '@foker/schemas';
 
 const literalPrefix = (glob: string) => glob.split(/[?*{[]/, 1)[0] ?? '';
 const representative = (glob: string) =>
@@ -62,4 +63,21 @@ export async function nonexistentScopePaths(root: string, scope: string[], files
         matchGlobs(`root/${directory}/`, [`root/${glob}`, `root/${parent}`]),
     );
   });
+}
+
+const compare = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
+/** Directorio de un archivo como alcance glob; la raíz es `**`. */
+export const directoryScope = (file: string) => {
+  const directory = posix.dirname(file);
+  return directory === '.' ? '**' : `${directory}/**`;
+};
+/** Puntuación descendente, id ascendente en empate. */
+export const rankPackFiles = (files: ContextPack['files']) =>
+  [...files].sort((a, b) => b.score - a.score || compare(a.id, b.id));
+
+/** Alcance derivado del pack preliminar (ADR-031 fase 2b); usa niveles, nunca texto renderizado. */
+export function deriveScopePaths(pack: Pick<ContextPack, 'files'>): string[] {
+  const targets = pack.files.filter((file) => file.level === 'L3');
+  const files = targets.length ? targets : rankPackFiles(pack.files.filter((file) => file.level === 'L2')).slice(0, 3);
+  return [...new Set(files.map((file) => directoryScope(file.id)))].sort(compare);
 }
