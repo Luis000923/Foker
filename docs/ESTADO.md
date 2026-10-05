@@ -60,6 +60,9 @@ M0, M2, M3, M4 y E6 completos en local; M1 con todo lo que no gasta API (manifie
   a-15 151k → 174k (control ~64–67k; a-09 control 165k, falla). En a-01 y a-15 el modelo adivinó
   `scope: src/**`, abrió una segunda tarea y cerró la huérfana: +3 llamadas. Corregido en 2b;
   falta medirlo con un smoke nuevo.
+- **Smoke real `bench-smoke-6`** (tras 2b): tokens Foker/control a-01 1,83x, a-15 1,21x (4 llamadas,
+  igual que control), a-09 1,20x (falla en ambos). Sobrecoste Foker en éxitos −63 % y −85 % frente a
+  smoke-4. Sin tareas huérfanas. Pendiente: recall (a-09 omite `skuMatches.ts`) y fase 3.
 - **ADR-031 fase 1 · Pack compacto v2**: implementada y medida sin red ni git de escritura.
   Recall idéntico por caso en los 60 ctx-gold (total 0,7444; calibration 0,7389;
   validation 0,7500). Mediana rendered 5552 → 1049 (−81,11 %); no alcanza −85 %.

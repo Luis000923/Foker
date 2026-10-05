@@ -646,3 +646,22 @@ Log completo: `/tmp/foker-phase2b-vitest-final.log`. Las comprobaciones
 usan los ejecutables locales y el addon existente. No se modifica ningún
 artefacto de benchmark ni se atribuye una nueva reducción de tokens:
 la medida de aceptación posterior de fase 2b en el anfitrión queda pendiente.
+
+## Resultados smoke-6 (tras fase 2b)
+
+bench-smoke-6: Claude Code 2.1.289, claude-sonnet-5-5 por suscripción, 3 tareas × 2 brazos,
+1 repetición. Tokens de entrada = input + cache_creation + cache_read medidos por el anfitrión.
+
+| Tarea | Control | Foker smoke-4 | Foker smoke-6 | Foker/control | Llamadas Foker (control) | Éxito F/C |
+|---|---:|---:|---:|---:|---:|---|
+| a-01 | 67.624 | 219.243 | 123.551 | 1,83x | 6 (4) | sí/sí |
+| a-15 | 64.210 | 151.404 | 77.468 | 1,21x | 4 (4) | sí/sí |
+| a-09 | 140.787 | 222.294 | 169.395 | 1,20x | 7 (≈6) | no/no |
+
+- Sobrecoste de Foker sobre el control en tareas con éxito: a-01 151,7k → 55,9k (−63 %),
+  a-15 87,2k → 13,3k (−85 %). Total Foker frente a smoke-4: −44 %, −49 % y −24 %.
+- Sin tareas huérfanas ni alcances inventados. El camino observado es ToolSearch → begin con
+  context → editar → submit.
+- a-09 sigue fallando en ambos brazos (no adaptan el consumidor `ui/referenceSearch`). El pack
+  no incluyó `skuMatches.ts` y el modelo exploró con Bash y Read: problema de recall pendiente.
+- n = 1 repetición y 3 tareas pequeñas: indicativo, no demuestra no inferioridad ni H1.
