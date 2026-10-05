@@ -147,6 +147,24 @@
             "bm25_b"
           ],
           "properties": {
+            "focal_min_tokens": {
+              "description": "Interno: vista focal de anclas con L3 mayor que este número de tokens; 0 la desactiva (ADR-033). Solo presente si difiere del default.",
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 200000
+            },
+            "focal_max_symbols": {
+              "description": "Interno: máximo de símbolos focales por ancla (ADR-033); solo presente si difiere del default.",
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 10000
+            },
+            "focal_relative": {
+              "description": "Interno: corte léxico relativo al mejor símbolo del archivo (ADR-033); solo presente si difiere del default.",
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
             "lexical_expansion": {
               "description": "Interno: expansión léxica es/en v1 (ADR-028); solo presente si difiere del default.",
               "type": "boolean"

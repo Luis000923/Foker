@@ -11,6 +11,15 @@ pub struct ContextParams {
     /// Plegado flexivo es/en en BM25 (ADR-032), desactivable para medir el baseline.
     #[serde(skip_serializing_if = "plegado_predeterminado")]
     pub inflection_folding: bool,
+    /// Vista focal de anclas cuyo L3 supera estos tokens (ADR-033); 0 la desactiva.
+    #[serde(skip_serializing_if = "focal_min_predeterminado")]
+    pub focal_min_tokens: usize,
+    /// Máximo de símbolos focales por ancla (incluye anclas e identificadores citados).
+    #[serde(skip_serializing_if = "focal_max_predeterminado")]
+    pub focal_max_symbols: usize,
+    /// Corte léxico relativo al mejor símbolo del archivo para entrar en el foco.
+    #[serde(skip_serializing_if = "focal_relativo_predeterminado")]
+    pub focal_relative: f64,
     /// Corte BM25 relativo al máximo; cero conserva top-k.
     #[serde(skip_serializing_if = "corte_bm25_predeterminado")]
     pub bm25_min_relative: f64,
@@ -81,6 +90,9 @@ impl Default for ContextParams {
         Self {
             lexical_expansion: true,
             inflection_folding: false,
+            focal_min_tokens: 0,
+            focal_max_symbols: 5,
+            focal_relative: 0.5,
             bm25_min_relative: 0.0,
             relevance_fraction: 0.01,
             sufficiency_fraction: 0.025,
@@ -163,6 +175,7 @@ impl ContextParams {
             self.core_fraction,
             self.bm25_k1,
             self.bm25_b,
+            self.focal_relative,
         ];
         if weights
             .iter()
@@ -177,15 +190,23 @@ impl ContextParams {
                 self.l0_min_fraction,
                 self.core_fraction,
                 self.bm25_b,
+                self.focal_relative,
             ]
             .iter()
             .any(|v| *v > 1.0)
             || self.bm25_k1 == 0.0
-            || [self.bm25_top, self.l2_count, self.l0_count, self.core_files]
-                .iter()
-                .chain(self.related_limits.iter())
-                .chain(self.outline_limits.iter())
-                .any(|v| *v > 10000)
+            || self.focal_min_tokens > 200_000
+            || [
+                self.bm25_top,
+                self.l2_count,
+                self.l0_count,
+                self.core_files,
+                self.focal_max_symbols,
+            ]
+            .iter()
+            .chain(self.related_limits.iter())
+            .chain(self.outline_limits.iter())
+            .any(|v| *v > 10000)
         {
             return Err(ContextError::InvalidInput("params fuera de rango".into()));
         }
@@ -221,6 +242,15 @@ impl ContextParams {
 
 // Los campos añadidos se omiten cuando coinciden con los defaults de ADR-028:
 // los overrides anteriores conservan la forma JSON reconocida por el esquema v1.
+fn focal_min_predeterminado(value: &usize) -> bool {
+    *value == ContextParams::default().focal_min_tokens
+}
+fn focal_max_predeterminado(value: &usize) -> bool {
+    *value == ContextParams::default().focal_max_symbols
+}
+fn focal_relativo_predeterminado(value: &f64) -> bool {
+    *value == ContextParams::default().focal_relative
+}
 fn plegado_predeterminado(value: &bool) -> bool {
     *value == ContextParams::default().inflection_folding
 }

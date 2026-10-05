@@ -57,6 +57,43 @@ fn render_candidate(
     file.tokens = estimate_tokens(&text);
     Ok((file, text))
 }
+/// Ancla L3 con vista focal (ADR-033); `None` sin foco o sin reducción.
+fn focal_candidate(
+    state: &MapState,
+    root: &Path,
+    candidate: &Candidate,
+    request: &crate::NormalizedRequest,
+    params: &crate::ContextParams,
+    explain: bool,
+) -> Result<Option<RenderedFile>, ContextError> {
+    let symbols: Vec<_> = state
+        .map
+        .symbols
+        .iter()
+        .filter(|s| s.file() == candidate.id)
+        .collect();
+    let focal =
+        crate::focal::focal_symbols(&symbols, &request.task, &request.anchors.symbols, params);
+    let source = render::read(root, &candidate.id)?;
+    let Some(view) = crate::focal::render(&source, &symbols, &focal) else {
+        return Ok(None);
+    };
+    let mut file = PackFile {
+        id: candidate.id.clone(),
+        level: RenderLevel::L3,
+        tokens: 0,
+        score: candidate.score,
+        reasons: candidate.reasons.clone(),
+        note: Some(format!(
+            "vista focal: {}; {} líneas omitidas",
+            view.symbols.join(", "),
+            view.omitted_lines
+        )),
+    };
+    let text = render::file(&file, &view.body, explain);
+    file.tokens = estimate_tokens(&text);
+    Ok(Some((file, text)))
+}
 const OMITTED: &str =
     "contenido completo omitido por presupuesto; léalo con su herramienta de lectura";
 fn section(id: &str, files: &[RenderedFile]) -> SectionText {
@@ -117,6 +154,16 @@ pub fn select(
         let minimum_pair = targets[position].clone();
         let full = render(candidate, RenderLevel::L3, None)?;
         let mut choices = Vec::new();
+        // ADR-033: un ancla grande con foco determinista prefiere la vista focal al archivo
+        // completo; también sustituye a L2 cuando el completo no cabe en anchor_fraction.
+        if params.focal_min_tokens > 0
+            && full.0.tokens > params.focal_min_tokens
+            && let Some(pair) = focal_candidate(state, root, candidate, request, params, explain)?
+            && pair.0.tokens < full.0.tokens
+            && pair.0.tokens <= (budget as f64 * params.anchor_fraction).floor() as usize
+        {
+            choices.push(pair);
+        }
         if full.0.tokens <= (budget as f64 * params.anchor_fraction).floor() as usize {
             choices.push(full);
         }

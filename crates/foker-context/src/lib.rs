@@ -2,6 +2,7 @@
 pub mod bm25;
 pub mod cache;
 pub mod compact;
+pub mod focal;
 pub mod intent;
 pub mod normalize;
 pub mod pack;
