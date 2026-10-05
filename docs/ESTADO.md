@@ -181,10 +181,10 @@ Sesión 2026-10-03 (usuario luis):
 
 ## Siguiente paso
 
-1. Smoke del benchmark (`bench-smoke-7`, consume cuota, requiere permiso) para medir FKR-091 en
-   el anfitrión: a-09 debería recibir `skuMatches.ts`; la hipótesis es menos exploración.
-2. FKR-096 · cuerpo completo para archivos L2 pequeños (HIPÓTESIS de smoke-7: un `Read` de un
-   archivo de 4 líneas cuesta un turno de ~17k tokens); medir con ctx-gold y smoke.
+1. FKR-096 · cuerpo completo para archivos L2 pequeños. HIPÓTESIS de smoke-7: un `Read` de un
+   archivo de 4 líneas cuesta un turno (~17k tokens releídos). Medir con ctx-gold y smoke-8.
+2. PREGUNTA-6 · Fixture B: necesario para revalidar ADR-033 (n = 8 en foker-self) y el
+   plegado flexivo; criterios y candidatos en docs/bench/fixture-b-*.md.
 3. Recall ≥ 0,80 del pack: ampliar ctx-gold (≥ 100 casos) y recalibrar `inflection_folding`
    solo con calibration; los fallos de vocabulario no se tratan con entradas de diccionario ad hoc.
-3. FKR-070: verificación manual de los cuatro anfitriones (incluido Codex).
+4. FKR-070: verificación manual de los cuatro anfitriones (incluido Codex).
