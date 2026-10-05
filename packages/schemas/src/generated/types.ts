@@ -426,6 +426,18 @@ explain: boolean
  */
 params?: {
 /**
+ * Interno: vista focal de anclas con L3 mayor que este número de tokens; 0 la desactiva (ADR-033). Solo presente si difiere del default.
+ */
+focal_min_tokens?: number
+/**
+ * Interno: máximo de símbolos focales por ancla (ADR-033); solo presente si difiere del default.
+ */
+focal_max_symbols?: number
+/**
+ * Interno: corte léxico relativo al mejor símbolo del archivo (ADR-033); solo presente si difiere del default.
+ */
+focal_relative?: number
+/**
  * Interno: expansión léxica es/en v1 (ADR-028); solo presente si difiere del default.
  */
 lexical_expansion?: boolean

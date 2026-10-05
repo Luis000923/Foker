@@ -1208,3 +1208,128 @@ fn compact_policy_overrides_participate_in_hash_and_cache() {
         );
     }
 }
+
+/// ADR-033: archivo grande con 40 funciones; la tarea cita una.
+fn large_module() -> String {
+    let mut source = String::from("import { helper } from './helper';\n\n");
+    for i in 0..40 {
+        source.push_str(&format!(
+            "/** Calcula la métrica {i}. */\nexport function metric{i}(values: number[]): number {{\n  let total = 0;\n  for (const value of values) {{\n    total += value * {i};\n  }}\n  return helper(total);\n}}\n\n"
+        ));
+    }
+    source
+}
+
+#[test]
+fn large_anchor_uses_focal_view_only_when_enabled() {
+    let (dir, map) = temporary_state(&[
+        ("src/metrics.ts", large_module()),
+        (
+            "src/helper.ts",
+            "export function helper(x: number) { return x; }\n".into(),
+        ),
+    ]);
+    let request = |focal_min_tokens: usize| ContextRequest {
+        task: "Corrige metric17 cuando la lista está vacía".into(),
+        anchors: Anchors {
+            files: vec!["src/metrics.ts".into()],
+            symbols: vec![],
+        },
+        params: Some(ContextParams {
+            focal_min_tokens,
+            ..Default::default()
+        }),
+        budget_tokens: 4000,
+        ..Default::default()
+    };
+    let build =
+        |min| build_context(&map, dir.path(), &request(min), &ContextInputs::default()).unwrap();
+    let full = build(0);
+    let target = full
+        .files
+        .iter()
+        .find(|f| f.id == "src/metrics.ts")
+        .unwrap();
+    // Sin vista focal, el ancla supera anchor_fraction (40 % de 4000) y degrada a L2 sin cuerpos.
+    assert_eq!(target.level, RenderLevel::L2);
+    assert!(!full.rendered.contains("total += value * 17;"));
+
+    let focal = build(500);
+    let target = focal
+        .files
+        .iter()
+        .find(|f| f.id == "src/metrics.ts")
+        .unwrap();
+    assert_eq!(target.level, RenderLevel::L3);
+    assert!(
+        target
+            .note
+            .as_deref()
+            .unwrap()
+            .starts_with("vista focal: 1 símbolos completos;")
+    );
+    // Foco completo, cabecera, resto como firma y aviso visible en rendered.
+    assert!(
+        focal
+            .rendered
+            .contains("// foker: vista focal; cuerpos completos: metric17.")
+    );
+    assert!(focal.rendered.contains("total += value * 17;"));
+    assert!(
+        focal
+            .rendered
+            .contains("import { helper } from './helper';")
+    );
+    // metric3 no lo usa el foco: solo su nombre en la marca de omisión (REFERENCE).
+    assert!(
+        focal
+            .rendered
+            .contains("omitidas: metric0, metric1, metric2, metric3")
+    );
+    assert!(!focal.rendered.contains("total += value * 3;"));
+    let anchor_tokens = |p: &ContextPack| {
+        p.files
+            .iter()
+            .find(|f| f.id == "src/metrics.ts")
+            .unwrap()
+            .tokens
+    };
+    // La vista focal (con el cuerpo del foco) cuesta menos que la L2 degradada (sin cuerpos).
+    assert!(
+        anchor_tokens(&focal) < anchor_tokens(&full),
+        "focal {} frente a L2 {}",
+        anchor_tokens(&focal),
+        anchor_tokens(&full)
+    );
+    assert!(focal.budget.used < full.budget.used);
+    assert!(focal.budget.used <= focal.budget.limit);
+    // Determinista y con hash distinto del pack completo.
+    assert_eq!(build(500).rendered, focal.rendered);
+    assert_ne!(focal.pack_hash, full.pack_hash);
+
+    // Sin foco determinista no hay vista focal: se conserva la degradación anterior.
+    let unfocused = build_context(
+        &map,
+        dir.path(),
+        &ContextRequest {
+            task: "xyzzy".into(),
+            ..request(500)
+        },
+        &ContextInputs::default(),
+    )
+    .unwrap();
+    assert!(!unfocused.rendered.contains("vista focal"));
+    // Política ADR-033: si el L3 completo cabe, gana aunque la vista esté activa.
+    let roomy = build_context(
+        &map,
+        dir.path(),
+        &ContextRequest {
+            budget_tokens: 8000,
+            ..request(500)
+        },
+        &ContextInputs::default(),
+    )
+    .unwrap();
+    assert!(roomy.rendered.contains("total += value * 3;"));
+    assert!(!roomy.rendered.contains("vista focal"));
+}

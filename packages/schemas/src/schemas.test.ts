@@ -141,6 +141,9 @@ describe('ContextPack v2 (ADR-031)', () => {
     expectInvalid('context-pack', pack({ related_limits: [8, 8, -1, 8, 8, 8] }), '/request/params/related_limits/2');
     // ADR-032: el pack serializado con plegado flexivo activado debe seguir validando.
     expectValid('context-pack', pack({ inflection_folding: true }));
+    // ADR-033: parámetros de vista focal.
+    expectValid('context-pack', pack({ focal_min_tokens: 1500, focal_max_symbols: 3, focal_relative: 0.4 }));
+    expectInvalid('context-pack', pack({ focal_relative: 1.5 }), '/request/params/focal_relative');
     expectInvalid('context-pack', pack({ inflection_folding: 1 }), '/request/params/inflection_folding');
     expectInvalid('context-pack', pack({ arbitrary: 1 }), '/request/params');
   });

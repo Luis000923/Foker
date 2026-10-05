@@ -49,10 +49,20 @@ M0, M2, M3, M4 y E6 completos en local; M1 con todo lo que no gasta API (manifie
 | FKR-070 | Verificación manual de anfitriones | pendiente (humano) | — | Checklist en docs/integrations/verification.md |
 | FKR-081/082 | Nightly, SECURITY.md | hecho | feat/FKR-081-082-nightly-security | |
 | FKR-091 | Recall en el flujo `foker_task_begin` | hecho | feat/FKR-091-recall | ADR-032: recall del flujo 0,3319 → 0,7611 (pack 0,7444 sin cambios); plegado flexivo medido y desactivado; revisión Codex 3/3 válidos corregidos |
+| FKR-094 | Fase 3 · vista focal por símbolo | hecho | feat/FKR-094-contexto-simbolo | ADR-033: anclas grandes que no caben se entregan con cuerpos focales en lugar de L2; foker-self validation recall de símbolos 0,289 → 0,442 sin regresiones; Fixture A idéntico; revisiones Codex + Claude 11/11 válidos corregidos |
 | FKR-060 | Esqueleto de CLI | hecho | feat/FKR-060-cli | Codex; `docs/cli.md` generado (REQ-DOC-001) |
 | FKR-092 | Medir y clasificar overhead fijo del anfitrión | hecho (local) | feat/FKR-092-overhead-anfitrion | Análisis determinista y 24 runs smoke-3…6; primer turno control ~15,7k, Foker ~17k; Δ smoke-6 1.316 tokens; internos no observables marcados INFERIDOS. Biome/tsc verdes, 40 tests benchmark verdes con addon externo de solo lectura |
 
 ## Trabajo 2026-10-04
+
+- **FKR-094 · Fase 3, vista focal por símbolo (ADR-033)**. Un ancla grande que no cabe
+  completa ya no se degrada a L2 sin cuerpos. Se entrega como L3 focal: cuerpos completos del
+  foco (anclas de símbolo, identificadores citados y BM25 dentro del archivo), firmas de lo que
+  usa, nombres del resto y marcas de omisión dentro de `rendered`. Medida con el ctx-gold de
+  símbolos `foker-self` (FKR-095, Codex): validation 0,289 → 0,442 sin regresiones, +15 % de
+  tokens de ancla, mismo total de pack. La política A (sustituir también L3 que caben) se
+  rechazó por una regresión. Fixture A, byte a byte idéntico. n = 8: indicativo, revalidar con
+  Fixture B.
 
 - **FKR-091 · Recall en el flujo begin (ADR-032)**. Causa de a-09 en smoke-6: el pack
   **definitivo** de `foker_task_begin` (con `taskScope` derivado) perdía `skuMatches.ts`,
@@ -168,8 +178,8 @@ Sesión 2026-10-03 (usuario luis):
 
 1. Smoke del benchmark (`bench-smoke-7`, consume cuota, requiere permiso) para medir FKR-091 en
    el anfitrión: a-09 debería recibir `skuMatches.ts`; la hipótesis es menos exploración.
-2. FKR-094 · Fase 3 (contexto por símbolo, ADR-031): anclas grandes con cuerpo focal y
-   esqueleto del resto; dataset de símbolos foker-self disponible (FKR-095); integrar su evaluación en FKR-094.
+2. FKR-096 · cuerpo completo para archivos L2 pequeños (HIPÓTESIS de smoke-7: un `Read` de un
+   archivo de 4 líneas cuesta un turno de ~17k tokens); medir con ctx-gold y smoke.
 3. Recall ≥ 0,80 del pack: ampliar ctx-gold (≥ 100 casos) y recalibrar `inflection_folding`
    solo con calibration; los fallos de vocabulario no se tratan con entradas de diccionario ad hoc.
 3. FKR-070: verificación manual de los cuatro anfitriones (incluido Codex).

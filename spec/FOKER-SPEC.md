@@ -493,7 +493,7 @@ Niveles de renderizado por archivo:
 
 | Nivel | Contenido | Uso típico |
 |---|---|---|
-| L3 | Contenido completo | Anclas (archivos a editar) |
+| L3 | Contenido completo, o **vista focal** si el completo no cabe (ADR-033: cuerpos focales completos, firmas de lo que usan, nombres del resto y marcas de omisión) | Anclas (archivos a editar) |
 | L2 | Firmas exportadas + tipos/interfaces completos + JSDoc | Dependencias directas de mayor puntuación |
 | L1 | Solo firmas exportadas | Resto de seleccionados |
 | L0 | Ruta + nombres exportados en una línea | Contorno de lo no seleccionado relevante |
@@ -501,7 +501,7 @@ Niveles de renderizado por archivo:
 Algoritmo (voraz, determinista):
 1. `B` = presupuesto; reservar 5 % de margen para cabeceras. Estimación de tokens: `ceil(bytes_utf8_LF / 3,2)` (**HIPÓTESIS** de calibración; se ajusta con el benchmark contra contadores oficiales; el valor se versiona en el pack como `estimator`).
 2. Sumar **contexto obligatorio** (§9.8). Si excede `B` → error `FKR-CTX-001` con desglose; **nunca se trunca en silencio**.
-3. Anclas a L3 en orden de puntuación. Si un ancla > 40 % de `B`, se baja a L2 y se añade nota "contenido completo omitido por presupuesto; léalo con su herramienta de lectura".
+3. Anclas a L3 en orden de puntuación. ADR-033: si el L3 completo supera el 40 % de `B` o no cabe, un ancla de más de `focal_min_tokens` (500) con foco determinista se entrega como L3 focal antes de degradar a L2. Si un ancla > 40 % de `B`, se baja a L2 y se añade nota "contenido completo omitido por presupuesto; léalo con su herramienta de lectura".
 4. Selección por suficiencia: un no-ancla debe superar ambos cortes inclusivos: score ≥ 1 % del máximo total (ADR-028) y score ≥ 2,5 % del mejor no-ancla (ADR-031). Seleccionar como máximo 64 archivos L2/L1 para fix/test/add/modify y 96 para refactor/explain. Los primeros 5 aceptados intentan L2; el resto L1. Si no cabe L2, probar L1; si tampoco cabe, pasar al siguiente. Los límites no incluyen las anclas, que siempre se reservan primero a L1 antes de subir de nivel. Los parámetros internos están en `params.rs` y se calibran exclusivamente con el split calibration.
 5. El contorno opcional L0 usa los mismos cortes y un máximo por intención (0 en los defaults v2 medidos; configurable internamente y acotado también por `l0_count`). Solo se intenta si queda > 3 % del presupuesto. Cada archivo aparece una sola vez, en su nivel más alto. Los envoltorios compartidos se contabilizan en la sección; `files[].tokens` mide la entrada individual. `budget.used` suma los techos por sección e incluye todo `rendered`.
 6. Registrar para cada archivo: nivel, tokens, puntuación, razones (`ANCHOR`, `PATH_MENTION`, `SYMBOL_MENTION`, `LEXICAL:<término>`, `DEPENDENCY_OF:<id>`, `DEPENDENT_OF:<id>`, `DIRTY`, `TASK_SCOPE`, `CORE`, `TEST_OF:<id>`), y los descartados con motivo `BUDGET` o `RANK_CUTOFF` (los 20 siguientes, para depuración).
