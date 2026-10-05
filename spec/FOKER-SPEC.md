@@ -524,14 +524,15 @@ Algoritmo (voraz, determinista):
 
 ### 9.9 Paso 15 · Construcción del prompt (renderizado)
 
-**Modificado por ADR-031 (fase 1): `pack_version = 2`.** El esquema acepta 1 y 2
+**Modificado por ADR-031 (fases 1 y 1c): `pack_version = 2`.** El esquema acepta 1 y 2
 para validar packs históricos y ejemplos v1; el motor produce solo v2.
 
 `rendered` es Markdown en el orden de la tabla anterior. Sin `explain`, no se
 repiten puntuaciones, razones ni cabeceras `###`; esos datos permanecen en
 `files[]`. Con `explain=true` se añaden cabeceras diagnósticas escapadas dentro de los
 delimitadores de confianza.
-Cada archivo L3/L2 conserva un único envoltorio:
+Cada archivo L3 conserva un único envoltorio. L2 admite un envoltorio individual
+o uno compartido para archivos consecutivos cuando reduce bytes:
 
 ```text
 <foker:file id="packages/ui/src/button.tsx" level="L2" trust="repository-content">
@@ -553,6 +554,35 @@ packages/ui/src/input.tsx
 packages/ui/src/theme.ts: Theme
 </foker:files>
 ```
+
+La fase 1c compacta **después de seleccionar**: conserva archivos, niveles,
+razones y notas. No reutiliza el ahorro para seleccionar más archivos.
+En bloques L0/L1 se pueden sustituir hermanos numéricos por una plantilla:
+`record-{0..21}.ts` y `entry{N}`. Solo se combinan entradas consecutivas cuyas
+plantillas son idénticas byte a byte. Dentro del grupo los números se ordenan
+numéricamente y se escriben rangos naturales inclusivos; listas y rangos
+combinados conservan los huecos y las repeticiones. La expansión reproduce
+el mismo multiconjunto de líneas y el mismo orden fuera del grupo colapsado.
+Los números con ceros iniciales permanecen literales. Los archivos individuales
+siguen en `files[]` con sus niveles y puntuaciones originales.
+
+Una única firma L1 puede ir en `ruta: firma`; las firmas múltiples siguen
+indentadas. La expansión deshace firma inline y plantilla numérica, en ese
+orden. Texto con `{N}` literal, llaves en rutas o rutas L1 con `: ` conserva
+su representación original para evitar ambigüedades. Las rutas y firmas se
+escriben completas: el diccionario de sustituciones de fase 1b fue rechazado
+y se retiran sus declaraciones, referencias y atributo de bloque. L2 agrupado
+usa ruta y cuerpo indentado dos espacios, conservando todas las líneas y
+blancos del cuerpo; L3 permanece literal.
+
+Las secciones vacías conservan metadatos con cero tokens y ningún texto.
+Las cabeceras no requieren líneas en blanco y request usa
+`## request [intención]` seguido de la tarea íntegra. Solo en el render de
+`foker/rules.md` se eliminan comentarios HTML completos y blancos redundantes
+fuera de código; fences, código inline/indentado y comentarios sin cierre se
+conservan. El archivo de reglas no se modifica. Hashes y costes por sección
+corresponden al texto compacto; `files[].tokens` mantiene el coste individual
+previo a esta compresión y no se suma para obtener `budget.used`.
 
 **REQUISITO REQ-CTX-002**: todo contenido procedente del repositorio va delimitado
 y marcado `trust="repository-content"`, incluyendo rutas y firmas agrupadas,
@@ -594,10 +624,11 @@ Por llamada (auditoría y `--json`): tokens por sección, nº de archivos por ni
 2. Las únicas escrituras en disco son dentro de `.foker/`.
 3. Los únicos procesos ejecutados son checks declarados en un perfil confiado (workspace trust, §11.4).
 4. Toda entrada se valida contra `inputSchema` (JSON Schema 2020-12, `additionalProperties: false`); toda salida contra `outputSchema` antes de enviarse.
-5. Las anotaciones (`readOnlyHint`, etc.) son informativas; la seguridad no depende de ellas (**HECHO**: la especificación indica que los clientes deben tratarlas como no confiables).
+5. **Modificado por ADR-031:** todas las tools entregan la información necesaria al modelo en `structuredContent` y en `content[0]` como texto. Para contexto, ambos incluyen el código `rendered`; las demás salidas usan el mismo JSON compacto. Los errores `isError` también usan ambas vías (variante de transporte en `outputSchema`).
+6. Las anotaciones (`readOnlyHint`, etc.) son informativas; la seguridad no depende de ellas (**HECHO**: la especificación indica que los clientes deben tratarlas como no confiables).
 
 ### 10.3 Herramientas
-Esquemas completos: `schemas/mcp-tools.json`. Errores: §18.
+Esquemas completos: `schemas/mcp-tools.json`. Errores: §18. **Modificado por ADR-031:** flujo habitual `foker_task_begin` con `context` → editar → `foker_task_submit` (ejecuta checks y gates); 2 llamadas MCP obligatorias. `foker_check` es opcional para feedback intermedio y `foker_search` cuando el pack no basta. El pack contiene el código objetivo: no se releen esos archivos salvo aviso de omisión.
 
 **`foker_status`**
 | Campo | Valor |
@@ -622,9 +653,9 @@ Esquemas completos: `schemas/mcp-tools.json`. Errores: §18.
 **`foker_context`**
 | Campo | Valor |
 |---|---|
-| Propósito | Construir el Context Pack para una tarea (§9). |
+| Propósito | Construir el Context Pack para una tarea (§9), **modificado por ADR-031**. |
 | Input | `ContextRequest` (§9.2) |
-| Output | `structuredContent`: `ContextPack` sin `rendered` (o completo si `explain`); `content[0]`: `rendered` (texto) |
+| Output | `structuredContent`: `{ pack_version, pack_hash, budget: {used, limit}, rendered, diagnostics }`; `ContextPack` completo solo con `explain=true`. `content[0].text = rendered`. Se conserva `outputSchema` con variantes exclusivas del transporte y se valida el pack completo y la proyección antes de enviar. **Modificado por ADR-031** |
 | Permisos | lectura del mapa y de archivos incluidos en L3/L2 |
 | Side effects | Refresco del mapa; entrada en auditoría |
 | Errores | `FKR-INP-001`, `FKR-CTX-001` (presupuesto insuficiente para obligatorio, `isError: true` con desglose), `FKR-SKL-001` (skill inexistente) |
@@ -653,14 +684,14 @@ Esquemas completos: `schemas/mcp-tools.json`. Errores: §18.
 **`foker_task_begin`**
 | Campo | Valor |
 |---|---|
-| Propósito | Crear una tarea, fijar su alcance y perfil, capturar baseline y pasarla a `RUNNING`. |
-| Input | `{ description: string(1..2000), scope: { paths: string[1..50] (globs relativos) }, profile?: string = "default", skill?: string, max_attempts?: 1..5 = 3, client_token?: string(≤64) }` |
-| Output | `{ task_id, state: "RUNNING", attempt: 1, baseline: { git_head?, dirty_files: string[], snapshot_hash }, allowed_paths, protected_paths_in_scope: string[], checks: string[] }` |
+| Propósito | Crear una tarea, fijar alcance/perfil y baseline, pasarla a `RUNNING` y opcionalmente entregar su pack en la misma llamada. **Modificado por ADR-031** |
+| Input | `{ description: string(1..2000), scope: { paths: string[1..50] (globs relativos) }, profile?: string = "default", skill?: string, max_attempts?: 1..5 = 3, client_token?: string(≤64), context?: true \| {budget_tokens?: 1000..20000, anchors?: {files?, symbols?}, intent?: "fix"\|"add"\|"modify"\|"refactor"\|"test"\|"explain"} }` (**modificado por ADR-031**) |
+| Output | `{ task_id, state: "RUNNING", attempt: 1, baseline: { git_head?, dirty_files: string[], snapshot_hash }, allowed_paths, protected_paths_in_scope: string[], checks: string[], context?: {pack_hash, budget: {used, limit}, rendered}, context_error?: {code, message, recoverable} }` (**modificado por ADR-031**) |
 | Permisos | escritura en `.foker/tasks/` |
 | Side effects | Crea ledger y evento; captura baseline (hashes de archivos en alcance + `git status`) |
 | Errores | `FKR-INP-001`, `FKR-POL-002` (alcance incluye rutas prohibidas: se devuelve la lista), `FKR-TSK-005` (demasiadas tareas activas: máx. 5) |
 | Timeout | 30 s |
-| Idempotencia | Sí con `client_token`: mismo token + misma entrada → misma tarea; sin token, cada llamada crea una tarea. `idempotentHint: false` |
+| Idempotencia | Sí con `client_token`: mismo token + misma entrada de tarea → misma tarea; `context` es una opción de transporte y puede variar en un reintento. Sin token, cada llamada crea una tarea. El pack usa el `task_id` ya creado y su alcance/skill/perfil. Si falla, la tarea permanece creada y la respuesta exitosa conserva `task_id` y añade `context_error` (exclusivo con `context`); se puede recuperar con `foker_context`. `idempotentHint: false` |
 
 **`foker_task_submit`**
 | Campo | Valor |

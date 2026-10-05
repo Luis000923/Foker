@@ -1,8 +1,8 @@
 # ADR-031 · Context Pack compacto (v2) y flujo corto
 
-- **Estado**: Fase 1 implementada y medida (objetivo del 85 % no alcanzado); fases 2 y 3 propuestas
+- **Estado**: Fases 1 y 1c implementadas y medidas (objetivo del 85 % pendiente; diccionario de fase 1b rechazado); fase 2 implementada y medida localmente (smoke de anfitrión pendiente); fase 3 propuesta
 - **Fecha**: 2026-10-04
-- **Modifica**: FOKER-SPEC §9.7, §9.8, §9.9, §10.3 (`foker_context`) y la skill `foker-workflow`
+- **Modifica**: FOKER-SPEC §9.7, §9.8, §9.9, §10.2–10.3 (`foker_context`, `foker_task_begin`) y la skill `foker-workflow`
 - **Amplía**: ADR-028 y ADR-030
 
 ## Contexto
@@ -60,12 +60,27 @@ declara sobre dos denominadores medibles:
 
 ### Fase 2 · Entrega MCP y flujo corto
 
-- `foker_context` devuelve el texto `rendered` en `content` y no publica `outputSchema`
-  ni `structuredContent`: así todos los anfitriones entregan el código al modelo. La salida
-  se sigue validando internamente contra `ContextPack` antes de responder.
-- `foker_task_begin` acepta pedir el pack en la misma llamada (begin + context = 1 turno).
-- La skill y los bloques generados dejan `foker_check` como opcional: `foker_task_submit`
-  ejecuta checks y gates.
+- Todas las tools entregan lo que el modelo necesita en `structuredContent`, compacto;
+  `content[0]` lleva la misma información en texto. Se conserva `outputSchema` y se valida
+  antes de enviar. También los errores `isError` usan ambas vías: la variante de error del
+  transporte evita que el cliente legacy rechace `structuredContent` al validarlo.
+- `foker_context` publica `{pack_version, pack_hash, budget:{used,limit}, rendered,
+  diagnostics}` por defecto; el `ContextPack` completo solo con `explain=true`.
+  `content[0].text = rendered`. Se valida el pack completo antes de proyectar y la salida
+  compacta después de redacción/truncado. Las variantes se definen exclusivamente en
+  `mcp-tools.json`, como ADR-030; no cambian el contrato del motor ni los formatos persistidos.
+- `foker_task_begin` admite `context: true` (defaults) u objeto con `budget_tokens?`,
+  `anchors?`, `intent?`. Construye el pack con el `task_id` ya creado, alcance, perfil y skill
+  de esa tarea, y devuelve `context:{pack_hash,budget:{used,limit},rendered}`.
+  Si falla, devuelve `context_error:{code,message,recoverable}` junto al `task_id`: la tarea
+  queda creada y se puede recuperar contexto sin crear otra. Las opciones `context` no se
+  persisten ni cambian la identidad por `client_token`; un reintento puede variar presupuesto
+  o anclas y conserva la misma tarea. Sin `context` se conserva la respuesta anterior.
+- Skill y bloques generados: `foker_task_begin` con context → editar → `foker_task_submit`.
+  Submit ejecuta checks y gates. `foker_check` es opcional para feedback intermedio;
+  `foker_search`, si el pack no basta. El pack ya contiene el código objetivo: no se releen
+  esos archivos salvo aviso de omisión. Se mantiene paridad entre los cuatro targets.
+- Las ocho descripciones se acortan; el registro MCP las obtiene del mismo esquema.
 
 ### Fase 3 · Cuerpo focal por símbolo
 
@@ -83,8 +98,9 @@ declara sobre dos denominadores medibles:
 ## Resultados fase 1
 
 Implementada y medida en Linux x64, sin red ni operaciones git de escritura.
-Las fases 2 y 3 permanecen propuestas. No cambia la entrega MCP, outputSchema,
-structuredContent, task_begin, task_submit ni la skill de flujo.
+Al cierre de la fase 1, las fases 2 y 3 permanecían propuestas. Esa fase no cambió
+la entrega MCP, outputSchema, structuredContent, task_begin, task_submit ni la skill.
+La implementación posterior de fase 2 se documenta al final.
 
 Dataset SHA-256:
 `482dbc0a2783eb159df86f4f63a9b46c38e6b349cb9267e2fbeda2f3b7b5ec09`.
@@ -298,3 +314,248 @@ se sustituye.
 No se ejecuta pnpm ni se escribe git. El addon Linux copiado es un artefacto
 ignorado necesario para medir; no se cambian fuentes de packages/core ni CLI.
 No se certifican otros sistemas operativos ni tokens reales de anfitriones.
+
+## Resultados fase 2
+
+Implementada sin red, pnpm, escrituras Git ni recompilar el addon nativo. No se modifica
+el motor Rust ni ctx-gold. Se conserva el pack v2 de fase 1: estas medidas aíslan la entrega
+MCP y las instrucciones, sin atribuirle otra reducción del motor. El smoke de anfitrión
+requerido para la aceptación por suscripción sigue pendiente; no se certifican tokens reales.
+
+### Medición de bytes
+
+Bytes UTF-8: `Buffer.byteLength(JSON.stringify(respuesta))` para la respuesta MCP completa
+(`isError`, `content`, `structuredContent`, sin sobre JSON-RPC); texto literal para descripciones,
+skill y bloques. Se midieron instrucciones antes de editar. Para el pack típico se reconstruye
+la proyección anterior (metadatos en structured, rendered solo en content) sobre **el mismo
+pack** que entrega el servidor actual: misma fase 1, petición, hash y código; sin secreto ni
+truncado. El script reproduce esa comparación y los tamaños actuales:
+
+```sh
+node packages/mcp/scripts/measure-phase2.mjs
+```
+
+Caso a-01 de Fixture A, semilla 42, tarea «El escaparate permite comprar artículos agotados.»,
+sin anclas, dirty_files=false, presupuesto 8000, defaults de configuración y reglas
+`# Reglas\nEdita solo el alcance autorizado.\n`. budget.used=2285, estimador bytes-lf/3.2@1.
+Hash: `blake3:0674b604474073ef123daeed9affb615c90759f1afc66cafd9de83af08b267db`.
+Es una medida del transporte con esa configuración, no una repetición de ctx-gold.
+
+| Elemento | Antes (bytes) | Después (bytes) |
+|---|---:|---:|
+| foker_context, respuesta completa típica a-01 | 17877 | 15353 |
+| foker_context, structuredContent a-01 | 10289 | 7683 |
+| foker_context, respuesta completa fixture monorepo pequeño | 6796 | 7083 |
+| Ocho descripciones, suma de sus textos | 1327 | 885 |
+| Skill foker-workflow, archivo completo | 1256 | 1005 |
+| Bloque común agentsBlock, sin delimitadores de sync | 765 | 688 |
+| Bloque claudeBlock, sin delimitadores de sync | 199 | 104 |
+
+La respuesta típica baja 14,12 %; structured baja 25,33 % y ahora incluye el código.
+El fixture pequeño (`fixtures/monorepo-pnpm`, ancla button.tsx, «Modificar el botón»,
+presupuesto 8000, mismas reglas) **crece** 287 bytes: sus metadatos anteriores eran menores
+que el código que ahora debe entregarse también en structured. No se promete ahorro para
+todos los packs. Las descripciones bajan 33,31 %; la skill, 19,98 %.
+
+| Descripción de tool | Antes | Después |
+|---|---:|---:|
+| foker_check | 212 | 117 |
+| foker_context | 238 | 151 |
+| foker_impact | 130 | 90 |
+| foker_search | 100 | 80 |
+| foker_status | 121 | 67 |
+| foker_task_begin | 203 | 162 |
+| foker_task_get | 94 | 63 |
+| foker_task_submit | 229 | 155 |
+
+Bloques generados en un proyecto vacío, incluyendo frontmatter, notas y delimitadores;
+roles incluidos, sin skills en esta tabla. AGENTS.md tiene los mismos bytes en cada target.
+El rol Implementer incluido se proyecta dentro de integrations; todos los adaptadores
+reciben el mismo cuerpo actualizado y el reviewer conserva su procedimiento de lectura.
+
+| Archivo generado / target | Antes | Después |
+|---|---:|---:|
+| AGENTS.md, los cuatro targets | 808 | 731 |
+| CLAUDE.md, Claude Code | 254 | 159 |
+| .agents/rules/foker.md, Antigravity | 838 | 761 |
+| .claude/agents/foker-implementer.md, Claude Code | 1484 | 1141 |
+| .codex/agents/foker-implementer.toml, Codex | 1181 | 834 |
+| .agents/rules/foker-implementer.md, Antigravity | 1237 | 894 |
+| .opencode/agents/foker-implementer.md, OpenCode | 1266 | 923 |
+
+**Llamadas MCP obligatorias del flujo: antes 4, después 2** (−50 %).
+Antes: begin → context → editar → check → submit. Después: begin con context → editar → submit.
+Son pasos normativos; fallos, recuperación o exploración adicional pueden requerir más llamadas.
+
+### Verificación
+
+- MCP en memoria con clientes 2026-07-28 y legacy 2025-11-25: código en structured/texto,
+  explain completo, pack validado antes de proyectar, context=true y opciones, scope/skill/task_id,
+  idempotencia con opciones variables, fallo real FKR-CTX-001 y recuperación sin duplicados,
+  rechazo de entradas inválidas, redacción/truncado con rendered idéntico y diagnóstico.
+- Paridad: prueba existente de CLI (catálogo, reglas, skills y roles) y nueva prueba en
+  integrations que exige el flujo corto y la instrucción de no releer para los cuatro targets.
+- `./node_modules/.bin/vitest run packages`: resultado registrado tras la comprobación final
+  abajo. Se usa un wrapper temporal que permite lecturas Git y bloquea toda escritura; no
+  se omiten ni se cambian fixtures para simular verde.
+- `./node_modules/.bin/tsc -p tsconfig.json`: verde.
+- `./node_modules/.bin/biome check packages skills docs`: verde.
+- `node packages/schemas/scripts/generate.mjs --check`: verde; incluye gen-config-docs.
+
+Los fallos de subprocess EPERM se comprueban además invocando directamente los scripts.
+Logs de esta ejecución: `/tmp/foker-phase2-vitest-final.log`,
+`/tmp/foker-phase2-targeted.log` y `/tmp/foker-phase2-measurements.log`.
+Las conexiones stdio fallidas no se presentan como compatibilidad certificada; las mismas
+revisiones de protocolo sí pasan con transporte en memoria.
+
+## Fase 1c
+
+Revisión de fase 1b: **diccionario de sustituciones rechazado**. Se eliminan
+su implementación, los interruptores de rutas y prefijos de firmas, el atributo
+de bloque, sus tests y ejemplos. Se conserva únicamente la compactación de
+hermanos con patrón, reglas sin comentarios HTML, cabeceras/request compactas,
+envoltorio L2 compartido y firma inline.
+
+La evidencia aportada por el revisor con o200k como proxy muestra que a-01
+con el diccionario medía 874 tokens estimados y 854 reales del proxy, frente
+a 2413 estimados y 1859 reales sin ese códec. El ahorro del estimador
+bytes/3,2 no se traslada en la misma proporción a tokens reales. Además,
+las sustituciones obligan al modelo a interpretar macros al leer y editar
+código, con riesgo de copiar una referencia como `$c` al código fuente.
+Esa pérdida de calidad incumple el objetivo del ADR. La conclusión de fase
+1b de «meta alcanzada» queda retirada; no se acepta ahorrar bytes a costa
+de legibilidad y calidad de edición.
+
+Medido en Linux x64, sin red, pnpm ni operaciones git de escritura. Dataset
+SHA-256 `482dbc0a2783eb159df86f4f63a9b46c38e6b349cb9267e2fbeda2f3b7b5ec09`,
+60 casos, splits persistidos 30/30, presupuesto 8000 y estimador
+bytes-lf/3.2@1, iguales a fase 1. Las capturas históricas v1 y fase 1 se
+comparan por id con las 60 filas nuevas. Las cifras de la tabla son tokens
+estimados del texto rendered completo; no son tokens del anfitrión ni del proxy.
+
+### Comparación por split
+
+| Split | Versión | Recall | Mediana rendered | Media rendered |
+|---|---|---:|---:|---:|
+| total (60) | v1 | 0,744444 | 5552 | 4984,05 |
+| total (60) | fase 1 | 0,744444 | 1049 | 1333,82 |
+| total (60) | 1c | 0,744444 | 903 | 889,00 |
+| calibration (30) | v1 | 0,738889 | 4099,5 | 4726,97 |
+| calibration (30) | fase 1 | 0,738889 | 1049 | 1267,13 |
+| calibration (30) | 1c | 0,738889 | 890 | 871,03 |
+| validation (30) | v1 | 0,750000 | 7497,5 | 5241,13 |
+| validation (30) | fase 1 | 0,750000 | 1063,5 | 1400,50 |
+| validation (30) | 1c | 0,750000 | 910 | 906,97 |
+
+**Casos con cambio de recall: ninguno (0/60)**, frente a v1 y a fase 1,
+tanto en calibration como en validation. También permanecen idénticos por
+caso exposed, gold_modified y occupants completos (id, nivel y coste
+individual) frente a fase 1. No se compensa una pérdida con una mejora ni
+se cambian archivos a L0 para aparentar ahorro.
+
+**La mediana rendered 903 supera 830: el objetivo ≥85 % no se alcanza.**
+Reducción frente a v1: 83,74 % (5552 → 903); frente a fase 1: 13,92 %
+(1049 → 903). No se introducen otros trucos de bytes ni se retocan los
+parámetros de selección. El TARGET independiente recall ≥0,80 sigue pendiente.
+Budget.used total: mediana 904 y media 890,15; su diferencia respecto de
+rendered_tokens es 0–3 por caso, por redondeo de secciones.
+
+### Transformaciones y garantías
+
+`compact` actúa después de select, sin calibrar de nuevo ni aprovechar el
+ahorro para añadir o subir archivos. La capacidad, reserva obligatoria y
+las decisiones de degradación siguen usando los costes de fase 1. Se
+recalculan hashes y costes de secciones y pack. files[].tokens conserva
+el coste individual previo a compactar.
+
+1. Hermanos L0/L1 consecutivos con idéntica plantilla byte a byte se combinan
+   en rangos inclusivos/listas. Los números se ordenan numéricamente dentro
+   del grupo: el orden bytewise 0,1,10…19,2,20,21,3…9 pasa a `record-{0..21}.ts`.
+   Solo se reordena ese grupo consecutivo; no se atraviesan entradas de otras
+   plantillas ni se altera files[]. `{N}` sustituye el mismo token numérico
+   en ruta y firmas; otros números, huecos, duplicados y Unicode se mantienen.
+   La expansión conserva **el mismo multiconjunto de líneas y el mismo orden
+   fuera del grupo**. Los ceros iniciales permanecen literales. Las propiedades
+   incluyen separadores entre grupos para comprobar que no se cruzan.
+2. Comentarios HTML completos y blancos redundantes de rules se omiten solo
+   en su render. Input y archivo no cambian. Código fenced, inline (también
+   multilínea), indentado y comentarios incompletos se preservan. La suite
+   no incluye rules: ahorro cero en ctx-gold, probado separadamente en Rust.
+3. Cabeceras sin blancos redundantes y `## request [intención]`, seguido de
+   la tarea completa. Las cabeceras vacías ya se omitían en fase 1.
+4. L2 consecutivos comparten envoltorio con rutas completas y cuerpos
+   indentados dos espacios. Se preservan cuerpos íntegros, blancos y orden;
+   L3 permanece literal.
+5. Una sola firma L1 admite `ruta: firma`; múltiples firmas siguen indentadas.
+   Las declaraciones, tipos y rutas se muestran completos.
+
+La expansión deshace inline y rangos, en ese orden. `{N}` literal, llaves
+presentes en rutas o rutas L1 con `: ` conservan la representación original
+para evitar ambigüedades. No se reservan símbolos para alias. El texto final
+no crece y todo dato sigue dentro de trust="repository-content", conservando
+escapes y nota fija. Los tests de confianza cubren el render final; los tres
+snapshots actualizados conservan sus files[].
+
+El ejemplo de ablación sigue siendo útil para las cinco transformaciones
+conservadas y se simplifica a 32 combinaciones. Nueva máscara: hermanos=1,
+reglas=2, cabeceras/request=4, L2=8, inline=16. No contiene interruptores de
+diccionario. La máscara 31 reproduce exactamente texto, budget.used y
+rendered_tokens del addon en **60/60** filas, sin reconstruir selección.
+Las máscaras de fase 1b dejan de aplicarse.
+
+### Volcado y reproducción
+
+ctx-gold mantiene rendered, rendered_bytes, categorías de bytes y
+bytes_at_median global/por split; se retira la categoría del diccionario.
+`FOKER_CTX_GOLD_DUMP=<dir>` crea el directorio y escribe el rendered exacto
+de cada caso en `<dir>/<id>.txt`, sin añadir nueva línea ni separadores.
+Los ids se validan como nombres de archivo seguros. El test comprueba la
+creación del directorio, el contenido exacto por caso y el rechazo de rutas
+que escaparían del directorio. Los 60 volcados medidos coinciden byte a byte
+con rows[].rendered del informe. Permiten tokenizar externamente sin extraer
+texto del JSON ni alterar su formato.
+
+```sh
+./node_modules/.bin/tsc -p benchmarks/tsconfig.build.json
+cargo build --offline --release -p foker-napi
+cp target/release/libfoker_napi.so /tmp/foker-adr031-1c.node
+(cd benchmarks && NAPI_RS_NATIVE_LIBRARY_PATH=/tmp/foker-adr031-1c.node FOKER_CTX_GOLD_DUMP=/tmp/foker-adr031-1c-dump node run.mjs ctx-gold ../benchmarks/ctx-gold/cases.jsonl 8000 /tmp/foker-adr031-1c)
+cargo run --offline -p foker-context --example compact_ablation -- /tmp/foker-adr031-1b-before.json /tmp/foker-adr031-1c-ablation.json
+```
+
+Informes nuevos: `/tmp/foker-adr031-1c.{json,md}`; volcados:
+`/tmp/foker-adr031-1c-dump/*.txt`; ablación:
+`/tmp/foker-adr031-1c-ablation.json`. Comparaciones contra
+`/tmp/foker-adr031-v1.json` y `/tmp/foker-adr031-1b-before.json` (fase 1).
+No se sustituyen informes históricos persistidos. El addon recompilado se
+carga desde /tmp; no se modifica el artefacto de packages/core ni sus fuentes.
+
+### Verificación local de fase 1c
+
+- `cargo fmt --all --check`: verde.
+- `cargo clippy --workspace --all-targets --offline -- -D warnings`: verde.
+- `cargo nextest run --workspace --offline`: **132 pasan, 2 omitidos** por diseño.
+- `./node_modules/.bin/vitest run benchmarks crates packages/engine packages/cli`:
+  **260 pasan, 35 fallan** (22 archivos pasan, 6 fallan). Los 35 requieren
+  `git init` o `git apply` en fixtures y se bloquean con un wrapper temporal
+  en PATH para respetar la prohibición de escrituras; también se bloquea
+  pnpm de subprocess. No se omiten tests ni se permiten esas operaciones.
+  Los cuatro tests ctx-gold pasan. `GIT_OPTIONAL_LOCKS=0` evita escrituras
+  opcionales en lecturas git. Un preload temporal carga exclusivamente el
+  addon de Foker desde /tmp, sin sustituir otros bindings ni packages/core.
+- `./node_modules/.bin/biome check crates benchmarks docs`: verde (97 archivos).
+- `./node_modules/.bin/tsc -p tsconfig.json` y build TS de benchmarks: verdes.
+
+Logs: `/tmp/foker-adr031-1c-{fmt,clippy,nextest,vitest,biome,typecheck}.log`;
+build TS: `/tmp/foker-adr031-1c-build-ts.log`. Wrapper de restricciones:
+`/tmp/foker-adr031-bin/{git,pnpm}`; preload:
+`/tmp/foker-adr031-1c-preload.cjs`. Comando Vitest utilizado:
+
+```sh
+PATH=/tmp/foker-adr031-bin:$PATH GIT_OPTIONAL_LOCKS=0 NODE_OPTIONS=--require=/tmp/foker-adr031-1c-preload.cjs ./node_modules/.bin/vitest run benchmarks crates packages/engine packages/cli
+```
+
+No se modifican N-API ni contratos JSON, ni fuentes de MCP, integrations,
+skills o schemas. La gramática de rendered v2 revisada queda registrada
+solo en este ADR y FOKER-SPEC §9.9. La evidencia nueva corresponde a esta
+suite y al estimador; la medición o200k citada es la aportada por el revisor.
