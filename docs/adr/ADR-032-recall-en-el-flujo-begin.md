@@ -87,6 +87,12 @@ alcance, luego mediana de tokens.
 | **b (elegida)** | 0,7389 | **0,8083** | **902,5** | 0,7833 | **0,8889** |
 | c | 0,7389 | 0,8000 | 920 | 0,7500 | 0,8778 |
 
+**Archivos de la raíz.** `directoryScope` acotaba un archivo de la raíz a `**`, que siempre
+intersecta las rutas protegidas (`.git/**`, `.foker/**`…). Begin rechazaba entonces el alcance
+derivado con `FKR-POL-002` (a-13, a-26 y a-45, por `vitest.config.ts`). Ahora el alcance es el
+propio archivo. Modifica la regla «en raíz, `**`» de ADR-031 fase 2b, también en las
+sugerencias de alcance.
+
 ### 3 · Plegado flexivo es/en en BM25: implementado, desactivado
 
 `fold_inflection` quita tildes, plural (`-s`, `-ies`→`-y`, nunca `-ss`) y una `-e` final, con
@@ -121,6 +127,11 @@ begin devuelve error sin código: `scope_error = true` y recall 0. El recall del
 (REQ-CTX-003) **no cambia de definición**. El flujo es una métrica adicional y se informa
 siempre junto a ella.
 
+Begin se reproduce con la política protegida por defecto: un alcance que la intersecta cuenta
+como `scope_error` con `error = FKR-POL-002`. Un fallo del pack definitivo (p. ej.
+`FKR-CTX-001` al sumar la sección `task_scope`) se registra como `context_error`, con recall 0 y
+sin abortar el informe. `scope_coverage` vale 0 cuando begin rechaza el alcance.
+
 Diferencias conocidas con el MCP real: ctx-gold no pasa `foker/rules.md` ni `dirty_files`
 y no usa anclas salvo en los casos que las declaran.
 
@@ -134,9 +145,16 @@ ctx-gold, 60 casos (30/30), presupuesto 8000, estimador bytes-lf/3.2@1, dataset 
 | Recall pack (total / cal. / val.) | 0,7444 / 0,7389 / 0,7500 | 0,7444 / 0,7389 / 0,7500 (sin cambios por caso) |
 | **Recall flujo begin** (total / cal. / val.) | 0,3319 / 0,3306 / 0,3333 | **0,7611 / 0,7389 / 0,7833** |
 | Precisión flujo | 0,0193 | 0,0630 |
-| Cobertura de alcance | 0,8361 | 0,8486 |
-| Mediana rendered flujo | 835 | 929,5 |
+| Cobertura de alcance (total / cal. / val.) | 0,8028 / 0,7333 / 0,8722 | 0,8319 / 0,7750 / 0,8889 |
+| Rechazos de begin (`FKR-POL-002`) / `context_error` | 2 / 0 | 0 / 0 |
+| Mediana rendered flujo | 829 | 929,5 |
 | Casos con recall flujo < recall pack | 33 | 0 |
+
+Ambas columnas usan la métrica de flujo **corregida tras la revisión de Codex** (política
+protegida y `context_error`). La línea base se midió restaurando `seeds.rs` y
+`deriveScopePaths` de `main` sobre esta métrica. Las rejillas de las decisiones 2 y 3 se
+midieron antes de la corrección: sus coberturas no aplican la política protegida, pero los
+recalls de calibration coinciden y la elección no cambia.
 
 Regresión por caso en el flujo: **a-47** (1 → 0,5). Antes, el alcance inflado exponía
 64 archivos y arrastraba los cuatro gold. Ahora expone 17, igual que el pack (0,5). Se acepta:
@@ -152,11 +170,24 @@ pendiente de un smoke real.
 (0,744). El flujo alcanza 0,78 en validation. El resto de fallos es de vocabulario o
 sinonimia (no resoluble sin sobreajustar el diccionario) y archivos nuevos fuera del mapa.
 
+## Revisión independiente (Codex)
+
+| Hallazgo | Clasificación | Acción |
+|---|---|---|
+| Pack con `inflection_folding: true` no valida contra `ContextPack` (`additionalProperties: false`) | VALID (latente: desactivado) | Campo opcional en el esquema, tipos regenerados, test de esquema |
+| `flow` contaba como éxito alcances que begin rechaza por política | VALID | Política protegida por defecto en `flowPack`; tests; reveló el bug de `**` en la raíz |
+| Un fallo del pack definitivo abortaba la evaluación | VALID | `context_error` registrado con recall 0; test con motor simulado |
+
+Sin falsos positivos. Codex confirmó además, sin cambios: reparto 1/n sin duplicados ni
+división por cero, ningún no determinismo nuevo, `truncate` seguro en UTF-8, ninguna regla de
+benchmark en producción y ningún gold que llegue al selector.
+
 ## Consecuencias
 
 - Cambia el `pack_hash` de cualquier pack con `task_id` (seeds distintas). No cambian los
   packs sin alcance, los snapshots ni los formatos persistidos.
 - La spec §9.5 documenta la masa fija y el plegado como parámetro interno desactivado.
+- El esquema `ContextPack` admite `request.params.inflection_folding` (opcional, aditivo).
 - Los informes ctx-gold añaden `flow` y `report.flow`. Los consumidores antiguos lo ignoran.
 - Riesgo de benchmark: ninguna regla nombra tareas ni archivos. Los parámetros se eligieron
   solo con calibration y validation se midió una vez por variante declarada.

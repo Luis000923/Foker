@@ -1,6 +1,6 @@
 # Estado de Foker
 
-Última actualización: 2026-10-04 · Rama actual: main · Desarrollo con Codex (implementación y `codex review`) + verificación propia
+Última actualización: 2026-10-04 · Rama actual: main · Desarrollo con Claude Code + Codex (encargos en worktrees y revisión independiente)
 
 ## Hito actual
 
@@ -46,9 +46,22 @@ M0, M2, M3, M4 y E6 completos en local; M1 con todo lo que no gasta API (manifie
 | FKR-069 | `foker doctor` | hecho | feat/FKR-069-doctor | |
 | FKR-070 | Verificación manual de anfitriones | pendiente (humano) | — | Checklist en docs/integrations/verification.md |
 | FKR-081/082 | Nightly, SECURITY.md | hecho | feat/FKR-081-082-nightly-security | |
+| FKR-091 | Recall en el flujo `foker_task_begin` | hecho | feat/FKR-091-recall | ADR-032: recall del flujo 0,3319 → 0,7611 (pack 0,7444 sin cambios); plegado flexivo medido y desactivado; revisión Codex 3/3 válidos corregidos |
 | FKR-060 | Esqueleto de CLI | hecho | feat/FKR-060-cli | Codex; `docs/cli.md` generado (REQ-DOC-001) |
 
 ## Trabajo 2026-10-04
+
+- **FKR-091 · Recall en el flujo begin (ADR-032)**. Causa de a-09 en smoke-6: el pack
+  **definitivo** de `foker_task_begin` (con `taskScope` derivado) perdía `skuMatches.ts`,
+  aunque el preliminar lo tenía. Las anclas inexistentes del modelo no influían. `TASK_SCOPE`
+  daba 0,5 a cada uno de ~50 archivos y anulaba la señal léxica en el PPR. ctx-gold no lo
+  veía porque nunca pasaba `taskScope`. Nuevo modo `flow` en ctx-gold: recall del flujo
+  **0,3319 → 0,7611** (val. 0,7833); cobertura de alcance 0,8028 → 0,8319; rechazos de
+  begin 2 → 0. Correcciones: masa fija 1/n del alcance; el alcance derivado antepone la
+  señal directa; un archivo de la raíz se acota a sí mismo (`**` siempre era rechazado). El
+  plegado flexivo es/en sube el recall de calibration a 0,806, pero regresa a-49: queda
+  desactivado. El recall del pack (REQ-CTX-003) sigue en 0,7444: el TARGET 0,80 está
+  pendiente y los fallos restantes son de vocabulario o sinonimia y de archivos nuevos.
 
 - **ADR-031 fases 1b/1c/2/2b**: pack sin pérdida (rangos de hermanos, L2 compartido, firma inline;
   diccionario de macros rechazado por riesgo de calidad). ctx-gold: mediana rendered 5552 → 903
@@ -138,6 +151,10 @@ Sesión 2026-10-03 (usuario luis):
 
 ## Siguiente paso
 
-1. Smoke del benchmark por suscripción (6 ejecuciones; consume cuota): requiere permiso y token.
-2. Recall ≥ 0,80 en validation: ampliar ctx-gold y revisar fallos por caso sin sobreajustar.
+1. Smoke del benchmark (`bench-smoke-7`, consume cuota, requiere permiso) para medir FKR-091 en
+   el anfitrión: a-09 debería recibir `skuMatches.ts`; la hipótesis es menos exploración.
+2. FKR-094 · Fase 3 (contexto por símbolo, ADR-031): anclas grandes con cuerpo focal y
+   esqueleto del resto; antes, ampliar ctx-gold con gold a nivel de símbolo (ADR metodológico).
+3. Recall ≥ 0,80 del pack: ampliar ctx-gold (≥ 100 casos) y recalibrar `inflection_folding`
+   solo con calibration; los fallos de vocabulario no se tratan con entradas de diccionario ad hoc.
 3. FKR-070: verificación manual de los cuatro anfitriones (incluido Codex).
