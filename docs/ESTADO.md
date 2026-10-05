@@ -63,6 +63,11 @@ M0, M2, M3, M4 y E6 completos en local; M1 con todo lo que no gasta API (manifie
   tokens de ancla, mismo total de pack. La política A (sustituir también L3 que caben) se
   rechazó por una regresión. Fixture A, byte a byte idéntico. n = 8: indicativo, revalidar con
   Fixture B.
+- **smoke-7** (mismo manifiesto que smoke-6, imagen reconstruida desde main): a-09 Foker
+  169k → 125k tokens, 8 → 6 llamadas, sin Bash ni `foker_search` (el pack ya trae
+  `skuMatches.ts`); Foker/control en a-09 1,20x → 0,88x. Éxito igual (2/3 por brazo; a-09 falla
+  en ambos por el consumidor `ui/`). a-01 1,43x y a-15 1,53x; variabilidad de ±25 % con n = 1.
+  Detalle en ADR-032.
 
 - **FKR-091 · Recall en el flujo begin (ADR-032)**. Causa de a-09 en smoke-6: el pack
   **definitivo** de `foker_task_begin` (con `taskScope` derivado) perdía `skuMatches.ts`,
