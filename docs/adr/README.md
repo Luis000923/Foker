@@ -34,3 +34,5 @@ Copia de `spec/adr/`. Una decisión nueva o modificada exige un ADR nuevo con n�
 | [ADR-028](ADR-028-expansion-lexica-context-engine.md) | Expansión léxica es/en y corte relativo del ranking | Aceptada |
 | [ADR-029](ADR-029-benchmark-suscripciones.md) | Benchmark con autenticación por suscripción | Aceptada |
 | [ADR-030](ADR-030-respuestas-mcp-compactas.md) | Respuestas MCP compactas | Aceptada |
+| [ADR-031](ADR-031-pack-compacto-y-flujo-corto.md) | Context Pack compacto (v2) y flujo corto | Fases 1–2b aceptadas |
+| [ADR-032](ADR-032-recall-en-el-flujo-begin.md) | Recall en el flujo `foker_task_begin` | Aceptada (plegado rechazado como default) |

@@ -279,3 +279,16 @@ compara recall por caso y minimiza mediana rendered, después media rendered,
 después maximiza recall. Los empates mantienen la primera configuración.
 La medición Rust elegida y ctx-gold vía N-API coinciden en las 30 filas de
 calibration, tanto en recall como en tokens y rendered_tokens.
+
+## Recall en el flujo begin · ADR-032
+
+- `TASK_SCOPE` aporta `w_task_scope` (0,5) **en total**, repartido 1/n entre los archivos del
+  alcance; antes era 0,5 por archivo y un alcance de directorio anulaba la señal léxica.
+- `deriveScopePaths` (`@foker/engine`) deriva el alcance de begin sin `scope`: L3 si los hay;
+  si no, tres L2 con señal directa (`ANCHOR`, menciones, `LEXICAL:`) antes que hubs del grafo.
+- ctx-gold informa `flow` por caso y `report.flow`: el pack que recibe el agente tras begin
+  (alcance derivado + `taskScope`), con `scope_coverage` (gold editable sin rechazo del gate).
+  Recall del flujo 0,3319 → 0,7611; el recall del pack (REQ-CTX-003) no cambia.
+- `inflection_folding` (plegado es/en en BM25) es un parámetro interno **desactivado**: mejora
+  el recall de calibration pero regresa a-49; ver tablas en el ADR.
+- Diagnóstico por gold: `cargo run --offline -p foker-context --example recall_diagnose -- <fixture-a> [split]`.

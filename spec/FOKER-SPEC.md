@@ -455,7 +455,7 @@ Entrada `ContextRequest` y salida `ContextPack`: esquema normativo `schemas/cont
 1. Unicode NFC; CRLF→LF; colapsar espacios.
 2. Extraer **tokens tipo ruta** (regex de segmentos con `/` o extensión conocida) y **tokens tipo identificador** (`[A-Za-z_$][\w$]*` de longitud ≥ 3).
 3. Partir identificadores: camelCase, PascalCase, snake_case, kebab-case → subtérminos en minúsculas (`getUserById` → `get, user, by, id`).
-4. Eliminar *stopwords* de listas fijas versionadas (español e inglés, ~150 palabras cada una, en `crates/foker-context/data/`). Sin *stemming* en el MVP.
+4. Eliminar *stopwords* de listas fijas versionadas (español e inglés, ~150 palabras cada una, en `crates/foker-context/data/`). Sin *stemming* en el MVP (ADR-032 mide un plegado flexivo es/en como parámetro interno desactivado).
 5. Resultado: `terms` (multiconjunto ordenado), `path_candidates`, `identifier_candidates`.
 
 ### 9.4 Paso 3 · Identificación de intención
@@ -471,7 +471,7 @@ Vector de personalización `p` sobre nodos-archivo:
 | Candidatos de ruta/identificador extraídos del texto que resuelven en el mapa | 0,8 × `w_anchor` | Coincidencia exacta de id de archivo, nombre de archivo o nombre de símbolo exportado |
 | BM25 léxico | `w_lex` = 0,6 × puntuación normalizada | Top 20 documentos con puntuación > 0 |
 | Archivos con cambios sin commitear (`git status --porcelain`) | `w_dirty` = 0,3 | Solo si `dirty_files` |
-| Alcance de la tarea (`task_id`) | 0,5 | Archivos que casan con los globs del alcance |
+| Alcance de la tarea (`task_id`) | 0,5 en total, repartido 1/n | Los n archivos que casan con los globs del alcance (ADR-032) |
 
 BM25: un documento por archivo = tokens partidos de la ruta + nombres de símbolos exportados + firmas + docs. `k1 = 1,2`, `b = 0,75`. Puntuaciones normalizadas dividiendo por el máximo. Empates por id.
 
