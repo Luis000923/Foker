@@ -75,9 +75,22 @@ export const directoryScope = (file: string) => {
 export const rankPackFiles = (files: ContextPack['files']) =>
   [...files].sort((a, b) => b.score - a.score || compare(a.id, b.id));
 
-/** Alcance derivado del pack preliminar (ADR-031 fase 2b); usa niveles, nunca texto renderizado. */
+const DIRECT = /^(ANCHOR|PATH_MENTION|SYMBOL_MENTION|LEXICAL:)/;
+/** Señal propia de la tarea; CORE o DEPENDENCY_OF/DEPENDENT_OF solo llegan por el grafo. */
+const directSignal = (file: ContextPack['files'][number]) => file.reasons.some((reason) => DIRECT.test(reason));
+
+/**
+ * Alcance derivado del pack preliminar (ADR-031 fase 2b); usa niveles, nunca texto renderizado.
+ * Sin L3, toma tres L2 y antepone los de señal directa a los alcanzados por el grafo (ADR-032).
+ */
 export function deriveScopePaths(pack: Pick<ContextPack, 'files'>): string[] {
   const targets = pack.files.filter((file) => file.level === 'L3');
-  const files = targets.length ? targets : rankPackFiles(pack.files.filter((file) => file.level === 'L2')).slice(0, 3);
+  const l2 = pack.files.filter((file) => file.level === 'L2');
+  const files = targets.length
+    ? targets
+    : [...rankPackFiles(l2.filter(directSignal)), ...rankPackFiles(l2.filter((file) => !directSignal(file)))].slice(
+        0,
+        3,
+      );
   return [...new Set(files.map((file) => directoryScope(file.id)))].sort(compare);
 }
