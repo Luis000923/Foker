@@ -106,17 +106,26 @@ describe('flowPack registra los rechazos de begin sin abortar (revisión Codex, 
     expect(flow).toMatchObject({ scope_error: true, error: 'FKR-INP-001', recall: 0, scope_coverage: 0 });
     expect(build).not.toHaveBeenCalled();
   });
-  it('L3 en la raíz deriva ** y la política protegida lo rechaza: FKR-POL-002', async () => {
+  it('un alcance que intersecta rutas protegidas se rechaza: FKR-POL-002', async () => {
     const build = vi.fn();
     const flow = await flowPack(
       engine(build),
       { task: 't' },
+      preliminary([{ id: 'foker/rules.md', level: 'L3', score: 1, reasons: ['ANCHOR'] }]),
+      item,
+    );
+    expect(flow.scope).toEqual(['foker/**']);
+    expect(flow).toMatchObject({ scope_error: true, error: 'FKR-POL-002', recall: 0, scope_coverage: 0 });
+    expect(build).not.toHaveBeenCalled();
+  });
+  it('un archivo de la raíz ya no deriva ** y begin lo acepta', async () => {
+    const flow = await flowPack(
+      engine(() => Promise.reject(Object.assign(new Error('x'), { code: 'FKR-CTX-001' }))),
+      { task: 't' },
       preliminary([{ id: 'README.md', level: 'L3', score: 1, reasons: ['ANCHOR'] }]),
       item,
     );
-    expect(flow.scope).toEqual(['**']);
-    expect(flow).toMatchObject({ scope_error: true, error: 'FKR-POL-002', recall: 0, scope_coverage: 0 });
-    expect(build).not.toHaveBeenCalled();
+    expect(flow).toMatchObject({ scope: ['README.md'], scope_error: false, scope_coverage: 1 });
   });
   it('si el pack definitivo falla se registra context_error con recall 0', async () => {
     const error = Object.assign(new Error('presupuesto'), { code: 'FKR-CTX-001' });
