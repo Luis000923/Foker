@@ -41,7 +41,13 @@ export async function checkHost(
     await exec(command, args, { cwd: root, env, timeout: 5000, maxBuffer: 64 * 1024 });
   },
 ): Promise<Check[]> {
-  const command = target === 'claude-code' ? 'claude' : target;
+  const commands: Record<HostId, string> = {
+    'claude-code': 'claude',
+    codex: 'codex',
+    opencode: 'opencode',
+    antigravity: 'agy',
+  };
+  const command = commands[target];
   const id = `host:${target}`;
   try {
     await probe(command, ['--version']);

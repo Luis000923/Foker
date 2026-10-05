@@ -69,7 +69,9 @@ M0, M2, M3, M4 y E6 completos en local; M1 con todo lo que no gasta API (manifie
   (`gold_full` 0); plegado flexivo sigue desactivado (pack 0,831 → 0,775).
 - **FKR-070**: checklist ejecutable de los 4 anfitriones (rama feat/FKR-070-checklist-anfitriones,
   OpenCode). Fallos válidos: Antigravity (`agy` 1.2.17) no lee `.agents/mcp_config.json`;
-  `doctor` busca `antigravity` en vez de `agy`.
+  el sondeo de `doctor` se corrigió en FKR-099 para usar `agy --version`.
+- **FKR-099**: `doctor` usa un mapa explícito de binarios para los 4 anfitriones y conserva
+  los ids `host:<target>`. Test de regresión para `agy --version`; sesión de Antigravity manual.
 
 ## Trabajo 2026-10-05
 
