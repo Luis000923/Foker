@@ -60,6 +60,10 @@ M0, M2, M3, M4 y E6 completos en local; M1 con todo lo que no gasta API (manifie
   Δ = completo − firmas ≤ 64 tokens, nunca en barrels. ctx-gold: recall igual, `gold_full`
   0,167 → 0,436 (flujo 0,394), +11,5 % de tokens del pack. Límite del anfitrión declarado: Claude
   Code exige `Read` antes de editar, así que solo son evitables los `Read` de archivos no editados.
+  **smoke-8**: 0 `Read` evitados (el de `skuMatches.ts` era obligatorio porque se editó;
+  `baseline.test.ts` viajaba en L1). Éxito 2/3 por brazo, igual que en smoke-7; pack +9–19 %;
+  tokens Foker a-01 −17 %, a-15 +1 %, a-09 −2 %, dentro del ruido. No se declara mejora; el
+  umbral no se ajusta. Fin de la optimización sobre Fixture A: siguiente evidencia, Fixture B.
 
 - **FKR-094 · Fase 3, vista focal por símbolo (ADR-033)**. Un ancla grande que no cabe
   completa ya no se degrada a L2 sin cuerpos. Se entrega como L3 focal: cuerpos completos del
@@ -187,10 +191,8 @@ Sesión 2026-10-03 (usuario luis):
 
 ## Siguiente paso
 
-1. FKR-096 · cuerpo completo para archivos L2 pequeños. HIPÓTESIS de smoke-7: un `Read` de un
-   archivo de 4 líneas cuesta un turno (~17k tokens releídos). Medir con ctx-gold y smoke-8.
-2. PREGUNTA-6 · Fixture B: necesario para revalidar ADR-033 (n = 8 en foker-self) y el
-   plegado flexivo; criterios y candidatos en docs/bench/fixture-b-*.md.
-3. Recall ≥ 0,80 del pack: ampliar ctx-gold (≥ 100 casos) y recalibrar `inflection_folding`
-   solo con calibration; los fallos de vocabulario no se tratan con entradas de diccionario ad hoc.
-4. FKR-070: verificación manual de los cuatro anfitriones (incluido Codex).
+1. **PREGUNTA-6 · Fixture B (prioridad)**: elegir 2–3 repositorios reales con los criterios y
+   candidatos de docs/bench/fixture-b-*.md; después, FKR-014 (fixture), FKR-015 (línea base) y
+   un ctx-gold de repositorios reales para revalidar ADR-032/033/034 y el plegado flexivo.
+2. No seguir ajustando umbrales sobre Fixture A (ADR-034).
+3. FKR-070: verificación manual de los cuatro anfitriones (incluido Codex).
