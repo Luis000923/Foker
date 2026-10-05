@@ -54,6 +54,16 @@ M0, M2, M3, M4 y E6 completos en local; M1 con todo lo que no gasta API (manifie
 | FKR-060 | Esqueleto de CLI | hecho | feat/FKR-060-cli | Codex; `docs/cli.md` generado (REQ-DOC-001) |
 | FKR-092 | Medir y clasificar overhead fijo del anfitrión | hecho (local) | feat/FKR-092-overhead-anfitrion | Análisis determinista y 24 runs smoke-3…6; primer turno control ~15,7k, Foker ~17k; Δ smoke-6 1.316 tokens; internos no observables marcados INFERIDOS. Biome/tsc verdes, 40 tests benchmark verdes con addon externo de solo lectura |
 
+## Trabajo 2026-10-05
+
+- **FKR-014 · Parte A completada (rama feat/FKR-014-fixture-b)**: minado determinista con las
+  reglas congeladas de ADR-035 y regex literales de `tools/eligibility.py`. Vite: 112 candidatos,
+  500 rechazos; Query: 69/863; Zod: 169/267. Primer motivo registrado y orden por semilla;
+  seis JSONL idénticos byte a byte en dos ejecuciones. Detalle de motivos e interpretaciones
+  en [README de Fixture B](../benchmarks/fixture-b/README.md). Biome benchmarks, tsc global
+  (tras generar el dist local de core) y Vitest Fixture B verdes, 2 tests con repo sintético.
+  Sin red ni commits. FKR-014 completo sigue pendiente de F2P/P2P y curación posterior.
+
 ## Trabajo 2026-10-04
 
 - **FKR-014 · Fixture B (en curso, rama feat/FKR-014-fixture-b)**. PREGUNTA-6: Vite, TanStack
@@ -64,7 +74,7 @@ M0, M2, M3, M4 y E6 completos en local; M1 con todo lo que no gasta API (manifie
   monorepo, Zod tiene 162 archivos y 31k LOC. E4/E8: Query superó la 1.ª preparación
   (install 105 s, evaluación offline 43 s). Vite necesita Node 24.16 (el corepack de Node 22.14
   no activa pnpm 12) y Zod necesita `nub` 0.8.3 (instalador curl fijado), ambos relanzados.
-  Pendiente: 2.ª y 3.ª preparaciones, minado (Codex), verificación F2P/P2P, enunciados,
+  Pendiente: 2.ª y 3.ª preparaciones, verificación F2P/P2P, enunciados,
   ctx-gold B, evaluación offline y entorno del arnés por repo. **Benchmark pagado sin autorizar.**
 
 - **FKR-096 · Contenido completo de L2 pequeños (ADR-034)**. Umbral fijado antes de implementar:
