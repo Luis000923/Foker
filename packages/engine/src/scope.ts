@@ -66,10 +66,13 @@ export async function nonexistentScopePaths(root: string, scope: string[], files
 }
 
 const compare = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
-/** Directorio de un archivo como alcance glob; la raíz es `**`. */
+/**
+ * Directorio de un archivo como alcance glob. Un archivo de la raíz se acota a sí mismo:
+ * `**` intersecta siempre las rutas protegidas y begin lo rechazaría (ADR-032).
+ */
 export const directoryScope = (file: string) => {
   const directory = posix.dirname(file);
-  return directory === '.' ? '**' : `${directory}/**`;
+  return directory === '.' ? file : `${directory}/**`;
 };
 /** Puntuación descendente, id ascendente en empate. */
 export const rankPackFiles = (files: ContextPack['files']) =>

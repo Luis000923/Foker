@@ -62,3 +62,11 @@ it('sin L3 antepone L2 con señal directa a hubs alcanzados solo por el grafo (A
     'packages/users/src/**',
   ]);
 });
+
+it('un archivo de la raíz se acota a sí mismo, no a ** (siempre protegido) (ADR-032)', () => {
+  const files = [
+    file('vitest.config.ts', 'L2', 0.9, ['LEXICAL:test']),
+    file('packages/orders/src/a.ts', 'L2', 0.5, ['LEXICAL:x']),
+  ];
+  expect(deriveScopePaths({ files })).toEqual(['packages/orders/src/**', 'vitest.config.ts']);
+});
