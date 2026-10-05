@@ -115,6 +115,40 @@ foker-self (`focal_eval`): recall de símbolos igual en ambos splits y umbrales 
 límite del anfitrión, eso no implica menos llamadas cuando el gold se edita; el efecto real se
 mide en smoke-8 con los `Read` evitables.
 
+## Resultados smoke-8 (OBSERVACIÓN)
+
+`bench-smoke-8` repite smoke-7: mismo manifiesto archivado (`blake3:3ea8e24f…`), 3 tareas ×
+2 brazos, 1 repetición, Claude Code 2.1.289, `claude-sonnet-5-5` por suscripción, mismo orden.
+Imagen `foker-bench:smoke8` construida desde `main` 9bd5729; se conservan `smoke7` y `smoke6`.
+Llamadas con `host-overhead` (FKR-092); `Read` clasificados comparando el cuerpo entregado
+en el pack de begin con el archivo del baseline.
+
+| Tarea | Brazo | Tokens smoke-7 → 8 | Llamadas 7 → 8 | Pack begin (tokens) 7 → 8 | Archivos completos en el pack | `Read` 7 → 8 (obligatorios / evitables sobre completos) | Éxito 7 → 8 |
+|---|---|---:|---:|---:|---:|---|---|
+| a-01 | control | 84.116 → 67.624 | 5 → 4 | — | — | 0 → 0 | sí → sí |
+| a-01 | Foker | 120.147 → 99.603 | 6 → 5 | 990 → 1.107 | 1 → 6 | 1 → 1 (0 / 0) | sí → sí |
+| a-15 | control | 64.210 → 64.210 | 4 → 4 | — | — | 1 → 1 | sí → sí |
+| a-15 | Foker | 98.225 → 99.385 | 5 → 5 | 906 → 1.081 | 1 → 6 | 0 → 0 | sí → sí |
+| a-09 | control | 142.251 → 85.126 | 8 → 5 | — | — | 0 → 0 | no → no |
+| a-09 | Foker | 125.037 → 122.235 | 6 → 6 | 1.034 → 1.124 | 0 → 5 | 2 → 2 (**1** / 0) | no → no |
+
+Foker/control: a-01 1,43x → 1,47x; a-15 1,53x → 1,55x; a-09 0,88x → 1,44x. Este último solo
+refleja que el control de a-09 dejó de editar (4 Bash, ningún `Write`) y consumió menos.
+
+- **`Read` evitados por ADR-034: 0.** En a-09, `skuMatches.ts` llegó completo en el pack, pero el
+  modelo lo leyó para editarlo: es un `Read` obligatorio por el anfitrión, como se declaró antes
+  del smoke. El único `Read` sin edición posterior (`baseline.test.ts`, en a-01 y a-09) viajaba
+  en L1, fuera del alcance de ADR-034.
+- Exploración manual del brazo Foker: 0 en ambos smokes.
+- Pack de begin: +9 % a +19 % de tokens.
+- Éxito: 2/3 por brazo en ambos smokes; sin regresiones por tarea.
+
+**INTERPRETACIÓN**: con Fixture A y Claude Code, ADR-034 no reduce llamadas. Aumenta el pack un
+~10 % sin pérdida de recall ni de éxito. Las variaciones de tokens totales (−17 % a +1 % en Foker)
+quedan dentro del ruido observado (±25 %, n = 1). **No se declara mejora.** Por el compromiso
+del ADR no se ajusta el umbral. Su utilidad depende de que haya archivos que se consulten sin
+editarse, lo que es más probable en repositorios reales: queda pendiente de Fixture B.
+
 ## Revisiones independientes
 
 | Hallazgo | Revisor | Clasificación | Acción |
