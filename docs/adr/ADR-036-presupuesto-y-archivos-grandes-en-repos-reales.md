@@ -1,7 +1,10 @@
 # ADR-036 · Reparto del presupuesto y archivos grandes en repositorios reales
 
-- **Estado**: Propuesta. Hipótesis, umbrales y protocolo fijados **antes** de implementar y de
-  medir.
+- **Estado**: **Aceptada con excepción** (decisión humana, 2026-10-05). Criterio principal cumplido
+  (validation B 0,8635 ≥ 0,724). D5 incumple dos barreras de Fixture A fijadas a priori: recall del
+  flujo 0,7611 → 0,7444 (un caso, a-48) y cobertura de alcance 0,8319 → 0,8222. La persona aceptó
+  esa excepción a cambio de 0 errores de alcance y recall del flujo validation 0,911 en Fixture B.
+  Configuración: D1 (0,25) + D2 + D4 + D5; D3 implementada y desactivada.
 - **Fecha**: 2026-10-05
 - **Issue**: FKR-097
 - **Modifica (si se acepta)**: FOKER-SPEC §9.5 (semillas de mención con paquete), §9.7 pasos 2–4
@@ -347,3 +350,10 @@ cargo nextest run -p foker-context --offline
 El JSON previo de validation se formateó con Biome sin cambiar datos para resolver su error
 preexistente de formato. La suite completa Vitest no queda verde por los tres fallos del
 sandbox; no se modifican esos tests ni se presenta la Definition of Done como cumplida.
+
+## Decisión final (2026-10-05)
+
+Se integra D1–D5 con la configuración congelada. La excepción afecta solo a las dos barreras de
+Fixture A de D5; no se relajó ningún otro umbral ni se ajustó nada después de ver validation.
+Pendiente, sin cambiar este ADR: D3 (anclas que no caben ni en L1) merece un ADR propio con un
+criterio basado en errores, porque en uso real un ancla gigante hoy devuelve `FKR-CTX-001`.

@@ -305,7 +305,7 @@ calibration, tanto en recall como en tokens y rendered_tokens.
 - Evaluación: `cargo run --release --offline -p foker-context --example focal_eval -- <cases> <trees> <out>`
   sobre `benchmarks/ctx-gold/foker-self` (FKR-095). Resultados y criterio en el ADR.
 
-## Propuesta para repositorios reales · ADR-036 (FKR-097)
+## Repositorios reales · ADR-036 (FKR-097)
 
 D1 limita el coste individual de no anclas L2/L1 (`related_max_fraction`); D2 permite las firmas
 L1 del foco léxico con una marca del número de símbolos omitidos (`related_focal`). D3 rescata
@@ -315,8 +315,7 @@ sin restringir anclas ni semillas BM25. Los nombres npm y la asociación archivo
 en el mapa; no se modifica `foker-map`, N-API, CLI ni MCP.
 
 La configuración congelada tras **calibration solamente** es `0.25 / true / false / true` en
-ese orden. El ADR sigue siendo **Propuesta**: validation de Fixture B y la revisión cruzada
-están pendientes. D3 reduce los errores de símbolos a cero en calibration, pero queda desactivada
+ese orden. ADR-036 está **aceptada con excepción**: validation de Fixture B 0,6238 → 0,8635 (los 45 casos, 0,4078 → 0,8307). D5 cambia el alcance derivado de `foker_task_begin` para que cuente L1/L2 con señal directa (0 errores de alcance en B), a costa de un caso de Fixture A (a-48). D3 reduce los errores de símbolos a cero en calibration, pero queda desactivada
 porque no aumenta el recall pack (criterio fijado en el ADR). Tabla y resultados por caso:
 [ADR-036](adr/ADR-036-presupuesto-y-archivos-grandes-en-repos-reales.md) y
 [medición](../benchmarks/fixture-b/results/adr036-calibration-2026-10-05.json).

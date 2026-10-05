@@ -38,3 +38,5 @@ Copia de `spec/adr/`. Una decisión nueva o modificada exige un ADR nuevo con n�
 | [ADR-032](ADR-032-recall-en-el-flujo-begin.md) | Recall en el flujo `foker_task_begin` | Aceptada (plegado rechazado como default) |
 | [ADR-033](ADR-033-vista-focal-por-simbolo.md) | Vista focal por símbolo para anclas grandes (fase 3) | Aceptada (activa solo como sustituta de la degradación) |
 | [ADR-034](ADR-034-contenido-completo-de-archivos-pequenos.md) | Contenido completo de archivos L2 pequeños | Aceptada (umbral a priori 64) |
+| [ADR-035](ADR-035-fixture-b-repositorios-reales.md) | Fixture B con repositorios reales | Propuesta (reglas congeladas; 45 tareas avaladas) |
+| [ADR-036](ADR-036-presupuesto-y-archivos-grandes-en-repos-reales.md) | Reparto del presupuesto y archivos grandes en repositorios reales | Aceptada con excepción (barrera A de D5) |
