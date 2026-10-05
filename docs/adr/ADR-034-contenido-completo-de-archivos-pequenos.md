@@ -94,6 +94,27 @@ Reglas complementarias, también fijadas ahora:
 - Después de smoke-8 no se siguen ajustando umbrales sobre Fixture A: la siguiente evidencia
   debe venir de Fixture B (PREGUNTA-6).
 
+## Resultados ctx-gold y foker-self (OBSERVACIÓN, código final)
+
+60 casos, presupuesto 8000, estimador bytes-lf/3.2@1; «antes» = mismo commit con
+`small_full_max_extra = 0`.
+
+| Métrica | Antes | Después |
+|---|---:|---:|
+| Recall pack (total / cal. / val.) | 0,7444 / 0,7389 / 0,7500 | igual (sin regresiones por caso) |
+| Recall flujo begin | 0,7611 | 0,7611 (sin regresiones por caso) |
+| `gold_full` pack (gold con contenido completo) | 0,1667 | **0,4361** |
+| `gold_full` flujo begin | 0,1667 | **0,3944** |
+| Mediana / media rendered pack | 903 / 889 | 1007 / 1006 (+11,5 %) |
+| Mediana / media rendered flujo | 929,5 / 956 | 1054 / 1093 (+13,4 %) |
+
+foker-self (`focal_eval`): recall de símbolos igual en ambos splits y umbrales (0,75 / 0,289 /
+0,442), sin regresiones; tokens del pack ±0,2 %.
+
+**INTERPRETACIÓN**: más gold llegan completos a cambio de un 11–13 % de tokens del pack. Por el
+límite del anfitrión, eso no implica menos llamadas cuando el gold se edita; el efecto real se
+mide en smoke-8 con los `Read` evitables.
+
 ## Revisiones independientes
 
 | Hallazgo | Revisor | Clasificación | Acción |

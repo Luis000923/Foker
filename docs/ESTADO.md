@@ -50,10 +50,16 @@ M0, M2, M3, M4 y E6 completos en local; M1 con todo lo que no gasta API (manifie
 | FKR-081/082 | Nightly, SECURITY.md | hecho | feat/FKR-081-082-nightly-security | |
 | FKR-091 | Recall en el flujo `foker_task_begin` | hecho | feat/FKR-091-recall | ADR-032: recall del flujo 0,3319 → 0,7611 (pack 0,7444 sin cambios); plegado flexivo medido y desactivado; revisión Codex 3/3 válidos corregidos |
 | FKR-094 | Fase 3 · vista focal por símbolo | hecho | feat/FKR-094-contexto-simbolo | ADR-033: anclas grandes que no caben se entregan con cuerpos focales en lugar de L2; foker-self validation recall de símbolos 0,289 → 0,442 sin regresiones; Fixture A idéntico; revisiones Codex + Claude 11/11 válidos corregidos |
+| FKR-096 | Contenido completo de L2 pequeños | hecho | feat/FKR-096-cuerpo-pequeno | ADR-034: Δ ≤ 64 tokens (a priori); sin barrels; gold_full 0,167 → 0,436, recall igual, +11,5 % tokens; revisiones Codex ×2 + Claude |
 | FKR-060 | Esqueleto de CLI | hecho | feat/FKR-060-cli | Codex; `docs/cli.md` generado (REQ-DOC-001) |
 | FKR-092 | Medir y clasificar overhead fijo del anfitrión | hecho (local) | feat/FKR-092-overhead-anfitrion | Análisis determinista y 24 runs smoke-3…6; primer turno control ~15,7k, Foker ~17k; Δ smoke-6 1.316 tokens; internos no observables marcados INFERIDOS. Biome/tsc verdes, 40 tests benchmark verdes con addon externo de solo lectura |
 
 ## Trabajo 2026-10-04
+
+- **FKR-096 · Contenido completo de L2 pequeños (ADR-034)**. Umbral fijado antes de implementar:
+  Δ = completo − firmas ≤ 64 tokens, nunca en barrels. ctx-gold: recall igual, `gold_full`
+  0,167 → 0,436 (flujo 0,394), +11,5 % de tokens del pack. Límite del anfitrión declarado: Claude
+  Code exige `Read` antes de editar, así que solo son evitables los `Read` de archivos no editados.
 
 - **FKR-094 · Fase 3, vista focal por símbolo (ADR-033)**. Un ancla grande que no cabe
   completa ya no se degrada a L2 sin cuerpos. Se entrega como L3 focal: cuerpos completos del

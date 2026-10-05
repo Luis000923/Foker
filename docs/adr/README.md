@@ -37,3 +37,4 @@ Copia de `spec/adr/`. Una decisión nueva o modificada exige un ADR nuevo con n�
 | [ADR-031](ADR-031-pack-compacto-y-flujo-corto.md) | Context Pack compacto (v2) y flujo corto | Fases 1–2b aceptadas |
 | [ADR-032](ADR-032-recall-en-el-flujo-begin.md) | Recall en el flujo `foker_task_begin` | Aceptada (plegado rechazado como default) |
 | [ADR-033](ADR-033-vista-focal-por-simbolo.md) | Vista focal por símbolo para anclas grandes (fase 3) | Aceptada (activa solo como sustituta de la degradación) |
+| [ADR-034](ADR-034-contenido-completo-de-archivos-pequenos.md) | Contenido completo de archivos L2 pequeños | Aceptada (umbral a priori 64) |
