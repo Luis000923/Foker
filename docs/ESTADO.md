@@ -34,6 +34,7 @@ M0, M2, M3, M4 y E6 completos en local; M1 con todo lo que no gasta API (manifie
 | FKR-011/016 | Arnés headless y análisis | hecho (sin ejecución real) | feat/FKR-011-arnes | Imagen foker-bench construida y probada; falta PREGUNTA-2 |
 | FKR-014/015/018 | Fixture B, línea base, benchmark completo | bloqueado | — | PREGUNTA-6 y PREGUNTA-2 |
 | FKR-093 | Criterios reproducibles y candidatos para Fixture B | hecho (documentación) | feat/FKR-093-fixture-b-criterios | [Criterios](bench/fixture-b-criterios.md), [8 candidatos](bench/fixture-b-candidatos.md) y propuesta compatible de manifiesto; SHAs/tamaños/offline pendientes, selección humana PREGUNTA-6 |
+| FKR-095 | Dataset ctx-gold de símbolos del historial foker-self | hecho | feat/FKR-095-ctx-gold-simbolos | [Metodología y resultados](../benchmarks/ctx-gold/foker-self/README.md): 8 casos (2 calibration / 6 validation), 43 descartes; generación reproducible, base 0 verificada; Biome, tsc y 49 tests benchmarks pasan; sin commits |
 | FKR-080 | Publicación npm | bloqueado | — | PREGUNTA-3 |
 | FKR-040…042 | Config, trust, ejecutor seguro | hecho | feat/FKR-040-config-trust-exec | ADR-022 (shims .cmd en Windows) |
 | FKR-043/044 | Parsers de hallazgos, escáner de secretos | hecho | feat/FKR-043-parsers-secretos | 24 reglas |
@@ -168,7 +169,7 @@ Sesión 2026-10-03 (usuario luis):
 1. Smoke del benchmark (`bench-smoke-7`, consume cuota, requiere permiso) para medir FKR-091 en
    el anfitrión: a-09 debería recibir `skuMatches.ts`; la hipótesis es menos exploración.
 2. FKR-094 · Fase 3 (contexto por símbolo, ADR-031): anclas grandes con cuerpo focal y
-   esqueleto del resto; antes, ampliar ctx-gold con gold a nivel de símbolo (ADR metodológico).
+   esqueleto del resto; dataset de símbolos foker-self disponible (FKR-095); integrar su evaluación en FKR-094.
 3. Recall ≥ 0,80 del pack: ampliar ctx-gold (≥ 100 casos) y recalibrar `inflection_folding`
    solo con calibration; los fallos de vocabulario no se tratan con entradas de diccionario ad hoc.
 3. FKR-070: verificación manual de los cuatro anfitriones (incluido Codex).
