@@ -2,7 +2,8 @@ import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } f
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { type ContextRequest, openEngine } from '@foker/core';
+import { type ContextRequest, matchGlobs, openEngine } from '@foker/core';
+import { deriveScopePaths } from '@foker/engine';
 import { generate } from '../fixtures/fixture-a/generate.mjs';
 
 export interface GoldCase {
@@ -136,6 +137,7 @@ function summarize(
     bytes: ReturnType<typeof renderedBytes>;
     recall: number;
     precision: number;
+    flow?: FlowResult;
   }[],
 ) {
   const median = (values: number[]) => {
@@ -159,6 +161,17 @@ function summarize(
     median_rendered_tokens: rows.length ? median(rows.map((r) => r.rendered_tokens)) : null,
     mean_rendered_tokens: rows.length ? mean(rows.map((r) => r.rendered_tokens)) : null,
     median_rendered_bytes: rows.length ? median(rows.map((r) => r.rendered_bytes)) : null,
+    flow:
+      rows.length && rows.every((r) => r.flow)
+        ? {
+            recall: mean(rows.map((r) => (r.flow as FlowResult).recall)),
+            precision: mean(rows.map((r) => (r.flow as FlowResult).precision)),
+            scope_coverage: mean(rows.map((r) => (r.flow as FlowResult).scope_coverage)),
+            scope_errors: rows.filter((r) => (r.flow as FlowResult).scope_error).length,
+            median_rendered_tokens: median(rows.map((r) => (r.flow as FlowResult).rendered_tokens)),
+            mean_rendered_tokens: mean(rows.map((r) => (r.flow as FlowResult).rendered_tokens)),
+          }
+        : null,
     mean_rendered_bytes: rows.length ? mean(rows.map((r) => r.rendered_bytes)) : null,
     // Media de las filas centrales: suma exactamente la mediana de bytes, a diferencia
     // de sumar medianas independientes de categorías.
@@ -179,6 +192,50 @@ function summarizeSplits(rows: ({ split: GoldCase['split'] } & Parameters<typeof
   return Object.fromEntries(
     (['calibration', 'validation'] as const).map((split) => [split, summarize(rows.filter((r) => r.split === split))]),
   );
+}
+/** Id fijo y checks del perfil default: el flujo es determinista y no depende de un ledger. */
+const FLOW_TASK_ID = 'tsk_00000000000000000000000000';
+const FLOW_CHECKS = ['typecheck', 'lint', 'test', 'secrets'];
+export interface FlowResult {
+  scope: string[];
+  scope_error: boolean;
+  /** Fracción de gold_modified editable dentro del alcance derivado (gate de alcance). */
+  scope_coverage: number;
+  recall: number;
+  precision: number;
+  rendered_tokens: number;
+  exposed: string[];
+}
+/**
+ * Emula foker_task_begin sin scope y con context (ADR-031 fase 2b, ADR-032): el pack preliminar
+ * deriva el alcance y el pack definitivo se construye con taskScope. Sin alcance derivable, begin
+ * devuelve error y el agente no recibe código: recall 0.
+ */
+async function flowPack(
+  engine: Awaited<ReturnType<typeof openEngine>>,
+  request: ContextRequest,
+  preliminary: Awaited<ReturnType<Awaited<ReturnType<typeof openEngine>>['buildContext']>>,
+  item: GoldCase,
+): Promise<FlowResult> {
+  const scope = deriveScopePaths(JSON.parse(preliminary.json));
+  const scope_coverage =
+    item.gold_modified.filter((id) => scope.length && matchGlobs(id, scope)).length / item.gold_modified.length;
+  if (!scope.length) {
+    return { scope, scope_error: true, scope_coverage, recall: 0, precision: 0, rendered_tokens: 0, exposed: [] };
+  }
+  const pack = await engine.buildContext({
+    ...request,
+    taskScope: { taskId: FLOW_TASK_ID, description: request.task, paths: scope, checks: FLOW_CHECKS },
+  });
+  const exposed = pack.files.filter((f) => f.level !== 'L0').map((f) => f.id);
+  return {
+    scope,
+    scope_error: false,
+    scope_coverage,
+    ...score(exposed, item.gold_modified, item.gold_read),
+    rendered_tokens: renderedTokens(pack.rendered),
+    exposed,
+  };
 }
 export async function evaluateContext(
   cases: GoldCase[],
@@ -208,12 +265,14 @@ export async function evaluateContext(
     for (const item of cases) {
       const engine = engines[item.fixture];
       if (!engine || !item.id || !item.task) throw new Error('Caso ctx-gold inválido');
-      const pack = await engine.buildContext({
+      const request: ContextRequest = {
         task: item.task,
         budgetTokens: budget,
         ...(params ? { params } : {}),
         ...(item.anchors ? { anchors: item.anchors } : {}),
-      });
+      };
+      const pack = await engine.buildContext(request);
+      const flow = await flowPack(engine, request, pack, item);
       if (dumpDir) writeFileSync(join(dumpDir, `${item.id}.txt`), pack.rendered);
       const exposed = pack.files.filter((f) => f.level !== 'L0').map((f) => f.id);
       const misses = [];
@@ -272,6 +331,7 @@ export async function evaluateContext(
         misses,
         sections: pack.sections.map(({ id, tokens }) => ({ id, tokens })),
         occupants: pack.files.map(({ id, level, tokens }) => ({ id, level, tokens })),
+        flow,
       });
     }
     if (!rows.length) throw new Error('Suite vacía');
@@ -304,7 +364,7 @@ export async function main(args: string[]): Promise<void> {
   const base = resolve(args[2] ?? join(repo, `benchmarks/reports/ctx-gold-${date}`));
   mkdirSync(dirname(base), { recursive: true });
   writeFileSync(`${base}.json`, `${JSON.stringify(report, null, 2)}\n`);
-  const summary = `Casos: ${report.cases}; recall@pack: ${report.recall.toFixed(4)}; precisión: ${report.precision.toFixed(4)}; mediana/media tokens: ${report.median_tokens}/${report.mean_tokens}; mediana/media rendered_tokens: ${report.median_rendered_tokens}/${report.mean_rendered_tokens}.\n\nREQ-CTX-003 TARGET recall ≥ 0,80: ${report.recall >= 0.8 ? 'SÍ' : 'NO'}; mediana ≤ 8000: ${report.median_tokens <= 8000 ? 'SÍ' : 'NO'}; recall < 0,6 bloquea M3: ${report.blocks_m3 ? 'SÍ' : 'NO'}.`;
+  const summary = `Casos: ${report.cases}; recall@pack: ${report.recall.toFixed(4)}; precisión: ${report.precision.toFixed(4)}; mediana/media tokens: ${report.median_tokens}/${report.mean_tokens}; mediana/media rendered_tokens: ${report.median_rendered_tokens}/${report.mean_rendered_tokens}.\n\nREQ-CTX-003 TARGET recall ≥ 0,80: ${report.recall >= 0.8 ? 'SÍ' : 'NO'}; mediana ≤ 8000: ${report.median_tokens <= 8000 ? 'SÍ' : 'NO'}; recall < 0,6 bloquea M3: ${report.blocks_m3 ? 'SÍ' : 'NO'}.\n\nFlujo begin sin scope (ADR-032): recall ${report.flow?.recall.toFixed(4)}; precisión ${report.flow?.precision.toFixed(4)}; cobertura de alcance ${report.flow?.scope_coverage.toFixed(4)}; errores de alcance ${report.flow?.scope_errors}; mediana/media rendered_tokens ${report.flow?.median_rendered_tokens}/${report.flow?.mean_rendered_tokens}.`;
   writeFileSync(
     `${base}.md`,
     `# ctx-gold · ${date}\n\n${summary}\n\n${Object.entries(report.splits)
@@ -317,6 +377,7 @@ export async function main(args: string[]): Promise<void> {
       )}\n\nMedia macro por caso. Fixture A: anclas solo si están declaradas; monorepo-pnpm: casos con anclas. Los tests nuevos aún ausentes del mapa cuentan como misses.\n\n| Caso | Split | Recall | Precisión | Tokens | Rendered tokens |\n|---|---|---:|---:|---:|---:|\n${report.rows.map((r) => `| ${r.id} | ${r.split} | ${r.recall.toFixed(3)} | ${r.precision.toFixed(3)} | ${r.tokens} | ${r.rendered_tokens} |`).join('\n')}\n`,
   );
   console.log(summary);
+  console.log(`Flujo begin (ADR-032): ${JSON.stringify(report.flow)}`);
   console.log(JSON.stringify(report.splits, null, 2));
   console.log(`Informes: ${base}.{json,md}`);
 }

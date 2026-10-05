@@ -69,3 +69,21 @@ it('rechaza ids que permitirían salir del directorio de volcado', async () => {
     vi.unstubAllEnvs();
   }
 });
+
+it('el flujo begin deriva alcance, usa taskScope y mide cobertura de alcance', async () => {
+  const repo = fileURLToPath(new URL('../../', import.meta.url));
+  const cases = loadCases(readFileSync(new URL('../ctx-gold/cases.jsonl', import.meta.url), 'utf8'));
+  const item = cases.find((c) => c.id === 'a-02');
+  if (!item) throw new Error('Caso ausente');
+  const report = await evaluateContext([item], repo);
+  const flow = report.rows[0]?.flow;
+  if (!flow) throw new Error('Flujo ausente');
+  expect(flow.scope_error).toBe(false);
+  expect(flow.scope.length).toBeGreaterThan(0);
+  expect(flow.scope.every((glob) => glob.endsWith('/**'))).toBe(true);
+  expect(flow.scope_coverage).toBeGreaterThanOrEqual(0);
+  expect(flow.scope_coverage).toBeLessThanOrEqual(1);
+  expect(flow.rendered_tokens).toBeGreaterThan(0);
+  expect(report.flow?.recall).toBe(flow.recall);
+  expect(report.flow?.scope_errors).toBe(0);
+});
