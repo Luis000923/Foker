@@ -944,7 +944,10 @@ fn compact_groups_escape_repository_data_at_every_level() {
             note: None,
         };
         let text = render::file(&file, body, false);
-        let section = render::files_section("related", "optional", "task", &[(file, text)]);
+        let section = compact::section(
+            render::files_section("related", "optional", "task", &[(file, text)]),
+            compact::Options::ALL,
+        );
         assert!(!section.text.contains("###"));
         assert!(
             !section
@@ -987,20 +990,41 @@ fn compact_pack_has_one_copy_per_file_and_one_trust_note() {
     assert!(!p.rendered.contains("###"));
     let ids: std::collections::BTreeSet<_> = p.files.iter().map(|f| &f.id).collect();
     assert_eq!(ids.len(), p.files.len());
+    // Expande rangos y firmas inline antes de comprobar las rutas individuales.
+    let mut expanded = String::new();
+    let mut rest = p.rendered.as_str();
+    while let Some(start) = rest.find("<foker:files ") {
+        expanded.push_str(&rest[..start]);
+        let (open, body) = rest[start..].split_once('\n').unwrap();
+        let (body, tail) = body.split_once("</foker:files>\n").unwrap();
+        expanded.push_str(open);
+        expanded.push('\n');
+        let level = open
+            .split("level=\"")
+            .nth(1)
+            .unwrap()
+            .split('"')
+            .next()
+            .unwrap();
+        expanded.push_str(&compact::expand_entries(body, level).unwrap());
+        expanded.push_str("</foker:files>\n");
+        rest = tail;
+    }
+    expanded.push_str(rest);
     for file in &p.files {
         // Ninguna ruta se repite en cabeceras ni en otro nivel/sección.
-        assert_eq!(p.rendered.matches(&file.id).count(), 1, "{}", file.id);
+        assert_eq!(expanded.matches(&file.id).count(), 1, "{}", file.id);
     }
     for id in ["core", "related", "targets"] {
         let text = p
             .rendered
-            .split(&format!("## {id}\n\n"))
+            .split(&format!("## {id}\n"))
             .nth(1)
             .unwrap_or("")
             .split("\n## ")
             .next()
             .unwrap();
-        for level in ["L0", "L1"] {
+        for level in ["L0", "L1", "L2"] {
             assert!(
                 text.matches(&format!("<foker:files level=\"{level}\""))
                     .count()

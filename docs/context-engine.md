@@ -198,11 +198,73 @@ etiqueta compartida pertenece a `sections[].tokens`. ctx-gold añade
 En los 60 casos v2 budget.used supera rendered_tokens entre 1 y 3 tokens por
 redondeos por sección. No se reduce el denominador a las firmas.
 
-Resultado: recall idéntico en cada caso (total 0,7444, calibration 0,7389,
+Resultado fase 1: recall idéntico en cada caso (total 0,7444, calibration 0,7389,
 validation 0,7500); mediana rendered 5552 → 1049 (−81,11 %), media 4984,05 →
 1333,82. El objetivo de ≤830 no se alcanza; la configuración más pequeña de
 la rejilla sin regresiones calibration mide 1049 de mediana. No se retocan
 parámetros después de observar validation ni se afirma un límite universal.
+
+### Compactación · ADR-031 fase 1c
+
+`compact` se ejecuta después de `select`: no cambia selección, parámetros,
+archivos, niveles, razones ni notas, ni usa el espacio ahorrado para rellenar
+el presupuesto. Se recalculan texto, hashes y tokens de secciones y pack.
+`files[].tokens` conserva el coste individual previo a la compactación;
+`budget.used` es la suma de secciones compactas.
+
+- L0/L1 combinan hermanos consecutivos con plantillas numéricas iguales.
+  Dentro del grupo se ordenan numéricamente, usando rangos naturales como
+  `record-{0..21}.ts`. `{N}` representa el mismo token numérico en ruta y
+  firmas. La expansión conserva el multiconjunto de líneas (huecos y
+  duplicados incluidos) y el orden fuera del grupo. Ceros iniciales y
+  reservados ambiguos se conservan literalmente. Las propiedades aleatorias
+  y casos concretos comprueban esas garantías también con Unicode.
+- Una sola firma L1 admite `ruta: firma`; las firmas múltiples siguen
+  indentadas. Rutas y firmas se escriben completas.
+- L2 consecutivos comparten envoltorio cuando reduce bytes; el cuerpo íntegro
+  se indenta dos espacios por línea, conservando blancos. L3 no se transforma.
+- Las cabeceras y request (`## request [intención]`) usan menos separadores.
+  La omisión de cabeceras vacías ya estaba implementada en fase 1.
+- Solo el render de reglas omite comentarios HTML completos y blancos
+  redundantes fuera de código. No cambia el archivo ni los inputs; conserva
+  fences, código inline/indentado y comentarios incompletos. ctx-gold no
+  contiene reglas: esta variante da ahorro cero allí y se comprueba en Rust.
+
+El diccionario de sustituciones de fase 1b se rechazó por optimizar el estimador
+sin ahorrar tokens reales en la misma proporción y por exigir al modelo
+interpretar macros al leer y editar código. Se retiran su código, interruptores,
+atributo, tests y ejemplos. Rutas, firmas y cuerpos siguen dentro de delimitadores
+con `trust="repository-content"`. Los tests de inyección recorren también la
+compactación final; los snapshots cambian por texto, costes y hashes, manteniendo
+sus `files[]`.
+
+[La fase 1c del ADR](adr/ADR-031-pack-compacto-y-flujo-corto.md#fase-1c)
+recoge las medidas por split frente a v1 y fase 1. ctx-gold registra el texto,
+`rendered_bytes`, categorías exactas de bytes y `bytes_at_median` por split:
+media de las filas centrales, no suma de medianas independientes de categorías.
+`FOKER_CTX_GOLD_DUMP=<dir>` vuelca cada `rendered` exacto en `<dir>/<id>.txt`,
+sin añadir separadores ni nueva línea, para medir tokens con herramientas externas.
+El directorio se crea si falta; los ids deben ser nombres de archivo seguros.
+
+Medición sin red, cargando el addon recompilado desde /tmp:
+
+```sh
+./node_modules/.bin/tsc -p benchmarks/tsconfig.build.json
+cargo build --offline --release -p foker-napi
+cp target/release/libfoker_napi.so /tmp/foker-adr031-1c.node
+(cd benchmarks && NAPI_RS_NATIVE_LIBRARY_PATH=/tmp/foker-adr031-1c.node FOKER_CTX_GOLD_DUMP=/tmp/foker-adr031-1c-dump node run.mjs ctx-gold ../benchmarks/ctx-gold/cases.jsonl 8000 /tmp/foker-adr031-1c)
+```
+
+Ablación opcional de las cinco transformaciones conservadas (32 combinaciones),
+sobre un informe de fase 1 con `rows[].rendered`, sin reconstruir selección:
+
+```sh
+cargo run --offline -p foker-context --example compact_ablation -- /tmp/foker-adr031-1b-before.json /tmp/foker-adr031-1c-ablation.json
+```
+
+Máscara: hermanos=1, reglas=2, cabeceras/request=4, L2=8, inline=16.
+0 es el render previo y 31 activa las cinco transformaciones. Las máscaras
+antiguas de fase 1b quedan retiradas.
 
 Reproducir calibration, sin evaluar validation ni operar git:
 

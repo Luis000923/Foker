@@ -72,7 +72,72 @@ export function score(exposed: string[], gold: string[], goldRead: string[] = []
 export function renderedTokens(text: string): number {
   return Math.ceil((Buffer.byteLength(text) - (text.match(/\r\n/g)?.length ?? 0)) / 3.2);
 }
-function summarize(rows: { tokens: number; rendered_tokens: number; recall: number; precision: number }[]) {
+/** Partición exacta de bytes UTF-8; cabeceras de código no cuentan como secciones. */
+export function renderedBytes(text: string) {
+  const bytes = {
+    headings: 0,
+    wrappers: 0,
+    trust_note: 0,
+    rules: 0,
+    skill: 0,
+    task_scope: 0,
+    request: 0,
+    paths: 0,
+    signatures: 0,
+    bodies: 0,
+    whitespace: 0,
+  };
+  let section = '';
+  let wrapper = '';
+  let level = '';
+  for (const line of text.match(/[^\n]*\n|[^\n]+$/g) ?? []) {
+    let kind: keyof typeof bytes;
+    if (line.startsWith('<foker:')) {
+      wrapper = line.startsWith('<foker:files ') ? 'files' : 'file';
+      level = /level="(L\d)"/.exec(line)?.[1] ?? '';
+      kind = 'wrappers';
+    } else if (line.startsWith('</foker:')) {
+      kind = 'wrappers';
+      wrapper = '';
+    } else if (!wrapper && line.startsWith('## ')) {
+      section = line.slice(3).trim().split(' ')[0] ?? '';
+      kind = 'headings';
+    } else if (!wrapper && line.startsWith('El contenido entre etiquetas foker:')) {
+      kind = 'trust_note';
+    } else if (section === 'request') {
+      kind = 'request';
+    } else if (!line.trim()) {
+      kind = 'whitespace';
+    } else if (section === 'rules' || section === 'skill' || section === 'task_scope') {
+      kind = section;
+    } else if (wrapper === 'files' && (level === 'L1' || level === 'L0')) {
+      if (!line.startsWith('  ') && line.includes(': ')) {
+        const split = line.indexOf(': ') + 2;
+        bytes.paths += Buffer.byteLength(line.slice(0, split));
+        bytes.signatures += Buffer.byteLength(line.slice(split));
+        continue;
+      }
+      kind = line.startsWith('  ') ? 'signatures' : 'paths';
+    } else if (wrapper === 'files' && level === 'L2') {
+      kind = line.startsWith('  ') ? 'bodies' : 'paths';
+    } else {
+      kind = 'bodies';
+    }
+    bytes[kind] += Buffer.byteLength(line);
+  }
+  return bytes;
+}
+function summarize(
+  rows: {
+    id: string;
+    tokens: number;
+    rendered_tokens: number;
+    rendered_bytes: number;
+    bytes: ReturnType<typeof renderedBytes>;
+    recall: number;
+    precision: number;
+  }[],
+) {
   const median = (values: number[]) => {
     const ordered = values.sort((a, b) => a - b);
     const middle = Math.floor(ordered.length / 2);
@@ -81,6 +146,10 @@ function summarize(rows: { tokens: number; rendered_tokens: number; recall: numb
       : ((ordered[middle - 1] as number) + (ordered[middle] as number)) / 2;
   };
   const mean = (values: number[]) => values.reduce((sum, value) => sum + value, 0) / values.length;
+  const ordered = [...rows].sort(
+    (a, b) => a.rendered_bytes - b.rendered_bytes || Buffer.compare(Buffer.from(a.id), Buffer.from(b.id)),
+  );
+  const central = ordered.slice(Math.floor((ordered.length - 1) / 2), Math.floor(ordered.length / 2) + 1);
   return {
     cases: rows.length,
     recall: rows.length ? mean(rows.map((r) => r.recall)) : null,
@@ -89,6 +158,21 @@ function summarize(rows: { tokens: number; rendered_tokens: number; recall: numb
     mean_tokens: rows.length ? mean(rows.map((r) => r.tokens)) : null,
     median_rendered_tokens: rows.length ? median(rows.map((r) => r.rendered_tokens)) : null,
     mean_rendered_tokens: rows.length ? mean(rows.map((r) => r.rendered_tokens)) : null,
+    median_rendered_bytes: rows.length ? median(rows.map((r) => r.rendered_bytes)) : null,
+    mean_rendered_bytes: rows.length ? mean(rows.map((r) => r.rendered_bytes)) : null,
+    // Media de las filas centrales: suma exactamente la mediana de bytes, a diferencia
+    // de sumar medianas independientes de categorías.
+    bytes_at_median: rows.length
+      ? {
+          case_ids: central.map((r) => r.id),
+          parts: Object.fromEntries(
+            Object.keys(central[0]?.bytes ?? {}).map((key) => [
+              key,
+              mean(central.map((r) => r.bytes[key as keyof typeof r.bytes])),
+            ]),
+          ),
+        }
+      : null,
   };
 }
 function summarizeSplits(rows: ({ split: GoldCase['split'] } & Parameters<typeof summarize>[0][number])[]) {
@@ -104,6 +188,14 @@ export async function evaluateContext(
   params?: ContextRequest['params'],
 ) {
   loadCases(cases.map((item) => JSON.stringify(item)).join('\n'));
+  const dumpDir = process.env['FOKER_CTX_GOLD_DUMP'];
+  if (dumpDir) {
+    // Cada id debe ser un nombre de archivo, sin permitir rutas fuera del directorio.
+    if (cases.some((item) => !/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/.test(item.id))) {
+      throw new Error('Id inválido para FOKER_CTX_GOLD_DUMP');
+    }
+    mkdirSync(dumpDir, { recursive: true });
+  }
   const temp = mkdtempSync(join(tmpdir(), 'foker-ctx-gold-'));
   try {
     const synthetic = join(temp, 'fixture-a');
@@ -122,6 +214,7 @@ export async function evaluateContext(
         ...(params ? { params } : {}),
         ...(item.anchors ? { anchors: item.anchors } : {}),
       });
+      if (dumpDir) writeFileSync(join(dumpDir, `${item.id}.txt`), pack.rendered);
       const exposed = pack.files.filter((f) => f.level !== 'L0').map((f) => f.id);
       const misses = [];
       if (diagnose) {
@@ -171,6 +264,9 @@ export async function evaluateContext(
         ...score(exposed, item.gold_modified, item.gold_read),
         tokens: pack.budget.used,
         rendered_tokens,
+        rendered: pack.rendered,
+        rendered_bytes: Buffer.byteLength(pack.rendered),
+        bytes: renderedBytes(pack.rendered),
         exposed,
         gold_modified: item.gold_modified,
         misses,
