@@ -56,6 +56,17 @@ M0, M2, M3, M4 y E6 completos en local; M1 con todo lo que no gasta API (manifie
 
 ## Trabajo 2026-10-04
 
+- **FKR-014 · Fixture B (en curso, rama feat/FKR-014-fixture-b)**. PREGUNTA-6: Vite, TanStack
+  Query y Zod, pendientes de validar E1–E8. ADR-035 congela SHAs, ventana y reglas de minado antes
+  de enumerar candidatos. Expediente fuera del repo en `~/Documentos/foker-fixture-b`
+  (clones, `tools/eligibility.py`, `tools/env_check.sh`, `eligibility/*.json`, `env/*/run*`).
+  E1/E2/E3: los tres son MIT con TS ≥ 94 %; Vite tiene tamaño «mixto», Query es medium y
+  monorepo, Zod tiene 162 archivos y 31k LOC. E4/E8: Query superó la 1.ª preparación
+  (install 105 s, evaluación offline 43 s). Vite necesita Node 24.16 (el corepack de Node 22.14
+  no activa pnpm 12) y Zod necesita `nub` 0.8.3 (instalador curl fijado), ambos relanzados.
+  Pendiente: 2.ª y 3.ª preparaciones, minado (Codex), verificación F2P/P2P, enunciados,
+  ctx-gold B, evaluación offline y entorno del arnés por repo. **Benchmark pagado sin autorizar.**
+
 - **FKR-096 · Contenido completo de L2 pequeños (ADR-034)**. Umbral fijado antes de implementar:
   Δ = completo − firmas ≤ 64 tokens, nunca en barrels. ctx-gold: recall igual, `gold_full`
   0,167 → 0,436 (flujo 0,394), +11,5 % de tokens del pack. Límite del anfitrión declarado: Claude
