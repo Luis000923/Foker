@@ -54,8 +54,38 @@ M0, M2, M3, M4 y E6 completos en local; M1 con todo lo que no gasta API (manifie
 | FKR-060 | Esqueleto de CLI | hecho | feat/FKR-060-cli | Codex; `docs/cli.md` generado (REQ-DOC-001) |
 | FKR-092 | Medir y clasificar overhead fijo del anfitrión | hecho (local) | feat/FKR-092-overhead-anfitrion | Análisis determinista y 24 runs smoke-3…6; primer turno control ~15,7k, Foker ~17k; Δ smoke-6 1.316 tokens; internos no observables marcados INFERIDOS. Biome/tsc verdes, 40 tests benchmark verdes con addon externo de solo lectura |
 
+## Trabajo 2026-10-05
+
+- **FKR-014 · Correcciones del arnés y verificación por lotes**: evaluación con instantánea
+  independiente del home preparado; entregas sin detección de renombres; veredictos condicionados
+  al retorno y huella actual del verificador; rechazo de skips nuevos por archivo en las tres
+  repeticiones. `verify_task.py` intacto. `exposure_recall` null si no hay gold (antes NaN).
+  Revisión Codex (5 hallazgos válidos, corregidos) e implementación Codex revisada por Claude;
+  `pnpm verify` verde. Reauditadas las 31 tareas v2 con la regla por archivo: 0 skips nuevos.
+
+- **FKR-014 · Parte A completada (rama feat/FKR-014-fixture-b)**: minado determinista con las
+  reglas congeladas de ADR-035 y regex literales de `tools/eligibility.py`. Vite: 112 candidatos,
+  500 rechazos; Query: 69/863; Zod: 172/264 (tras la corrección de regex del README). Primer motivo registrado y orden por semilla;
+  seis JSONL idénticos byte a byte en dos ejecuciones. Detalle de motivos e interpretaciones
+  en [README de Fixture B](../benchmarks/fixture-b/README.md). Biome benchmarks, tsc global
+  (tras generar el dist local de core) y Vitest Fixture B verdes, 2 tests con repo sintético.
+  Sin red ni commits. FKR-014 completo sigue pendiente de F2P/P2P y curación posterior.
+
 ## Trabajo 2026-10-04
 
+- **FKR-014 · Fixture B preparada (ADR-035)**. Vite, Query y Zod cumplen E1–E8 en su SHA fijado.
+  45 tareas reales (15 por repo) verificadas 3 veces sin red con el entorno de cada base; enunciados
+  de Codex derivados de los tests y auditados (0 fugas); ctx-gold B de 45 casos. Evaluación offline
+  con el motor congelado: recall pack 0,408 / flujo 0,396 / símbolos 0,370 (Fixture A: 0,744 / 0,761);
+  12/45 anclas fallan con FKR-CTX-001 (10 en Zod); `gold_full` 0; plegado empeora. Pendiente:
+  arnés por repo para FKR-015 y autorización del benchmark pagado.
+  **Corrección (2026-10-05)**: la reverificación v2 se había interrumpido con 31/45 avaladas. Se
+  completó: las **45 tareas tienen aval v2** (huella `5cc8a340ce5b`, 3 repeticiones estables, sin
+  skips nuevos por archivo) y el conjunto coincide con v1. Dos bajas intermedias (b-vite-13,
+  b-zod-10) eran `verifier_error` por cerrojos huérfanos de la interrupción, apartados como
+  `*.lock.huerfano-0530`.
+- **bench-b-smoke-1 · inválido**: 6/6 `API Error 400` en el primer turno por un token OAuth mal
+  guardado (caracteres de control del pegado). Coste 0; no se usa como evidencia.
 - **FKR-096 · Contenido completo de L2 pequeños (ADR-034)**. Umbral fijado antes de implementar:
   Δ = completo − firmas ≤ 64 tokens, nunca en barrels. ctx-gold: recall igual, `gold_full`
   0,167 → 0,436 (flujo 0,394), +11,5 % de tokens del pack. Límite del anfitrión declarado: Claude

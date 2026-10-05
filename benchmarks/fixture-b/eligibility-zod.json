@@ -1,0 +1,24 @@
+{
+  "sha": "004d800c9e3cd4c79930f55aa4ad080225b22efd",
+  "license_files": ["LICENSE", "packages/docs-v3/LICENSE", "packages/mini/LICENSE", "packages/zod/LICENSE"],
+  "ts_files": 162,
+  "ts_loc": 30960,
+  "js_files": 4,
+  "js_loc": 78,
+  "ts_share": 0.9975,
+  "ts_test_files": 204,
+  "ts_test_loc": 41527,
+  "packages_with_ts": {
+    "packages/zod": 126,
+    "packages/treeshake": 23,
+    "packages/resolution": 5,
+    "packages/tsc": 3,
+    ".": 3,
+    "packages/mini": 2
+  },
+  "lockfiles": ["pnpm-lock.yaml"],
+  "packageManager": "nub@0.8.3",
+  "engines": null,
+  "submodules": false,
+  "lfs": false
+}

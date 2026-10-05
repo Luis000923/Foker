@@ -40,3 +40,6 @@ lcov.info
 !/benchmarks/reports/ctx-gold-diagnostico.md
 /benchmarks/docker/compiled/
 /benchmarks/dist/
+
+# Fixture B: cachés de Python
+__pycache__/
