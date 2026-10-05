@@ -295,7 +295,8 @@ calibration, tanto en recall como en tokens y rendered_tokens.
 
 ## Vista focal por símbolo · ADR-033
 
-- `focal_min_tokens` (interno, **0 = desactivada**, default) entrega anclas grandes como L3 focal:
+- `focal_min_tokens` (interno, 500 por defecto; 0 la desactiva) entrega como L3 focal las anclas
+  grandes que **no caben** completas (en lugar de degradarlas a L2):
   FULL para el foco y contratos pequeños, OPEN para contenedores, SIGNATURE para lo que usa el
   foco y REFERENCE agrupado para el resto, con aviso y marcas de omisión dentro de `rendered`.
 - Foco: anclas de símbolo, identificadores citados y BM25 dentro del archivo. Sin foco, archivo completo.
