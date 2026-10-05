@@ -271,3 +271,79 @@ Barreras de D5 (más estrictas; no relajan nada de lo anterior):
 | Recall del pack | sin cambios (D5 no toca el motor) |
 
 Si D5 no cumple, el ADR no se integra y se reabre la decisión.
+
+### Resultados de D5
+
+**OBSERVACIÓN (2026-10-05): D5 no cumple todas sus barreras. No se integra el ADR y se
+reabre la decisión.** El criterio, las barreras y los defaults congelados permanecen intactos.
+Implementación idéntica en TS y Rust: L3 si existe; sin L3, ranking conjunto L1/L2 con señal
+directa, después L2 sin señal, corte a tres archivos antes de deduplicar directorios. L0 excluido.
+`benchmarks/src/ctx-gold.ts` importa `deriveScopePaths` de `@foker/engine`.
+
+Fixture B: `CARGO_TARGET_DIR=/home/luis/Documentos/Foker-097/target cargo run --release --offline
+-p foker-context --example fixture_b_eval -- benchmarks/fixture-b/ctx-gold/cases.jsonl
+/home/luis/Documentos/foker-fixture-b/trees benchmarks/fixture-b/results/adr036-d5-2026-10-05.json`.
+Los árboles se leen sin modificarlos; no se crea `.foker/`. No se ajustan parámetros del motor.
+
+Cada celda sigue el orden **main / validation D1–D4 / D5**:
+
+| Split | Recall pack | Recall flujo | scope_coverage | scope_errors |
+|---|---|---|---|---|
+| calibration (24) | 0,218750 / 0,802083 / 0,802083 | 0,239583 / 0,625000 / 0,760417 | 0,479167 / 0,250000 / 0,541667 | 0 / 4 / 0 |
+| validation (21) | 0,623810 / 0,863492 / 0,863492 | 0,574603 / 0,815873 / 0,911111 | 0,619048 / 0,476190 / 0,714286 | 0 / 1 / 0 |
+| todos (45) | 0,407778 / 0,830741 / 0,830741 | 0,395926 / 0,714074 / 0,830741 | 0,544444 / 0,355556 / 0,622222 | 0 / 5 / 0 |
+
+[Medición D5](../../benchmarks/fixture-b/results/adr036-d5-2026-10-05.json),
+[comparación de los 45 casos](../../benchmarks/fixture-b/results/adr036-d5-comparacion-2026-10-05.md)
+y [detalle de flujos y alcances](../../benchmarks/fixture-b/results/adr036-d5-comparacion-2026-10-05.json).
+`offline-eval-2026-10-05.json` solo contiene agregados: para el detalle main se ejecutó el
+binario aislado de `e749daa` conservado de la prueba de identidad en `/tmp/fkr097`;
+recall pack/flujo, cobertura y errores por split reproducen el informe publicado (tolerancia
+1e-12). Frente a validation, mejora el recall de b-query-10 (0 → 1), b-zod-04 (0 → 0,25),
+b-zod-08, b-zod-11, b-zod-12 y b-zod-15 (0 → 1); ningún caso pierde recall del flujo.
+Los cinco errores de alcance desaparecen. b-query-13 pierde cobertura (1 → 0), aunque
+mantiene recall 1; la tabla por caso incluye también cambios de alcance sin cambio de recall.
+Recall del pack idéntico a validation en los 45 casos.
+
+Fixture A se midió con **`fixture_a_barrier` (port Rust del flujo)**, los 60 casos ctx-gold,
+la Fixture A generada en `/tmp/fkr097/fixture-a`, el monorepo del repositorio y
+`/tmp/fkr097/empty.json` (`[]`, sin overrides). Comando: `cargo run --release --offline
+-p foker-context --example fixture_a_barrier -- /tmp/fkr097/fixture-a /tmp/fkr097/empty.json
+benchmarks/fixture-b/results/adr036-d5-fixture-a-2026-10-05.json`, con el mismo `CARGO_TARGET_DIR`.
+[Resultado A](../../benchmarks/fixture-b/results/adr036-d5-fixture-a-2026-10-05.json):
+cobertura **0,822222** (base 0,831944), recall flujo **0,744444** (base 0,761111),
+recall pack **0,744444** (sin cambios), cero errores de alcance.
+Frente a la medición A anterior conservada en `/tmp/fkr097/d4-a.json`, el recall solo baja
+en **a-48 (1 → 0)**; cobertura baja en a-19 (1 → 0), a-32 (1 → 0,5),
+a-46 (0,75 → 0,5), a-50 (2/3 → 1/3), y sube en a-20 (0 → 1), a-34 (0,5 → 1).
+
+Aplicación literal de las barreras D5:
+
+| Métrica | Resultado | Cumple |
+|---|---|---|
+| Errores de alcance B (todos) = 0 | 0 | Sí |
+| Cobertura B calibration/validation ≥ main (0,479 y 0,619) | 0,541667 / 0,714286; también supera las bases sin redondear | Sí |
+| Recall flujo B calibration/validation ≥ 0,6250 / 0,8159 | 0,760417 / 0,911111 | Sí |
+| Fixture A cobertura y recall flujo ≥ 0,8319 / 0,7611 | 0,822222 / 0,744444 | **No, ambos** |
+| Recall pack sin cambios | B: idéntico en 45/45 casos; A: 0,744444, idéntico por caso | Sí |
+
+Comprobaciones locales (sin red ni commit):
+
+```text
+cargo fmt --check
+  exit 0
+cargo clippy -p foker-context --all-targets --offline -- -D warnings
+  exit 0; Finished dev profile
+cargo nextest run -p foker-context --offline
+  exit 0; 77 tests run: 77 passed, 1 skipped
+./node_modules/.bin/vitest run packages/engine benchmarks
+  exit 1; 244 passed, 3 failed (spawnSync git EPERM del sandbox)
+./node_modules/.bin/biome check packages/engine benchmarks
+  exit 0; Checked 146 files. No fixes applied.
+./node_modules/.bin/tsc -b
+  exit 0
+```
+
+El JSON previo de validation se formateó con Biome sin cambiar datos para resolver su error
+preexistente de formato. La suite completa Vitest no queda verde por los tres fallos del
+sandbox; no se modifican esos tests ni se presenta la Definition of Done como cumplida.

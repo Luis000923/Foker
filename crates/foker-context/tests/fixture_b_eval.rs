@@ -181,3 +181,58 @@ fn configuraciones_adicionales_y_filtro_previo_de_split() {
             .is_err()
     );
 }
+
+#[test]
+fn alcance_d5_niveles_senales_orden_y_fallback() {
+    use foker_context::pack::{PackFile, RenderLevel::*};
+    let file = |id: &str, level, score, reason: &str| PackFile {
+        id: id.into(),
+        level,
+        score,
+        tokens: 1,
+        reasons: vec![reason.into()],
+        note: None,
+    };
+    let mut files = vec![
+        file("z/a.ts", L1, 2.0, "PATH_MENTION"),
+        file("b/a.ts", L2, 2.0, "SYMBOL_MENTION"),
+        file("a/a.ts", L1, 2.0, "LEXICAL:a"),
+        file("c/a.ts", L1, 3.0, "ANCHOR"),
+        file("root.ts", L0, 99.0, "ANCHOR"),
+        file("hub/a.ts", L2, 99.0, "CORE"),
+    ];
+    assert_eq!(
+        fixture_b::derive_scope_paths(&files),
+        ["a/**", "b/**", "c/**"]
+    );
+    files.reverse();
+    assert_eq!(
+        fixture_b::derive_scope_paths(&files),
+        ["a/**", "b/**", "c/**"]
+    );
+    assert!(fixture_b::derive_scope_paths(&[file("root.ts", L0, 99.0, "ANCHOR")]).is_empty());
+    let mut fallback = vec![
+        file("z/a.ts", L2, 1.0, "CORE"),
+        file("a/b.ts", L2, 2.0, "DEPENDENCY_OF:x"),
+        file("b/a.ts", L2, 1.0, "CORE"),
+        file("a/a.ts", L2, 2.0, "CORE"),
+        file("c/a.ts", L1, 99.0, "CORE"),
+    ];
+    assert_eq!(fixture_b::derive_scope_paths(&fallback), ["a/**", "b/**"]);
+    fallback.reverse();
+    assert_eq!(fixture_b::derive_scope_paths(&fallback), ["a/**", "b/**"]);
+    fallback.push(file("direct/a.ts", L1, 0.1, "LEXICAL:a"));
+    assert_eq!(
+        fixture_b::derive_scope_paths(&fallback),
+        ["a/**", "direct/**"]
+    );
+    fallback.extend([
+        file("target/a.ts", L3, 0.0, "CORE"),
+        file("target/b.ts", L3, 0.0, "CORE"),
+        file("config.ts", L3, 0.0, "CORE"),
+    ]);
+    assert_eq!(
+        fixture_b::derive_scope_paths(&fallback),
+        ["config.ts", "target/**"]
+    );
+}

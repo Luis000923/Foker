@@ -285,7 +285,9 @@ calibration, tanto en recall como en tokens y rendered_tokens.
 - `TASK_SCOPE` aporta `w_task_scope` (0,5) **en total**, repartido 1/n entre los archivos del
   alcance; antes era 0,5 por archivo y un alcance de directorio anulaba la señal léxica.
 - `deriveScopePaths` (`@foker/engine`) deriva el alcance de begin sin `scope`: L3 si los hay;
-  si no, tres L2 con señal directa (`ANCHOR`, menciones, `LEXICAL:`) antes que hubs del grafo.
+  si no, tres L1/L2 con señal directa (`ANCHOR`, menciones, `LEXICAL:`), por puntuación
+  descendente e id ascendente, y después L2 sin señal. L0 queda excluido (ADR-036 D5,
+  implementación experimental pendiente de superar sus barreras).
 - ctx-gold informa `flow` por caso y `report.flow`: el pack que recibe el agente tras begin
   (alcance derivado + `taskScope`), con `scope_coverage` (gold editable sin rechazo del gate).
   Recall del flujo 0,3319 → 0,7611; el recall del pack (REQ-CTX-003) no cambia.

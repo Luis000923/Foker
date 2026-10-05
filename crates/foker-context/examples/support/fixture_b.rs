@@ -252,14 +252,27 @@ pub fn directory_scope(file: &str) -> String {
     }
 }
 
-/// Port de `deriveScopePaths`: L3 si hay; si no, tres L2 con señal directa primero.
+/// Port de `deriveScopePaths`: L3 si hay; si no, tres L1/L2 con señal directa y luego L2 del grafo (D5).
 pub fn derive_scope_paths(files: &[PackFile]) -> Vec<String> {
     let targets: Vec<&PackFile> = files.iter().filter(|f| f.level.as_str() == "L3").collect();
     let chosen = if targets.is_empty() {
-        let l2: Vec<&PackFile> = files.iter().filter(|f| f.level.as_str() == "L2").collect();
-        let mut ordered = rank(l2.iter().copied().filter(|f| direct_signal(f)).collect());
+        let candidates: Vec<&PackFile> = files
+            .iter()
+            .filter(|f| matches!(f.level.as_str(), "L1" | "L2"))
+            .collect();
+        let mut ordered = rank(
+            candidates
+                .iter()
+                .copied()
+                .filter(|f| direct_signal(f))
+                .collect(),
+        );
         ordered.extend(rank(
-            l2.iter().copied().filter(|f| !direct_signal(f)).collect(),
+            candidates
+                .iter()
+                .copied()
+                .filter(|f| f.level.as_str() == "L2" && !direct_signal(f))
+                .collect(),
         ));
         ordered.truncate(3);
         ordered

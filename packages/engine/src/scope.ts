@@ -84,16 +84,16 @@ const directSignal = (file: ContextPack['files'][number]) => file.reasons.some((
 
 /**
  * Alcance derivado del pack preliminar (ADR-031 fase 2b); usa niveles, nunca texto renderizado.
- * Sin L3, toma tres L2 y antepone los de señal directa a los alcanzados por el grafo (ADR-032).
+ * Sin L3, toma tres L1/L2 con señal directa y luego L2 del grafo (ADR-036 D5).
  */
 export function deriveScopePaths(pack: Pick<ContextPack, 'files'>): string[] {
   const targets = pack.files.filter((file) => file.level === 'L3');
-  const l2 = pack.files.filter((file) => file.level === 'L2');
+  const candidates = pack.files.filter((file) => file.level === 'L2' || file.level === 'L1');
   const files = targets.length
     ? targets
-    : [...rankPackFiles(l2.filter(directSignal)), ...rankPackFiles(l2.filter((file) => !directSignal(file)))].slice(
-        0,
-        3,
-      );
+    : [
+        ...rankPackFiles(candidates.filter(directSignal)),
+        ...rankPackFiles(candidates.filter((file) => file.level === 'L2' && !directSignal(file))),
+      ].slice(0, 3);
   return [...new Set(files.map((file) => directoryScope(file.id)))].sort(compare);
 }
