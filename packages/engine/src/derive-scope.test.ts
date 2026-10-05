@@ -6,7 +6,7 @@ const file = (
   id: string,
   level: ContextPack['files'][number]['level'],
   score: number,
-  reasons = ['CORE'],
+  reasons: [string, ...string[]] = ['CORE'],
 ): ContextPack['files'][number] => ({
   id,
   level,
