@@ -201,9 +201,11 @@ const commit = (cwd: string, message: string) =>
 /** Entrega del agente respecto del commit preparado, con validación de seguridad. */
 export async function submission(work: string, prepared: string) {
   await git(work, ['add', '-A']);
-  const patch = await git(work, ['diff', '--cached', '--binary', prepared]);
-  const names = (await git(work, ['diff', '--cached', '--name-only', prepared])).split('\n').filter(Boolean);
-  const raw = (await git(work, ['diff', '--cached', '--raw', prepared])).split('\n').filter(Boolean);
+  const patch = await git(work, ['diff', '--cached', '--no-renames', '--binary', prepared]);
+  const names = (await git(work, ['diff', '--cached', '--no-renames', '--name-only', prepared]))
+    .split('\n')
+    .filter(Boolean);
+  const raw = (await git(work, ['diff', '--cached', '--no-renames', '--raw', prepared])).split('\n').filter(Boolean);
   const violations: string[] = names.filter((p) => PROTECTED.some((re) => re.test(p)));
   for (const line of raw) {
     const [meta, path] = line.split('\t') as [string, string];
@@ -254,6 +256,8 @@ export async function runTaskB(options: {
   await commit(work, `Base ${task.base}`);
   const backend = options.backend ?? containerBackendB(manifest);
   await backend.prepare(work, home, task, arm, privateDir);
+  const preparedHome = join(base, 'prepared-home');
+  cpSync(home, preparedHome, { recursive: true, verbatimSymlinks: true });
   if (arm === 'control') writeFileSync(join(work, '.bench-mcp.json'), '{"mcpServers":{}}\n');
   await git(work, ['add', '-A']);
   await commit(work, 'Preparado');
@@ -306,7 +310,7 @@ export async function runTaskB(options: {
   const runPrivate = join(base, 'private');
   cpSync(join(privateDir, 'hidden'), join(runPrivate, 'hidden'), { recursive: true, verbatimSymlinks: true });
   writeFileSync(join(runPrivate, 'submission.patch'), sub.patch);
-  const rc = await backend.evaluate(snapshot, home, task, runPrivate);
+  const rc = await backend.evaluate(snapshot, preparedHome, task, runPrivate);
   writeFileSync(join(evidence, 'evaluation.json'), JSON.stringify({ rc, violations: sub.violations }));
   const traces: unknown[] = [output.transcript, output.tool_traces];
   writeFileSync(join(evidence, 'traces.json'), JSON.stringify(traces));
@@ -364,7 +368,9 @@ export async function runTaskB(options: {
       exposure_precision: exposed.files.size
         ? [...exposed.files].filter((p) => task.gold_modified.includes(p)).length / exposed.files.size
         : null,
-      exposure_recall: task.gold_modified.filter((p) => exposed.files.has(p)).length / task.gold_modified.length,
+      exposure_recall: task.gold_modified.length
+        ? task.gold_modified.filter((p) => exposed.files.has(p)).length / task.gold_modified.length
+        : null,
       out_of_scope_edits: sub.names.filter((p) => !task.gold_modified.includes(p) && !testFiles.has(p)).length,
       errors: exposed.errors + Number(host.exitCode !== 0 || host.timedOut || output.is_error === true),
       retries: null,

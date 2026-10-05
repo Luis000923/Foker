@@ -5,7 +5,7 @@ Una tarea se acepta si las 3 repeticiones se aceptan con el mismo conjunto de ca
 fallidos antes del gold y los mismos conteos P2P después (estabilidad, revisión Codex 5).
 Resumen en verify/<repo>/summary.jsonl.
 """
-import json, os, pathlib, subprocess, sys
+import hashlib, json, os, pathlib, re, subprocess, sys
 
 B = pathlib.Path(os.environ.get('FIXTURE_B_ROOT', '/home/luis/Documentos/foker-fixture-b'))
 HERE = pathlib.Path(__file__).resolve().parent
@@ -14,8 +14,35 @@ FIXTURE = HERE.parent
 
 def verdict(repo, commit, run):
     path = B / 'verify' / repo / commit / f'run{run}.json'
-    subprocess.run([sys.executable, str(HERE / 'verify_task.py'), repo, commit, str(run)], capture_output=True, timeout=5400)
-    return json.loads(path.read_text()) if path.exists() else {'accepted': False, 'reasons': ['verifier_error']}
+    error = {'accepted': False, 'reasons': ['verifier_error']}
+    verifier = HERE / 'verify_task.py'
+    result = subprocess.run([sys.executable, str(verifier), repo, commit, str(run)], capture_output=True, timeout=5400)
+    if result.returncode != 0 or not path.exists():
+        return error
+    value = json.loads(path.read_text())
+    version = hashlib.sha256(verifier.read_bytes()).hexdigest()[:12]
+    return value if value.get('verifier') == version else error
+
+
+def skipped_by_file(log):
+    """Conteos de skips por proyecto y archivo en las líneas de resultados de Vitest."""
+    clean = re.sub(r'\x1b\[[0-?]*[ -/]*[@-~]', '', log)
+    counts = {}
+    pattern = r'^\s*[✓❯×↓]\s+(?:\[([^]\n]+)\]\s+)?(.+?)\s+\(\d+ tests?((?:\s*\|\s*\d+ (?:failed|skipped))*)\)'
+    for match in re.finditer(pattern, clean, re.M):
+        skipped = re.search(r'(\d+) skipped', match[3])
+        counts[(match[1] or '', match[2])] = int(skipped[1]) if skipped else 0
+    return counts
+
+
+def new_skips_file(repo, commit):
+    for run in (1, 2, 3):
+        work = B / 'verify' / repo / commit / f'run{run}'
+        before = skipped_by_file((work / 'p2p_before.log').read_text(errors='replace'))
+        after = skipped_by_file((work / 'p2p_after.log').read_text(errors='replace'))
+        if any(skipped > before.get(file, 0) for file, skipped in after.items()):
+            return True
+    return False
 
 
 def stable(runs):
@@ -44,6 +71,9 @@ def main(repo, target=15):
             reasons.append('unstable')
         elif len(runs) > 1 and not ok:
             reasons.append('flaky')
+        if all_ok and new_skips_file(repo, cand['commit']):
+            ok = False
+            reasons.append('new_skips_file')
         accepted += ok
         lines.append({'commit': cand['commit'], 'subject': cand['subject'], 'accepted': ok, 'runs': len(runs),
                       'reasons': reasons, 'verifier': runs[0].get('verifier')})

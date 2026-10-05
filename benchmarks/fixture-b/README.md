@@ -74,3 +74,12 @@ renombres, fechas de commit frente a autor, extremos temporales, first-parent y 
 Comprobaciones verdes (2 tests). En un worktree sin `packages/core/dist`, el chequeo global de tipos
 requiere primero `./node_modules/.bin/tsc -p packages/core/tsconfig.json`: otro benchmark existente
 importa ese artefacto. No requiere compilar el addon nativo para estos tests.
+
+
+La evaluación del arnés usa copias independientes del árbol y del home preparado antes del
+anfitrión. La entrega representa los renombres como borrado y alta para comprobar también
+las rutas protegidas originales. El verificador por lotes exige retorno cero y la huella
+actual de `verify_task.py`; tras tres repeticiones aceptadas y la comprobación de estabilidad,
+compara los skips de Vitest por proyecto y archivo en los logs P2P de cada repetición. Un
+incremento local rechaza la tarea con `new_skips_file`, aunque el total global no aumente.
+Pruebas locales sin Docker: `python3 -m unittest benchmarks/fixture-b/tools/test_verify_batch.py`.
