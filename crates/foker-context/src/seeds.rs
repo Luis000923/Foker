@@ -133,7 +133,9 @@ pub fn build(
     } else {
         tokens.terms.clone()
     };
-    for hit in Bm25::new(map).search_with_params(&terms, &params) {
+    for hit in
+        Bm25::with_folding(map, params.inflection_folding).search_with_params(&terms, &params)
+    {
         seeds.add(
             map,
             &hit.id,
