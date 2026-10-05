@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 const commands = new Set([
   'host-overhead',
   'bench-run',
+  'bench-run-b',
   'bench-report',
   'diagnose',
   'calibrate',

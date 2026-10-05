@@ -16,6 +16,18 @@ EXCLUDE = re.compile(
 TEST = re.compile(r'(^|/)(__tests__|tests?|test-d|__snapshots__|e2e)(/|$)|\.(test|spec|test-d|bench)\.[cm]?[jt]sx?$')
 
 
+CLOC_SHA256 = '099b5223029a6d29'  # prefijo del sha256 de node_modules/cloc/lib/cloc (cloc 1.96, npm cloc@2.11.0)
+
+
+def check_cloc():
+    import hashlib
+    version = subprocess.check_output([CLOC, '--version'], text=True).strip()
+    script = pathlib.Path(CLOC).resolve().parent.parent / 'lib' / 'cloc'
+    digest = hashlib.sha256(script.read_bytes()).hexdigest()
+    if version != '1.96' or not digest.startswith(CLOC_SHA256):
+        raise SystemExit(f'cloc no fijado: versión {version}, sha256 {digest[:16]}')
+
+
 def files(repo, sha):
     out = subprocess.check_output(['git', '-C', repo, 'ls-tree', '-r', '--name-only', '-z', sha])
     return [f for f in out.decode().split('\0') if f]
@@ -34,6 +46,7 @@ def cloc(repo, sha, paths):
 
 
 def main(repo, sha):
+    check_cloc()
     all_files = files(repo, sha)
     own = [f for f in all_files if not EXCLUDE.search(f) and not f.endswith('.d.ts')]
     ts = [f for f in own if f.endswith(TS) and not TEST.search(f)]

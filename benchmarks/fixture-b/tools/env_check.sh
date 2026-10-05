@@ -6,6 +6,7 @@ set -euo pipefail
 name=$1 sha=$2 image=$3 setup=$4 install=$5 evalcmd=$6 run=$7
 B=${FIXTURE_B_ROOT:-/home/luis/Documentos/foker-fixture-b}
 out=$B/env/$name/run$run
+if [ -e "$out" ]; then echo "ya existe $out: usa otro número de run (preparación limpia)" >&2; exit 2; fi
 mkdir -p "$out/repo" "$out/home"
 cp "$B/tools/nub-install.sh" "$out/home/nub-install.sh"
 git -C "$B/repos/$name" archive "$sha" | tar -x -C "$out/repo"
