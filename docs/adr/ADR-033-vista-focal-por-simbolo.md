@@ -132,6 +132,12 @@ y 0,78 (validation).
 | `focal_candidate` recorre todos los símbolos por ancla | Claude | VALID | Índice perezoso por archivo, solo si hace falta la vista |
 | Ancla `foo` de otro archivo marca un `foo` homónimo | Claude | VALID | `ruta#símbolo` por id exacto; test |
 
+**Segunda revisión de Codex** (solo el commit de correcciones): confirma resueltos los
+hallazgos anteriores y detecta tres más, todos VALID: la cabecera OPEN se cortaba por la `{` de un
+decorador multilínea (ahora abarca todo lo previo al primer hijo; test), y `focal_eval` no se
+detenía en la siguiente ruta del L2 compartido ni escapaba el id del atributo (corregido). La
+remedición da cifras idénticas.
+
 Sin falsos positivos. Confirmado sin cambios por ambos revisores: presupuesto (`used ≤ limit`),
 determinismo, hash y caché, y grafo §4.2.
 

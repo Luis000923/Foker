@@ -336,8 +336,22 @@ fn block(
         match shape {
             Shape::Full => emit(lines, s, e + 1, out, shown),
             Shape::Open => {
-                // Cabecera completa (decoradores, extends en varias líneas) hasta la llave.
-                let opening = (s..e).find(|&k| lines[k].contains('{')).unwrap_or(s);
+                // Cabecera completa (decoradores, extends en varias líneas): todo lo anterior al
+                // primer hijo y a sus comentarios; no se buscan llaves (pueden estar en decoradores).
+                let first_child = tree
+                    .children
+                    .get(&Some(node.id.as_str()))
+                    .and_then(|c| {
+                        c.iter()
+                            .map(|c| c.range.start.line as usize)
+                            .filter(|&l| l > s)
+                            .min()
+                    })
+                    .unwrap_or(s + 1)
+                    .min(e);
+                let opening = leading_trivia(lines, s + 1, first_child)
+                    .saturating_sub(1)
+                    .max(s);
                 emit(lines, s, opening + 1, out, shown);
                 block(
                     tree,
@@ -578,6 +592,27 @@ mod tests {
         assert_eq!(
             focal_symbols(&refs, "xyzzy", &["a.ts#helper".into()], &params),
             ["a.ts#helper"]
+        );
+    }
+    #[test]
+    fn cabecera_open_con_decorador_multilinea_con_llaves() {
+        // Segunda revisión de Codex: `{` dentro del decorador no corta la cabecera.
+        let source = "@decorate({\n  option: true,\n})\nexport class Box {\n  other() {\n    return 0;\n  }\n  focus() {\n    return 1;\n  }\n}\nfunction rest() {\n  return 3;\n}";
+        let owned = [
+            at("Box", SymbolKind::Class, (0, 10), None),
+            at("Box.other", SymbolKind::Method, (4, 6), Some("Box")),
+            at("Box.focus", SymbolKind::Method, (7, 9), Some("Box")),
+            at("rest", SymbolKind::Function, (11, 13), None),
+        ];
+        let refs: Vec<_> = owned.iter().collect();
+        let view = render(source, &refs, &["a.ts#Box.focus".into()]).unwrap();
+        assert!(
+            view.body
+                .contains("@decorate({\n  option: true,\n})\nexport class Box {\n")
+        );
+        assert!(
+            view.body
+                .contains("omitidas: other\n  focus() {\n    return 1;\n  }\n}")
         );
     }
 }
