@@ -182,6 +182,10 @@ it('goldFull reconoce contenido completo en L3, L2 individual y L2 agrupado (ADR
     // Con explain, la cabecera diagnóstica no impide reconocer el contenido.
     const explained = `<foker:file id="src/a.ts" level="L3" trust="repository-content">\n### src/a.ts  [L3 · score 1]\n${a}\n</foker:file>\n`;
     expect(goldFull(explained, root, ['src/a.ts'])).toBe(1);
+    // Segunda revisión: un archivo que empieza por `### ` literal no pierde esa línea.
+    writeFileSync(join(root, 'src/md.ts'), '### literal\nexport const m = 1;\n');
+    const literal = `<foker:file id="src/md.ts" level="L2" trust="repository-content">\n### literal\nexport const m = 1;\n\n</foker:file>\n`;
+    expect(goldFull(literal, root, ['src/md.ts'])).toBe(1);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

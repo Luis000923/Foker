@@ -203,6 +203,9 @@ function summarizeSplits(rows: ({ split: GoldCase['split'] } & Parameters<typeof
  * (sin la cabecera diagnóstica de explain) y entradas del envoltorio L2 agrupado (ruta sin
  * indentar seguida de líneas indentadas dos espacios, hasta la siguiente ruta).
  */
+// Solo la cabecera diagnóstica exacta de explain (`### <id>  [`), no cualquier `### ` literal.
+const stripDiagnostic = (body: string, id: string) =>
+  body.startsWith(`### ${id}  [`) ? body.slice(body.indexOf('\n') + 1) : body;
 export function fileBodies(rendered: string): Map<string, string[]> {
   const bodies = new Map<string, string[]>();
   const add = (id: string, body: string) => bodies.set(id, [...(bodies.get(id) ?? []), body]);
@@ -211,15 +214,15 @@ export function fileBodies(rendered: string): Map<string, string[]> {
   const single =
     /<foker:file id="([^"]*)" level="(?:L2|L3)" trust="repository-content">\n([\s\S]*?)\n<\/foker:file>\n/g;
   for (const match of rendered.matchAll(single)) {
-    const body = (match[2] as string).replace(/^### [^\n]*\n/, '');
-    add(decodeAttribute(match[1] as string), body);
+    const id = decodeAttribute(match[1] as string);
+    add(id, stripDiagnostic(match[2] as string, id));
   }
   const group = /<foker:files level="L2" trust="repository-content">\n([\s\S]*?)<\/foker:files>\n/g;
   for (const match of rendered.matchAll(group)) {
     let id: string | undefined;
     let lines: string[] = [];
     const flush = () => {
-      if (id !== undefined) add(id, lines.filter((line, k) => !(k === 0 && line.startsWith('### '))).join('\n'));
+      if (id !== undefined) add(id, stripDiagnostic(lines.join('\n'), id));
     };
     for (const line of (match[1] as string).replace(/\n$/, '').split('\n')) {
       if (line.startsWith('  ')) lines.push(line.slice(2));

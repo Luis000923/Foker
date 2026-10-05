@@ -243,17 +243,13 @@ pub fn select(
         {
             let l2 = render(candidate, RenderLevel::L2, None)?;
             let limit = l2.0.tokens + params.small_full_max_extra;
-            // Cota inferior barata (tamaño del mapa, descontando un CR por línea): evita leer
-            // archivos que no pueden cumplir el umbral.
-            let lower = state
-                .map
-                .files
-                .binary_search_by(|f| f.id.as_str().cmp(&candidate.id))
+            // Cota inferior barata con el tamaño actual en disco (no el del mapa, que puede estar
+            // desactualizado): con CRLF, los bytes LF son al menos la mitad. Evita leer archivos
+            // que no pueden cumplir el umbral.
+            let lower = foker_map::path::normalize_path(root, &candidate.id)
                 .ok()
-                .map_or(0, |i| {
-                    let file = &state.map.files[i];
-                    file.size_bytes.saturating_sub(u64::from(file.lines)) as usize * 5 / 16
-                });
+                .and_then(|path| std::fs::metadata(root.join(path)).ok())
+                .map_or(0, |meta| (meta.len() / 2) as usize * 5 / 16);
             // Una lectura fallida descarta la opción y sigue la degradación habitual.
             if lower <= limit
                 && let Ok(complete) = render_complete_l2(&index, root, candidate, explain)

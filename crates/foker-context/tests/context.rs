@@ -1398,3 +1398,29 @@ fn small_full_never_replaces_barrels_and_survives_missing_files() {
     let fallback = build_context(&map, dir.path(), &request, &ContextInputs::default());
     assert!(fallback.is_ok(), "{fallback:?}");
 }
+
+#[test]
+fn small_full_uses_current_size_not_stale_map() {
+    // Segunda revisión Codex: un mapa con tamaño antiguo no debe descartar un completo válido.
+    let big = format!(
+        "/** Grande. */\nexport function f() {{\n{}  return 1;\n}}\n",
+        "  // relleno\n".repeat(400)
+    );
+    let (dir, map) = temporary_state(&[("src/a.ts", big)]);
+    std::fs::write(
+        dir.path().join("src/a.ts"),
+        "/** Grande. */\nexport function f() {\n  return 1;\n}\n",
+    )
+    .unwrap();
+    let pack = build_context(
+        &map,
+        dir.path(),
+        &ContextRequest {
+            task: "Corrige f grande".into(),
+            ..Default::default()
+        },
+        &ContextInputs::default(),
+    )
+    .unwrap();
+    assert!(pack.rendered.contains("  return 1;"), "{}", pack.rendered);
+}

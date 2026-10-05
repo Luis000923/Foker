@@ -106,5 +106,8 @@ Reglas complementarias, también fijadas ahora:
 | `goldFull` acepta coincidencias fuera del bloque del archivo y falla con explain | Codex | VALID | Cuerpos extraídos por id y nivel; tests |
 | §9.7 no describe L2 completo | Claude | VALID | Tabla de niveles actualizada |
 | Comparabilidad de smoke-8 (imagen etiquetada, ablación) | Claude | VALID (parcial) | Imágenes `smoke7`/`smoke8`; ablación pendiente de autorización |
+| (2.ª ronda) La cota usaba el tamaño del mapa, que puede estar desactualizado | Codex | VALID | Tamaño actual en disco (`stat`), cota conservadora para CRLF; test |
+| (2.ª ronda) `fileBodies` quitaba cualquier primera línea `### ` | Codex | VALID | Solo la cabecera diagnóstica exacta del id; test |
+| (2.ª ronda) Una ruta que empieza por dos espacios es ambigua en el L2 agrupado | Codex | OUT OF SCOPE | Ambigüedad del formato agrupado de ADR-031 1c, no de `goldFull`; documentada |
 
 Sin falsos positivos.
