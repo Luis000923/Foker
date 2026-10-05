@@ -1,5 +1,7 @@
 # Fixture B · Minado determinista (FKR-014, parte A)
 
+ctx-gold y evaluador offline (parte D): [ctx-gold/README.md](ctx-gold/README.md).
+
 Implementa las reglas 1–6 congeladas en [ADR-035](../../docs/adr/ADR-035-fixture-b-repositorios-reales.md).
 No requiere red ni dependencias nuevas. Ejecutar desde la raíz de Foker, con Node ≥ 22.14 y Git,
 utilizando clones completos de solo lectura:
