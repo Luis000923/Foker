@@ -50,8 +50,8 @@ async function fixture(legacy = false) {
     client.callTool({ name, arguments: args }).then((result) => {
       if (!('content' in result)) throw new Error('Resultado de herramienta sin content');
       if (!result.isError) return result;
-      expect(result).not.toHaveProperty('structuredContent');
-      const content = result.content as Array<{ type: string; text: string }>;
+      expect(result).toHaveProperty('structuredContent');
+      const content = result['content'] as Array<{ type: string; text: string }>;
       expect(content[0]?.type).toBe('text');
       return { ...result, error: JSON.parse(content[0]?.text ?? '') };
     });
@@ -75,6 +75,15 @@ async function tree(root: string, prefix = ''): Promise<Record<string, string>> 
     else result[path] = (await readFile(join(root, path))).toString('base64');
   }
   return result;
+}
+async function monorepo(root: string) {
+  await writeFile(join(root, 'package.json'), JSON.stringify({ name: 'workspace', private: true }));
+  await writeFile(join(root, 'pnpm-workspace.yaml'), 'packages:\n  - packages/*\n');
+  for (const name of ['catalog', 'cart']) {
+    await mkdir(join(root, `packages/${name}/src`), { recursive: true });
+    await writeFile(join(root, `packages/${name}/package.json`), JSON.stringify({ name: `@demo/${name}` }));
+    await writeFile(join(root, `packages/${name}/src/index.ts`), `export const ${name} = 1;\n`);
+  }
 }
 it('root inválido es error de protocolo', async () => {
   await expect(createFokerServer({ root: '/does/not/exist' })).rejects.toMatchObject({
@@ -127,7 +136,8 @@ for (const legacy of [false, true])
       f.advance(1000);
       const context = await f.call('foker_context', { task: 'demo', task_id: id });
       expect(context.isError).toBe(false);
-      expect(context.structuredContent).not.toHaveProperty('rendered');
+      expect(context.structuredContent).toMatchObject({ pack_version: 2 });
+      expect(context.structuredContent).toHaveProperty('rendered');
       expect(await f.call('foker_task_submit', { task_id: id })).toMatchObject({
         isError: false,
         structuredContent: { state: 'COMPLETED' },
@@ -410,6 +420,292 @@ it('check y submit omiten output_tail en pass y eliminan ANSI en fail sin cambia
   } finally {
     validate.mockRestore();
     submit.mockRestore();
+    await f.client.close();
+    await f.server.close();
+  }
+});
+
+for (const legacy of [false, true]) {
+  it(`alcance inexistente rechaza sin tarea ni ledger y permite corregir el mismo token (legacy=${legacy})`, async () => {
+    const f = await fixture(legacy);
+    try {
+      await monorepo(f.root);
+      const args = { description: 'Modificar catalog', client_token: 'scope-retry' };
+      const result = await f.call('foker_task_begin', {
+        ...args,
+        scope: { paths: ['packages/catalog/src/**', 'src/**'] },
+      });
+      expect(result).toMatchObject({
+        isError: true,
+        error: { code: 'FKR-INP-001', recoverable: true, message: expect.stringContaining('packages/catalog/src/**') },
+      });
+      const message = (result.structuredContent as { message: string }).message;
+      const suggestions = JSON.parse(/Alcances sugeridos: (\[[^\]]*\])/.exec(message)?.[1] ?? 'null');
+      expect(suggestions.length).toBeGreaterThan(0);
+      expect(suggestions.length).toBeLessThanOrEqual(5);
+      expect(await readdir(join(f.root, '.foker/tasks')).catch(() => [])).toEqual([]);
+      expect(await new engineApi.TaskStore(f.root).list()).toEqual([]);
+      const corrected = await f.call('foker_task_begin', { ...args, scope: { paths: ['packages/catalog/src/**'] } });
+      expect(corrected.isError).toBe(false);
+      expect(await new engineApi.TaskStore(f.root).list()).toHaveLength(1);
+    } finally {
+      await f.client.close();
+      await f.server.close();
+    }
+  });
+
+  it(`scope omitido deriva directorios monorepo; reintentos conservan alcance y ledger (legacy=${legacy})`, async () => {
+    const f = await fixture(legacy);
+    try {
+      await monorepo(f.root);
+      const args = { description: 'Modificar catalog', client_token: 'derived' };
+      const first = await f.call('foker_task_begin', {
+        ...args,
+        context: { anchors: { files: ['packages/catalog/src/index.ts'] } },
+      });
+      expect(first).toMatchObject({
+        isError: false,
+        structuredContent: { scope_derived: true, allowed_paths: ['packages/catalog/src/**'] },
+      });
+      const id = (first.structuredContent as { task_id: string }).task_id;
+      expect((first.structuredContent as { context: { rendered: string } }).context.rendered).toContain(id);
+      const store = new engineApi.TaskStore(f.root);
+      const task = await store.inspect(id);
+      expect(task.scope.paths).toEqual(['packages/catalog/src/**']);
+      const ledger = await readFile(join(f.root, `.foker/tasks/${id}.events.jsonl`), 'utf8');
+      const retryArgs = {
+        ...args,
+        context: { budget_tokens: 1000, anchors: { files: ['packages/cart/src/index.ts'] } },
+      };
+      const retries = await Promise.all([f.call('foker_task_begin', retryArgs), f.call('foker_task_begin', retryArgs)]);
+      for (const retry of retries)
+        expect(retry).toMatchObject({
+          isError: false,
+          structuredContent: { task_id: id, allowed_paths: ['packages/catalog/src/**'], scope_derived: true },
+        });
+      expect(await f.call('foker_task_begin', { ...retryArgs, description: 'Otra tarea' })).toMatchObject({
+        isError: true,
+        error: { code: 'FKR-INP-001', recoverable: true },
+      });
+      expect(await readFile(join(f.root, `.foker/tasks/${id}.events.jsonl`), 'utf8')).toBe(ledger);
+      expect(await store.list()).toHaveLength(1);
+    } finally {
+      await f.client.close();
+      await f.server.close();
+    }
+  });
+
+  it(`derivación respeta protected_paths antes de crear tarea (legacy=${legacy})`, async () => {
+    const f = await fixture(legacy);
+    try {
+      await monorepo(f.root);
+      const configPath = join(f.root, 'foker.config.yaml');
+      await writeFile(
+        configPath,
+        `${await readFile(configPath, 'utf8')}policy:\n  protected_paths: [packages/catalog/src/private.ts]\n`,
+      );
+      expect(
+        await f.call('foker_task_begin', {
+          description: 'Modificar catalog',
+          context: { anchors: { files: ['packages/catalog/src/index.ts'] } },
+        }),
+      ).toMatchObject({ isError: true, error: { code: 'FKR-POL-002' } });
+      expect(await readdir(join(f.root, '.foker/tasks')).catch(() => [])).toEqual([]);
+      expect(await new engineApi.TaskStore(f.root).list()).toEqual([]);
+    } finally {
+      await f.client.close();
+      await f.server.close();
+    }
+  });
+
+  it(`sin scope ni context se rechaza; sin objetivos no crea tarea (legacy=${legacy})`, async () => {
+    const f = await fixture(legacy);
+    try {
+      expect(await f.call('foker_task_begin', { description: 'Nada' })).toMatchObject({
+        isError: true,
+        error: { code: 'FKR-INP-001', recoverable: true },
+      });
+      await rm(join(f.root, 'index.ts'));
+      expect(await f.call('foker_task_begin', { description: 'Nada', context: true })).toMatchObject({
+        isError: true,
+        error: { code: 'FKR-INP-001', recoverable: true, message: expect.stringContaining('Alcances sugeridos:') },
+      });
+      expect(await readdir(join(f.root, '.foker/tasks')).catch(() => [])).toEqual([]);
+      await writeFile(join(f.root, 'foker/rules.md'), 'reglas obligatorias\n'.repeat(1000));
+      expect(await f.call('foker_task_begin', { description: 'Nada', context: { budget_tokens: 1000 } })).toMatchObject(
+        {
+          isError: true,
+          error: { code: 'FKR-INP-001', recoverable: true, message: expect.stringContaining('Alcances sugeridos:') },
+        },
+      );
+      expect(await readdir(join(f.root, '.foker/tasks')).catch(() => [])).toEqual([]);
+    } finally {
+      await f.client.close();
+      await f.server.close();
+    }
+  });
+
+  it(`contexto compacto contiene código; explain conserva el pack completo (legacy=${legacy})`, async () => {
+    const f = await fixture(legacy);
+    try {
+      await f.client.listTools();
+      const args = { task: 'Cambiar demo', anchors: { files: ['index.ts'] }, dirty_files: false };
+      const result = await f.call('foker_context', args);
+      const data = result.structuredContent as Record<string, unknown>;
+      expect(Object.keys(data).sort()).toEqual(['budget', 'diagnostics', 'pack_hash', 'pack_version', 'rendered']);
+      expect(Object.keys(data['budget'] as object).sort()).toEqual(['limit', 'used']);
+      expect(data['rendered']).toContain('export const demo = 1;');
+      expect(result['content']).toEqual([{ type: 'text', text: data['rendered'] }]);
+      const explained = await f.call('foker_context', { ...args, explain: true });
+      expect(explained.structuredContent).toMatchObject({
+        files: expect.any(Array),
+        sections: expect.any(Array),
+        excluded: expect.any(Array),
+        budget: { estimator: expect.any(String) },
+        rendered: expect.stringContaining('export const demo = 1;'),
+      });
+      expect(explained['content']).toEqual([
+        { type: 'text', text: (explained.structuredContent as { rendered: string }).rendered },
+      ]);
+    } finally {
+      await f.client.close();
+      await f.server.close();
+    }
+  });
+
+  it(`begin con contexto usa task_id y defaults/opciones sin alterar client_token (legacy=${legacy})`, async () => {
+    const f = await fixture(legacy);
+    try {
+      await f.client.listTools();
+      const args = {
+        description: 'Modificar demo',
+        scope: { paths: ['index.ts'] },
+        skill: 'demo',
+        client_token: 'combined',
+      };
+      const result = await f.call('foker_task_begin', { ...args, context: true });
+      const data = result.structuredContent as {
+        task_id: string;
+        context: { pack_hash: string; budget: { limit: number }; rendered: string };
+      };
+      expect(result.isError).toBe(false);
+      expect(data.context.rendered).toContain(data.task_id);
+      expect(data.context.rendered).toContain('demo');
+      const context = { budget_tokens: 8000, anchors: { files: ['index.ts'] }, intent: 'fix' };
+      const retry = await f.call('foker_task_begin', { ...args, context });
+      const retried = retry.structuredContent as typeof data;
+      expect(retried.task_id).toBe(data.task_id);
+      expect(retried.context.budget.limit).toBe(8000);
+      expect(retried.context.rendered).toContain('export const demo = 1;');
+      expect(JSON.parse((retry['content'] as { text: string }[])[0]?.text ?? '')).toEqual(retry.structuredContent);
+      const standalone = await f.call('foker_context', {
+        task: args.description,
+        task_id: data.task_id,
+        skill: 'demo',
+        ...context,
+      });
+      expect(standalone.structuredContent).toMatchObject(retried.context);
+      expect(await f.call('foker_task_begin', args)).toMatchObject({ structuredContent: { task_id: data.task_id } });
+      expect(await new engineApi.TaskStore(f.root).list()).toHaveLength(1);
+      expect(await f.call('foker_task_get', { task_id: data.task_id })).not.toHaveProperty('structuredContent.context');
+      expect(await f.call('foker_task_begin', { ...args, description: 'Otra tarea', context: true })).toMatchObject({
+        isError: true,
+        error: { code: 'FKR-INP-001' },
+      });
+    } finally {
+      await f.client.close();
+      await f.server.close();
+    }
+  });
+
+  it(`un pack fallido conserva tarea y permite recuperar con el mismo token (legacy=${legacy})`, async () => {
+    const f = await fixture(legacy);
+    try {
+      await f.client.listTools();
+      const args = { description: 'demo', scope: { paths: ['index.ts'] }, client_token: 'recover' };
+      for (const context of [false, { budget_tokens: 999 }, { explain: true }, { anchors: { extra: [] } }])
+        expect(await f.call('foker_task_begin', { ...args, context })).toMatchObject({
+          isError: true,
+          error: { code: 'FKR-INP-001' },
+        });
+      expect(await new engineApi.TaskStore(f.root).list()).toHaveLength(0);
+      await writeFile(join(f.root, 'foker/rules.md'), 'reglas obligatorias\n'.repeat(1000));
+      const result = await f.call('foker_task_begin', { ...args, context: { budget_tokens: 1000 } });
+      expect(result).toMatchObject({
+        isError: false,
+        structuredContent: { task_id: expect.any(String), context_error: { code: 'FKR-CTX-001', recoverable: true } },
+      });
+      expect(result.structuredContent).not.toHaveProperty('context');
+      const id = (result.structuredContent as { task_id: string }).task_id;
+      expect(await f.call('foker_task_get', { task_id: id })).toMatchObject({
+        structuredContent: { state: 'RUNNING' },
+      });
+      await writeFile(join(f.root, 'foker/rules.md'), '# Reglas\n');
+      expect(await f.call('foker_task_begin', { ...args, context: true })).toMatchObject({
+        isError: false,
+        structuredContent: { task_id: id, context: { rendered: expect.any(String) } },
+      });
+      expect(await new engineApi.TaskStore(f.root).list()).toHaveLength(1);
+    } finally {
+      await f.client.close();
+      await f.server.close();
+    }
+  });
+}
+
+it('truncado conserva rendered idéntico y task_id; redacta el código de ambos transportes', () => {
+  const secret = 'AK' + 'IA' + 'A1B2C3D4E5F6G7H8';
+  const rendered = `${secret}\n${'código\n'.repeat(30000)}`;
+  const result = limitOutput(
+    { pack_version: 2, pack_hash: 'a'.repeat(64), budget: { used: 1000, limit: 8000 }, rendered, diagnostics: [] },
+    rendered,
+  );
+  expect(result.structured['rendered']).toBe(result.rendered);
+  expect(result.rendered).not.toContain(secret);
+  expect(result.rendered).toContain('FKR-MCP-101');
+  expect(result.structured['diagnostics']).toContainEqual(expect.objectContaining({ code: 'FKR-MCP-101' }));
+  expect(
+    JSON.stringify({ content: [{ type: 'text', text: result.rendered }], structuredContent: result.structured }).length,
+  ).toBeLessThanOrEqual(80000);
+  const taskId = 'tsk_00000000000000000000000000';
+  const begin = limitOutput({
+    task_id: taskId,
+    context: { pack_hash: 'b'.repeat(64), budget: { used: 1000, limit: 8000 }, rendered },
+  });
+  expect(begin.structured['task_id']).toBe(taskId);
+  expect(begin.structured).toHaveProperty('diagnostics');
+});
+
+it('valida el pack completo antes de proyectarlo y conserva task_id si falla en begin', async () => {
+  const f = await fixture();
+  const engine = await engineApi.openEngine(f.root);
+  await engine.refresh();
+  const build = engine.buildContext.bind(engine);
+  const mocked = vi.spyOn(engine, 'buildContext').mockImplementation(async (input) => {
+    const pack = await build(input);
+    const data = JSON.parse(pack.json);
+    delete data.map_hash;
+    return { ...pack, json: JSON.stringify(data) };
+  });
+  const opened = vi.spyOn(engineApi, 'openEngine').mockResolvedValue(engine);
+  try {
+    await expect(f.call('foker_context', { task: 'demo' })).rejects.toMatchObject({
+      code: -32603,
+      data: { code: 'FKR-INT-001' },
+    });
+    const result = await f.call('foker_task_begin', {
+      description: 'demo',
+      scope: { paths: ['index.ts'] },
+      context: true,
+    });
+    expect(result).toMatchObject({
+      isError: false,
+      structuredContent: { task_id: expect.any(String), context_error: { code: 'FKR-INT-001' } },
+    });
+    expect(await new engineApi.TaskStore(f.root).list()).toHaveLength(1);
+  } finally {
+    opened.mockRestore();
+    mocked.mockRestore();
     await f.client.close();
     await f.server.close();
   }

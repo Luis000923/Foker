@@ -24,7 +24,10 @@ it('acepta suscripción, prioriza OAuth y explica ambas vías', () => {
   expect(() => claudeCredential({})).toThrow('claude setup-token');
   expect(claudeArgs('tarea', 'modelo', 60, '/mcp', null)).not.toContain('--max-budget-usd');
   expect(claudeArgs('tarea', 'modelo', 60, '/mcp', null)).not.toContain('--allowedTools');
-  expect(claudeArgs('tarea', 'modelo', 60, '/mcp', null, ['mcp__foker']).slice(-2)).toEqual(['--allowedTools', 'mcp__foker']);
+  expect(claudeArgs('tarea', 'modelo', 60, '/mcp', null, ['mcp__foker']).slice(-2)).toEqual([
+    '--allowedTools',
+    'mcp__foker',
+  ]);
 });
 it('solo el anfitrión recibe OAuth por nombre; Codex monta autenticación explícita readonly', async () => {
   vi.stubEnv('CLAUDE_CODE_OAUTH_TOKEN', 'secreto-no-en-argv');

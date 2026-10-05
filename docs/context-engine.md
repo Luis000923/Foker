@@ -15,11 +15,12 @@ alcance y archivos modificados; Rust no ejecuta git ni checks.
 - `seeds` y `rank`: pesos normativos, required_context débil (0,5), PPR y razones.
   El grafo y el procedimiento numérico se comparten con el PageRank global de
   `foker-map`. El mapa construido ya aplica include y filtros de secretos.
-- `select`: reserva anclas, corta candidatos opcionales por debajo del 1 % del
-  máximo del ranking, degrada niveles, añade contornos y contabiliza tokens.
+- `select`: reserva anclas, aplica el corte ADR-028 (1 % del máximo total) y
+  suficiencia ADR-031 (2,5 % del mejor no-ancla, máximos por intención), degrada
+  niveles, deduplica core y contabiliza el render completo.
 - `render`: delimitación de datos, tipos completos mediante rangos del mapa y
   lectura segura del disco, sin volver a parsear ni inventar declaraciones.
-- `pack`: contratos Rust y JSON canónico snake_case.
+- `pack`: Context Pack v2 y JSON canónico snake_case; el esquema admite históricos v1.
 - `cache`: LRU opcional de 64 entradas y métricas fuera del pack determinista.
 
 ## Decisiones de implementación
@@ -37,8 +38,12 @@ y puede omitirse si el contexto obligatorio consume su espacio.
 Los nombres de símbolo ambiguos usan `FKR-CTX-102` con un mensaje de ambigüedad y
 reparten el peso entre declaraciones. No se incorpora un código nuevo al contrato.
 Las razones se ordenan y deduplican. Un candidato alcanzado sin razón directa usa
-`CORE` como razón del prior genérico. Un archivo presente también en el contorno
-core conserva esa razón en sus metadatos y aparece una sola vez en `files`.
+`CORE` como razón del prior genérico. Un archivo que también es candidato del contorno
+core aparece solo a su nivel más alto, sin repetir el texto en otra sección.
+El prior genérico puede conservar la razón `CORE` del ranking, aunque no forme
+parte del contorno core final. El texto core se marca con estabilidad `task`: su
+lista candidata sigue usando el PageRank global, pero la deduplicación depende
+de related/targets.
 
 L0/L1/L2 usan un índice por construcción de exports del módulo y exports
 resueltos, excluyendo miembros de namespaces. L0 deduplica nombres de
@@ -100,7 +105,8 @@ campos de CLI/MCP. Campos omitidos usan defaults de Rust:
 | `relevanceFraction` / `relevance_fraction` | 0,01 | No-anclas con PPR < máximo × fracción quedan fuera de L1/L2 y contornos L0 |
 
 Las fracciones aceptan valores finitos en [0,1]; cero desactiva el corte.
-Las anclas siguen siendo obligatorias y core permanece estático. Los descartes
+Las anclas siguen siendo obligatorias. La lista candidata core permanece basada en
+PageRank global; en v2 su texto deduplicado depende de la tarea (estabilidad `task`). Los descartes
 usan `RANK_CUTOFF`, ya existente. Los demás parámetros incluyen pesos de ancla,
 menciones, dirty, alcance y skill; r(intent), factor tests; top BM25 y k1/b;
 niveles L2/L0; umbral de ancla, margen y reserva core. Valores inválidos producen
@@ -109,10 +115,9 @@ FKR-INP-001. Un `coreFiles` explícito de la API prevalece sobre `params.coreFil
 Solo params efectivos distintos de defaults aparecen en la petición JSON
 normalizada y participan canónicamente en hash y caché. Los tres campos nuevos
 se omiten dentro de params cuando coinciden con sus defaults; los overrides
-anteriores conservan la forma JSON anterior. **Pendiente fuera del ámbito**:
-sincronizar `spec/api/foker-core.d.ts` y el esquema estricto de context-pack para
-admitir overrides nuevos no predeterminados. Los packs normales y overrides
-antiguos conservan una forma admitida. ADR-028 documenta esta ampliación.
+anteriores conservan la forma JSON anterior. El esquema de ContextPack reconoce los campos ADR-028 y ADR-031; sus tipos
+se regeneran con `node packages/schemas/scripts/generate.mjs`. Sigue pendiente
+contrastar `spec/api/foker-core.d.ts`, no reconstruido en esta tarea.
 
 ### Resultados con 60 casos y split persistido
 
@@ -157,3 +162,120 @@ conserva el resultado histórico negativo de 30 casos; ADR-028 registra la mejor
 actual con 60 casos. Los snapshots botón/carrito se actualizan por el nuevo
 algoritmo, y el de tarea sin señal queda idéntico. Los tests nuevos cubren
 expansión, cortes, anclas, hash/caché y 50 ejecuciones idénticas en 25 hilos.
+
+## Pack compacto v2 · ADR-031 fase 1
+
+[ADR-031](adr/ADR-031-pack-compacto-y-flujo-corto.md#resultados-fase-1) conserva
+la rejilla y las mediciones por split. No se cambian recuperación léxica, pesos,
+intenciones ni el dataset; tampoco entrega MCP ni cuerpos focales.
+
+Cada archivo se renderiza una vez. L3/L2 usan `<foker:file id="…" level="L2|L3"
+trust="repository-content">`; L1/L0 comparten `<foker:files level="L1|L0"
+trust="repository-content">` por sección. Las rutas y firmas quedan dentro de la
+región de datos; los delimitadores literales de ambas etiquetas se escapan.
+Las cabeceras con score/razones aparecen solo con explain=true, y la nota fija
+REQ-CTX-002 aparece una vez. Los tres snapshots cambian por versión, formato,
+selección, hashes y coste; sus datos de origen permanecen iguales.
+
+Parámetros Rust internos, sin ampliar CLI/MCP ni N-API:
+
+| Parámetro | Default | Efecto |
+|---|---|---|
+| `sufficiency_fraction` | 0,025 | Corte inclusivo contra el mejor no-ancla; se aplica además del corte ADR-028 |
+| `related_limits` | [64, 64, 96, 64, 64, 96] | Máximo de archivos L2/L1 por fix, test, refactor, add, modify, explain |
+| `outline_limits` | [0, 0, 0, 0, 0, 0] | Máximo L0 related por intención; además acotado por l0_count |
+| `core_min_relative` | 0,1 | Corte contra el máximo PageRank global; también excluye mínimos empatados |
+
+`context.core_files` explícito sigue determinando el tope del núcleo. Los
+candidatos se toman del ranking global significativo hasta ese tope y después
+se omiten los duplicados: el tope no exige rellenar huecos con archivos de cola.
+
+El presupuesto se calcula con secciones ya agrupadas, incluidos envoltorios,
+notas y request. En L1/L0 `files[].tokens` mide la entrada; el coste de su
+etiqueta compartida pertenece a `sections[].tokens`. ctx-gold añade
+`rendered_tokens`, `median_rendered_tokens`, `mean_rendered_tokens` y
+`mean_tokens`, globales y por split, y falla si budget.used subestima rendered.
+En los 60 casos v2 budget.used supera rendered_tokens entre 1 y 3 tokens por
+redondeos por sección. No se reduce el denominador a las firmas.
+
+Resultado fase 1: recall idéntico en cada caso (total 0,7444, calibration 0,7389,
+validation 0,7500); mediana rendered 5552 → 1049 (−81,11 %), media 4984,05 →
+1333,82. El objetivo de ≤830 no se alcanza; la configuración más pequeña de
+la rejilla sin regresiones calibration mide 1049 de mediana. No se retocan
+parámetros después de observar validation ni se afirma un límite universal.
+
+### Compactación · ADR-031 fase 1c
+
+`compact` se ejecuta después de `select`: no cambia selección, parámetros,
+archivos, niveles, razones ni notas, ni usa el espacio ahorrado para rellenar
+el presupuesto. Se recalculan texto, hashes y tokens de secciones y pack.
+`files[].tokens` conserva el coste individual previo a la compactación;
+`budget.used` es la suma de secciones compactas.
+
+- L0/L1 combinan hermanos consecutivos con plantillas numéricas iguales.
+  Dentro del grupo se ordenan numéricamente, usando rangos naturales como
+  `record-{0..21}.ts`. `{N}` representa el mismo token numérico en ruta y
+  firmas. La expansión conserva el multiconjunto de líneas (huecos y
+  duplicados incluidos) y el orden fuera del grupo. Ceros iniciales y
+  reservados ambiguos se conservan literalmente. Las propiedades aleatorias
+  y casos concretos comprueban esas garantías también con Unicode.
+- Una sola firma L1 admite `ruta: firma`; las firmas múltiples siguen
+  indentadas. Rutas y firmas se escriben completas.
+- L2 consecutivos comparten envoltorio cuando reduce bytes; el cuerpo íntegro
+  se indenta dos espacios por línea, conservando blancos. L3 no se transforma.
+- Las cabeceras y request (`## request [intención]`) usan menos separadores.
+  La omisión de cabeceras vacías ya estaba implementada en fase 1.
+- Solo el render de reglas omite comentarios HTML completos y blancos
+  redundantes fuera de código. No cambia el archivo ni los inputs; conserva
+  fences, código inline/indentado y comentarios incompletos. ctx-gold no
+  contiene reglas: esta variante da ahorro cero allí y se comprueba en Rust.
+
+El diccionario de sustituciones de fase 1b se rechazó por optimizar el estimador
+sin ahorrar tokens reales en la misma proporción y por exigir al modelo
+interpretar macros al leer y editar código. Se retiran su código, interruptores,
+atributo, tests y ejemplos. Rutas, firmas y cuerpos siguen dentro de delimitadores
+con `trust="repository-content"`. Los tests de inyección recorren también la
+compactación final; los snapshots cambian por texto, costes y hashes, manteniendo
+sus `files[]`.
+
+[La fase 1c del ADR](adr/ADR-031-pack-compacto-y-flujo-corto.md#fase-1c)
+recoge las medidas por split frente a v1 y fase 1. ctx-gold registra el texto,
+`rendered_bytes`, categorías exactas de bytes y `bytes_at_median` por split:
+media de las filas centrales, no suma de medianas independientes de categorías.
+`FOKER_CTX_GOLD_DUMP=<dir>` vuelca cada `rendered` exacto en `<dir>/<id>.txt`,
+sin añadir separadores ni nueva línea, para medir tokens con herramientas externas.
+El directorio se crea si falta; los ids deben ser nombres de archivo seguros.
+
+Medición sin red, cargando el addon recompilado desde /tmp:
+
+```sh
+./node_modules/.bin/tsc -p benchmarks/tsconfig.build.json
+cargo build --offline --release -p foker-napi
+cp target/release/libfoker_napi.so /tmp/foker-adr031-1c.node
+(cd benchmarks && NAPI_RS_NATIVE_LIBRARY_PATH=/tmp/foker-adr031-1c.node FOKER_CTX_GOLD_DUMP=/tmp/foker-adr031-1c-dump node run.mjs ctx-gold ../benchmarks/ctx-gold/cases.jsonl 8000 /tmp/foker-adr031-1c)
+```
+
+Ablación opcional de las cinco transformaciones conservadas (32 combinaciones),
+sobre un informe de fase 1 con `rows[].rendered`, sin reconstruir selección:
+
+```sh
+cargo run --offline -p foker-context --example compact_ablation -- /tmp/foker-adr031-1b-before.json /tmp/foker-adr031-1c-ablation.json
+```
+
+Máscara: hermanos=1, reglas=2, cabeceras/request=4, L2=8, inline=16.
+0 es el render previo y 31 activa las cinco transformaciones. Las máscaras
+antiguas de fase 1b quedan retiradas.
+
+Reproducir calibration, sin evaluar validation ni operar git:
+
+```sh
+node --input-type=module -e 'import {generate} from "./benchmarks/fixtures/fixture-a/generate.mjs"; generate("/tmp/foker-adr031-fixture-a")'
+cargo run --offline -p foker-context --example calibrate_compact -- /tmp/foker-adr031-fixture-a /tmp/foker-adr031-v1.json /tmp/foker-adr031-calibration.json
+```
+
+El ejemplo requiere la línea base v1 con filas individuales (la suministrada
+por el usuario también sirve). Filtra `calibration` antes de construir packs,
+compara recall por caso y minimiza mediana rendered, después media rendered,
+después maximiza recall. Los empates mantienen la primera configuración.
+La medición Rust elegida y ctx-gold vía N-API coinciden en las 30 filas de
+calibration, tanto en recall como en tokens y rendered_tokens.

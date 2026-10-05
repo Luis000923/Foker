@@ -10,6 +10,7 @@ import {
   gatherContextInputs,
   loadConfig,
   loadSkill,
+  nonexistentScopePaths,
   normalizePath,
   openEngine,
   submitTask,
@@ -19,6 +20,7 @@ import {
 } from '@foker/engine';
 import {
   ajv,
+  type ContextPack,
   type FokerCheckInput,
   type FokerContextInput,
   type FokerImpactInput,
@@ -27,6 +29,8 @@ import {
   mcpApiVersion,
   mcpTools,
   type ProjectMap,
+  type TaskRecord,
+  validator,
 } from '@foker/schemas';
 import {
   type CallToolResult,
@@ -39,6 +43,7 @@ import {
 } from '@modelcontextprotocol/server';
 import { type ServeStdioOptions, serveStdio } from '@modelcontextprotocol/server/stdio';
 import { Audit, limitOutput, sanitize, TokenBucket } from './safety.js';
+import { deriveScopePaths, scopeSuggestions } from './scope.js';
 
 export const PACKAGE_NAME = '@foker/mcp';
 const version = (createRequire(import.meta.url)('../package.json') as { version: string }).version;
@@ -55,6 +60,8 @@ const validators = definitions.map((tool) => ({
   input: ajv().compile(tool.inputSchema),
   output: ajv().compile(tool.outputSchema),
 }));
+const validatePack = validator('context-pack');
+const validateToolError = validator('mcp-tools#/$defs/mcpToolError');
 const cache = (ttlMs: number) => ({ ttlMs, cacheScope: 'private' as const });
 const resources = [
   { name: 'rules', uri: 'foker://rules', mimeType: 'text/markdown', ...cache(60000) },
@@ -147,6 +154,48 @@ function serverFactory(options: FokerServerOptions) {
       await engine.refresh();
       return { engine, loaded };
     }
+    async function buildPack(
+      engine: Engine,
+      loaded: Awaited<ReturnType<typeof loadConfig>>,
+      input: FokerContextInput,
+      task?: TaskRecord,
+    ): Promise<ContextPack & { rendered: string }> {
+      normalizePath(root, 'foker/rules.md');
+      if (input.skill) normalizePath(root, `foker/skills/${input.skill}`);
+      const gathered = await gatherContextInputs(root, input.skill ? { skill: input.skill } : {});
+      const pack = await engine.buildContext({
+        task: input.task,
+        ...gathered,
+        ...(input.dirty_files === false ? { dirtyFiles: [] } : {}),
+        ...(input.anchors ? { anchors: input.anchors } : {}),
+        ...(input.intent ? { intent: input.intent as NonNullable<ContextRequest['intent']> } : {}),
+        ...(task
+          ? {
+              taskId: task.task_id,
+              taskScope: {
+                taskId: task.task_id,
+                description: task.description,
+                paths: task.scope.paths,
+                checks: loaded.config.validation.profiles[task.profile]?.checks ?? [],
+              },
+            }
+          : {}),
+        coreFiles: loaded.config.context.core_files,
+        budgetTokens:
+          input.budget_tokens ?? Math.min(20000, Math.max(1000, loaded.config.context.default_budget_tokens)),
+        explain: input.explain ?? false,
+      });
+      const data = { ...JSON.parse(pack.json), rendered: pack.rendered };
+      if (!validatePack(data)) throw new FokerError('FKR-INT-001', 'ContextPack inválido del motor.');
+      return data as ContextPack & { rendered: string };
+    }
+    function taskContext(pack: ContextPack & { rendered: string }) {
+      return {
+        pack_hash: pack.pack_hash,
+        budget: { used: pack.budget.used, limit: pack.budget.limit },
+        rendered: pack.rendered,
+      };
+    }
     async function dispatch(
       name: string,
       args: Record<string, unknown>,
@@ -190,14 +239,82 @@ function serverFactory(options: FokerServerOptions) {
         if (!profile) throw new FokerError('FKR-VAL-001', 'Perfil inexistente');
         if (input.skill) await gatherContextInputs(root, { skill: input.skill });
         const project = JSON.parse(await engine.exportMapJson()) as ProjectMap;
-        assertUnprotectedScope(input.scope.paths, loaded.policy.protected_paths, Object.keys(project.files));
-        const task = await tasks.begin(input);
+        const { context, ...taskInput } = input;
+        const files = Object.keys(project.files);
+        const contextInput: FokerContextInput = {
+          task: input.description,
+          ...(input.skill ? { skill: input.skill } : {}),
+          ...(context === true ? {} : context),
+        };
+        async function invalidScope(message: string, pack?: ContextPack | null): Promise<never> {
+          // Las sugerencias no deben convertir un error de alcance en fallo del pack.
+          if (pack === undefined) {
+            try {
+              pack = await buildPack(engine, loaded, contextInput);
+            } catch {
+              // Si el presupuesto/reglas impiden el pack, quedan las raíces de paquetes.
+            }
+          }
+          const suggestions = scopeSuggestions(project, loaded.policy.protected_paths, pack ?? undefined);
+          throw new FokerError(
+            'FKR-INP-001',
+            `${message} Alcances sugeridos: ${JSON.stringify(suggestions)}. Usa un alcance existente u omite scope con context y anchors.`,
+          );
+        }
+        // También se comprueba la política en reintentos; begin conserva la identidad
+        // y ejecuta la derivación/validación únicamente al crear una tarea nueva.
+        if (input.scope) assertUnprotectedScope(input.scope.paths, loaded.policy.protected_paths, files);
+        const task = await tasks.begin(taskInput, async () => {
+          let scope = input.scope;
+          if (!scope) {
+            if (!context) return invalidScope('Falta scope o context.');
+            let preliminary: ContextPack;
+            try {
+              preliminary = await buildPack(engine, loaded, contextInput);
+            } catch {
+              return invalidScope('No se pudo construir el pack para derivar el alcance.', null);
+            }
+            const paths = deriveScopePaths(preliminary);
+            const [first, ...rest] = paths;
+            if (first === undefined)
+              return invalidScope('El pack no contiene objetivos L3 ni archivos L2.', preliminary);
+            scope = { paths: [first, ...rest] };
+          }
+          assertUnprotectedScope(scope.paths, loaded.policy.protected_paths, files);
+          const missing = await nonexistentScopePaths(root, scope.paths, files);
+          if (missing.length)
+            return invalidScope(`Alcance sin archivos ni directorios existentes: ${JSON.stringify(missing)}.`);
+          return scope;
+        });
+        assertUnprotectedScope(task.scope.paths, loaded.policy.protected_paths, files);
+        let contextResult: Record<string, unknown> = {};
+        if (context) {
+          try {
+            const pack = await buildPack(
+              engine,
+              loaded,
+              {
+                task: task.description,
+                ...(task.skill ? { skill: task.skill } : {}),
+                ...(context === true ? {} : context),
+              },
+              task,
+            );
+            contextResult = { context: taskContext(pack) };
+          } catch (error) {
+            const failure = FokerError.fromNative(error);
+            contextResult = {
+              context_error: { code: failure.code, message: failure.message, recoverable: failure.recoverable },
+            };
+          }
+        }
         const dirtyFiles = task.baseline.dirty_files
           .filter((path) => !path.split('/').includes('node_modules'))
           .sort()
           .slice(0, 20);
         return {
           data: {
+            ...contextResult,
             task_id: task.task_id,
             state: 'RUNNING',
             attempt: 1,
@@ -208,6 +325,7 @@ function serverFactory(options: FokerServerOptions) {
               dirty_files_truncated: task.baseline.dirty_files.length > dirtyFiles.length,
             },
             allowed_paths: task.scope.paths,
+            ...(!input.scope ? { scope_derived: true } : {}),
             protected_paths_in_scope: [],
             checks: profile.checks,
           },
@@ -245,37 +363,16 @@ function serverFactory(options: FokerServerOptions) {
         return { data: { ...impact, nodes: impact.nodes.map((node) => ({ ...node, via: node.via ?? null })) } };
       }
       const input = args as unknown as FokerContextInput;
-      normalizePath(root, 'foker/rules.md');
-      if (input.skill) normalizePath(root, `foker/skills/${input.skill}`);
-      const gathered = await gatherContextInputs(root, input.skill ? { skill: input.skill } : {});
       const task = input.task_id ? await tasks.get(input.task_id) : undefined;
-      const pack = await engine.buildContext({
-        task: input.task,
-        ...gathered,
-        ...(input.dirty_files === false ? { dirtyFiles: [] } : {}),
-        ...(input.anchors ? { anchors: input.anchors } : {}),
-        ...(input.intent ? { intent: input.intent as NonNullable<ContextRequest['intent']> } : {}),
-        ...(task
-          ? {
-              taskId: task.task_id,
-              taskScope: {
-                taskId: task.task_id,
-                description: task.description,
-                paths: task.scope.paths,
-                checks: loaded.config.validation.profiles[task.profile]?.checks ?? [],
-              },
-            }
-          : {}),
-        coreFiles: loaded.config.context.core_files,
-        budgetTokens:
-          input.budget_tokens ?? Math.min(20000, Math.max(1000, loaded.config.context.default_budget_tokens)),
-        explain: input.explain ?? false,
-      });
-      const data = JSON.parse(pack.json) as Record<string, unknown>;
-      if (input.explain) data['rendered'] = pack.rendered;
-      else delete data['rendered'];
-      return { data, text: pack.rendered };
+      const pack = await buildPack(engine, loaded, input, task);
+      return {
+        data: input.explain
+          ? { ...pack }
+          : { pack_version: pack.pack_version, ...taskContext(pack), diagnostics: pack.diagnostics },
+        text: pack.rendered,
+      };
     }
+
     server.server.setRequestHandler('tools/list', async () => ({
       tools: definitions.map(({ timeoutS: _, ...tool }) => tool as Tool),
     }));
@@ -290,17 +387,15 @@ function serverFactory(options: FokerServerOptions) {
         const retry = bucket.take();
         if (retry) {
           code = 'FKR-MCP-002';
+          const data = { code, message: 'Límite de llamadas excedido.', recoverable: true, retry_after_ms: retry };
+          if (!validateToolError(data)) throw new FokerError('FKR-INT-001', 'Error MCP inválido.');
           result = {
             isError: true,
+            structuredContent: data,
             content: [
               {
                 type: 'text',
-                text: JSON.stringify({
-                  code,
-                  message: 'Límite de llamadas excedido.',
-                  recoverable: true,
-                  retry_after_ms: retry,
-                }),
+                text: JSON.stringify(data),
               },
             ],
           };
@@ -334,8 +429,10 @@ function serverFactory(options: FokerServerOptions) {
           message: message.slice(0, 20000),
           recoverable: failure.recoverable,
         };
+        if (!validateToolError(data)) throw protocolFailure(new FokerError('FKR-INT-001', 'Error MCP inválido.'));
         result = {
           isError: true,
+          structuredContent: data,
           content: [{ type: 'text', text: JSON.stringify(data) }],
           ...(message.length > 20000
             ? { _meta: { diagnostics: [{ code: 'FKR-MCP-101', message: 'Mensaje de error truncado.' }] } }

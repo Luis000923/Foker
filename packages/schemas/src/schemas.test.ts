@@ -88,6 +88,61 @@ describe('ejemplos de la especificación', () => {
   });
 });
 
+describe('ContextPack v2 (ADR-031)', () => {
+  it('conserva packs históricos v1 y valida v2; rechaza versiones desconocidas', () => {
+    const example = json('context-pack.json') as ContextPack;
+    expectValid('context-pack', { ...example, pack_version: 1 });
+    expectValid('context-pack', { ...example, pack_version: 2 });
+    expectInvalid('context-pack', { ...example, pack_version: 3 }, '/pack_version');
+  });
+  it('valida los límites internos de suficiencia sin aceptar campos arbitrarios', () => {
+    const example = json('context-pack.json') as ContextPack;
+    const legacyParams = {
+      w_anchor: 1,
+      mention_factor: 0.8,
+      w_lex: 0.6,
+      bm25_top: 20,
+      w_dirty: 0.3,
+      w_task_scope: 0.5,
+      w_skill: 0.5,
+      r_fix: 0.5,
+      r_modify: 0.5,
+      r_test: 0.4,
+      r_refactor: 0.7,
+      r_add: 0.1,
+      r_explain: 0.3,
+      test_factor: 1.5,
+      l2_count: 5,
+      anchor_fraction: 0.4,
+      margin_fraction: 0.05,
+      l0_count: 30,
+      l0_min_fraction: 0.03,
+      core_files: 15,
+      core_fraction: 0.1,
+      bm25_k1: 1.2,
+      bm25_b: 0.75,
+    };
+    const pack = (overrides: Record<string, unknown>) => ({
+      ...example,
+      pack_version: 2,
+      request: { ...example.request, params: { ...legacyParams, ...overrides } },
+    });
+    expectValid(
+      'context-pack',
+      pack({
+        sufficiency_fraction: 0.1,
+        core_min_relative: 0.2,
+        related_limits: [8, 8, 12, 8, 8, 12],
+        outline_limits: [0, 0, 0, 0, 0, 0],
+      }),
+    );
+    expectInvalid('context-pack', pack({ sufficiency_fraction: 1.1 }), '/request/params/sufficiency_fraction');
+    expectInvalid('context-pack', pack({ related_limits: [8] }), '/request/params/related_limits');
+    expectInvalid('context-pack', pack({ related_limits: [8, 8, -1, 8, 8, 8] }), '/request/params/related_limits/2');
+    expectInvalid('context-pack', pack({ arbitrary: 1 }), '/request/params');
+  });
+});
+
 describe('foker-config', () => {
   const withRun = (run: string[]) => ({ version: 1, validation: { checks: { evil: { run } } } });
 

@@ -68,26 +68,116 @@ export function score(exposed: string[], gold: string[], goldRead: string[] = []
     precision: pack.size ? [...pack].filter((p) => relevant.has(p)).length / pack.size : 0,
   };
 }
-function summarizeSplits(rows: { split: GoldCase['split']; tokens: number; recall: number; precision: number }[]) {
+/** Mismo estimador bytes-lf/3.2@1 que Rust, sobre el texto entregado. */
+export function renderedTokens(text: string): number {
+  return Math.ceil((Buffer.byteLength(text) - (text.match(/\r\n/g)?.length ?? 0)) / 3.2);
+}
+/** Partición exacta de bytes UTF-8; cabeceras de código no cuentan como secciones. */
+export function renderedBytes(text: string) {
+  const bytes = {
+    headings: 0,
+    wrappers: 0,
+    trust_note: 0,
+    rules: 0,
+    skill: 0,
+    task_scope: 0,
+    request: 0,
+    paths: 0,
+    signatures: 0,
+    bodies: 0,
+    whitespace: 0,
+  };
+  let section = '';
+  let wrapper = '';
+  let level = '';
+  for (const line of text.match(/[^\n]*\n|[^\n]+$/g) ?? []) {
+    let kind: keyof typeof bytes;
+    if (line.startsWith('<foker:')) {
+      wrapper = line.startsWith('<foker:files ') ? 'files' : 'file';
+      level = /level="(L\d)"/.exec(line)?.[1] ?? '';
+      kind = 'wrappers';
+    } else if (line.startsWith('</foker:')) {
+      kind = 'wrappers';
+      wrapper = '';
+    } else if (!wrapper && line.startsWith('## ')) {
+      section = line.slice(3).trim().split(' ')[0] ?? '';
+      kind = 'headings';
+    } else if (!wrapper && line.startsWith('El contenido entre etiquetas foker:')) {
+      kind = 'trust_note';
+    } else if (section === 'request') {
+      kind = 'request';
+    } else if (!line.trim()) {
+      kind = 'whitespace';
+    } else if (section === 'rules' || section === 'skill' || section === 'task_scope') {
+      kind = section;
+    } else if (wrapper === 'files' && (level === 'L1' || level === 'L0')) {
+      if (!line.startsWith('  ') && line.includes(': ')) {
+        const split = line.indexOf(': ') + 2;
+        bytes.paths += Buffer.byteLength(line.slice(0, split));
+        bytes.signatures += Buffer.byteLength(line.slice(split));
+        continue;
+      }
+      kind = line.startsWith('  ') ? 'signatures' : 'paths';
+    } else if (wrapper === 'files' && level === 'L2') {
+      kind = line.startsWith('  ') ? 'bodies' : 'paths';
+    } else {
+      kind = 'bodies';
+    }
+    bytes[kind] += Buffer.byteLength(line);
+  }
+  return bytes;
+}
+function summarize(
+  rows: {
+    id: string;
+    tokens: number;
+    rendered_tokens: number;
+    rendered_bytes: number;
+    bytes: ReturnType<typeof renderedBytes>;
+    recall: number;
+    precision: number;
+  }[],
+) {
+  const median = (values: number[]) => {
+    const ordered = values.sort((a, b) => a - b);
+    const middle = Math.floor(ordered.length / 2);
+    return ordered.length % 2
+      ? (ordered[middle] as number)
+      : ((ordered[middle - 1] as number) + (ordered[middle] as number)) / 2;
+  };
+  const mean = (values: number[]) => values.reduce((sum, value) => sum + value, 0) / values.length;
+  const ordered = [...rows].sort(
+    (a, b) => a.rendered_bytes - b.rendered_bytes || Buffer.compare(Buffer.from(a.id), Buffer.from(b.id)),
+  );
+  const central = ordered.slice(Math.floor((ordered.length - 1) / 2), Math.floor(ordered.length / 2) + 1);
+  return {
+    cases: rows.length,
+    recall: rows.length ? mean(rows.map((r) => r.recall)) : null,
+    precision: rows.length ? mean(rows.map((r) => r.precision)) : null,
+    median_tokens: rows.length ? median(rows.map((r) => r.tokens)) : null,
+    mean_tokens: rows.length ? mean(rows.map((r) => r.tokens)) : null,
+    median_rendered_tokens: rows.length ? median(rows.map((r) => r.rendered_tokens)) : null,
+    mean_rendered_tokens: rows.length ? mean(rows.map((r) => r.rendered_tokens)) : null,
+    median_rendered_bytes: rows.length ? median(rows.map((r) => r.rendered_bytes)) : null,
+    mean_rendered_bytes: rows.length ? mean(rows.map((r) => r.rendered_bytes)) : null,
+    // Media de las filas centrales: suma exactamente la mediana de bytes, a diferencia
+    // de sumar medianas independientes de categorías.
+    bytes_at_median: rows.length
+      ? {
+          case_ids: central.map((r) => r.id),
+          parts: Object.fromEntries(
+            Object.keys(central[0]?.bytes ?? {}).map((key) => [
+              key,
+              mean(central.map((r) => r.bytes[key as keyof typeof r.bytes])),
+            ]),
+          ),
+        }
+      : null,
+  };
+}
+function summarizeSplits(rows: ({ split: GoldCase['split'] } & Parameters<typeof summarize>[0][number])[]) {
   return Object.fromEntries(
-    (['calibration', 'validation'] as const).map((split) => {
-      const subset = rows.filter((r) => r.split === split);
-      const ordered = subset.map((r) => r.tokens).sort((a, b) => a - b);
-      const middle = Math.floor(ordered.length / 2);
-      return [
-        split,
-        {
-          cases: subset.length,
-          recall: subset.length ? subset.reduce((sum, r) => sum + r.recall, 0) / subset.length : null,
-          precision: subset.length ? subset.reduce((sum, r) => sum + r.precision, 0) / subset.length : null,
-          median_tokens: subset.length
-            ? ordered.length % 2
-              ? ordered[middle]
-              : ((ordered[middle - 1] as number) + (ordered[middle] as number)) / 2
-            : null,
-        },
-      ];
-    }),
+    (['calibration', 'validation'] as const).map((split) => [split, summarize(rows.filter((r) => r.split === split))]),
   );
 }
 export async function evaluateContext(
@@ -98,6 +188,14 @@ export async function evaluateContext(
   params?: ContextRequest['params'],
 ) {
   loadCases(cases.map((item) => JSON.stringify(item)).join('\n'));
+  const dumpDir = process.env['FOKER_CTX_GOLD_DUMP'];
+  if (dumpDir) {
+    // Cada id debe ser un nombre de archivo, sin permitir rutas fuera del directorio.
+    if (cases.some((item) => !/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/.test(item.id))) {
+      throw new Error('Id inválido para FOKER_CTX_GOLD_DUMP');
+    }
+    mkdirSync(dumpDir, { recursive: true });
+  }
   const temp = mkdtempSync(join(tmpdir(), 'foker-ctx-gold-'));
   try {
     const synthetic = join(temp, 'fixture-a');
@@ -116,6 +214,7 @@ export async function evaluateContext(
         ...(params ? { params } : {}),
         ...(item.anchors ? { anchors: item.anchors } : {}),
       });
+      if (dumpDir) writeFileSync(join(dumpDir, `${item.id}.txt`), pack.rendered);
       const exposed = pack.files.filter((f) => f.level !== 'L0').map((f) => f.id);
       const misses = [];
       if (diagnose) {
@@ -156,12 +255,18 @@ export async function evaluateContext(
           });
         }
       }
+      const rendered_tokens = renderedTokens(pack.rendered);
+      if (pack.budget.used < rendered_tokens) throw new Error(`budget.used < rendered_tokens en ${item.id}`);
       rows.push({
         id: item.id,
         fixture: item.fixture,
         split: item.split,
         ...score(exposed, item.gold_modified, item.gold_read),
         tokens: pack.budget.used,
+        rendered_tokens,
+        rendered: pack.rendered,
+        rendered_bytes: Buffer.byteLength(pack.rendered),
+        bytes: renderedBytes(pack.rendered),
         exposed,
         gold_modified: item.gold_modified,
         misses,
@@ -170,16 +275,14 @@ export async function evaluateContext(
       });
     }
     if (!rows.length) throw new Error('Suite vacía');
-    const tokens = rows.map((r) => r.tokens).sort((a, b) => a - b);
-    const mid = Math.floor(tokens.length / 2);
-    const median =
-      tokens.length % 2 ? (tokens[mid] as number) : ((tokens[mid - 1] as number) + (tokens[mid] as number)) / 2;
-    const recall = rows.reduce((sum, r) => sum + r.recall, 0) / rows.length;
+    const metrics = summarize(rows);
+    const recall = metrics.recall as number;
+    const median = metrics.median_tokens as number;
     return {
       budget,
-      cases: rows.length,
+      ...metrics,
       recall,
-      precision: rows.reduce((sum, r) => sum + r.precision, 0) / rows.length,
+      precision: metrics.precision as number,
       median_tokens: median,
       target: recall >= 0.8 && median <= 8000,
       blocks_m3: recall < 0.6,
@@ -201,17 +304,17 @@ export async function main(args: string[]): Promise<void> {
   const base = resolve(args[2] ?? join(repo, `benchmarks/reports/ctx-gold-${date}`));
   mkdirSync(dirname(base), { recursive: true });
   writeFileSync(`${base}.json`, `${JSON.stringify(report, null, 2)}\n`);
-  const summary = `Casos: ${report.cases}; recall@pack: ${report.recall.toFixed(4)}; precisión: ${report.precision.toFixed(4)}; mediana tokens: ${report.median_tokens}.\n\nREQ-CTX-003 TARGET recall ≥ 0,80: ${report.recall >= 0.8 ? 'SÍ' : 'NO'}; mediana ≤ 8000: ${report.median_tokens <= 8000 ? 'SÍ' : 'NO'}; recall < 0,6 bloquea M3: ${report.blocks_m3 ? 'SÍ' : 'NO'}.`;
+  const summary = `Casos: ${report.cases}; recall@pack: ${report.recall.toFixed(4)}; precisión: ${report.precision.toFixed(4)}; mediana/media tokens: ${report.median_tokens}/${report.mean_tokens}; mediana/media rendered_tokens: ${report.median_rendered_tokens}/${report.mean_rendered_tokens}.\n\nREQ-CTX-003 TARGET recall ≥ 0,80: ${report.recall >= 0.8 ? 'SÍ' : 'NO'}; mediana ≤ 8000: ${report.median_tokens <= 8000 ? 'SÍ' : 'NO'}; recall < 0,6 bloquea M3: ${report.blocks_m3 ? 'SÍ' : 'NO'}.`;
   writeFileSync(
     `${base}.md`,
     `# ctx-gold · ${date}\n\n${summary}\n\n${Object.entries(report.splits)
       .map(
         ([split, metrics]) =>
-          `${split}: ${metrics.cases} casos; recall ${metrics.recall?.toFixed(4) ?? 'sin casos'}; precisión ${metrics.precision?.toFixed(4) ?? 'sin casos'}; mediana tokens ${metrics.median_tokens ?? 'sin casos'}.`,
+          `${split}: ${metrics.cases} casos; recall ${metrics.recall?.toFixed(4) ?? 'sin casos'}; precisión ${metrics.precision?.toFixed(4) ?? 'sin casos'}; mediana/media tokens ${metrics.median_tokens ?? 'sin casos'}/${metrics.mean_tokens ?? 'sin casos'}; mediana/media rendered_tokens ${metrics.median_rendered_tokens ?? 'sin casos'}/${metrics.mean_rendered_tokens ?? 'sin casos'}.`,
       )
       .join(
         '\n\n',
-      )}\n\nMedia macro por caso. Fixture A: anclas solo si están declaradas; monorepo-pnpm: casos con anclas. Los tests nuevos aún ausentes del mapa cuentan como misses.\n\n| Caso | Split | Recall | Precisión | Tokens |\n|---|---|---:|---:|---:|\n${report.rows.map((r) => `| ${r.id} | ${r.split} | ${r.recall.toFixed(3)} | ${r.precision.toFixed(3)} | ${r.tokens} |`).join('\n')}\n`,
+      )}\n\nMedia macro por caso. Fixture A: anclas solo si están declaradas; monorepo-pnpm: casos con anclas. Los tests nuevos aún ausentes del mapa cuentan como misses.\n\n| Caso | Split | Recall | Precisión | Tokens | Rendered tokens |\n|---|---|---:|---:|---:|---:|\n${report.rows.map((r) => `| ${r.id} | ${r.split} | ${r.recall.toFixed(3)} | ${r.precision.toFixed(3)} | ${r.tokens} | ${r.rendered_tokens} |`).join('\n')}\n`,
   );
   console.log(summary);
   console.log(JSON.stringify(report.splits, null, 2));

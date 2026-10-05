@@ -162,7 +162,7 @@ const errorTable = [
 ].join('\n');
 
 const outputs = [
-  [new URL('src/generated/types.ts', pkgDir), types],
+  [new URL('src/generated/types.ts', pkgDir), types.replace(/[ \t]+$/gm, '')],
   [new URL('../core/src/error-codes.generated.ts', pkgDir), errorTable],
 ];
 

@@ -25,6 +25,23 @@ pnpm exec foker doctor
 | Hooks | PreToolUse y Stop | — | — | — |
 | Flujo real por suscripción | PENDIENTE FKR-070 | PENDIENTE FKR-070 | PENDIENTE FKR-070 | PENDIENTE FKR-070 |
 
+## Flujo corto (ADR-031 fase 2)
+
+`foker_task_begin` con descripción, alcance y `context: true` (defaults) u objeto
+`{budget_tokens?, anchors?, intent?}` → editar → `foker_task_submit`.
+Submit ejecuta checks y gates: dos llamadas MCP obligatorias. `foker_check` es opcional
+para feedback intermedio y `foker_search` cuando el pack no basta.
+
+El pack ya contiene el código objetivo: no releas esos archivos salvo aviso de omisión.
+`structuredContent` incluye `rendered`; `content[0]` entrega el mismo código en texto.
+`foker_context` devuelve la proyección compacta por defecto; `explain=true` devuelve el pack
+completo. Si begin devuelve `context_error`, la tarea existe: conserva `task_id` y recupera
+el contexto con `foker_context` o reintenta begin con el mismo `client_token` y otras opciones
+`context`. Esas opciones no cambian la identidad de la tarea ni el ledger.
+
+Los cuatro targets comparten instrucciones y rol Implementer. El cuerpo incluido se
+proyecta en `packages/integrations` para actualizar los bloques sin modificar `roles/`.
+
 ## Qué toca `sync` y qué no
 
 - Markdown: solo el contenido entre `<!-- foker:begin v1 -->` y `<!-- foker:end -->`; el resto del

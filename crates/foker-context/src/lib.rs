@@ -1,6 +1,7 @@
 //! Context Engine determinista de Foker (FOKER-SPEC §9).
 pub mod bm25;
 pub mod cache;
+pub mod compact;
 pub mod intent;
 pub mod normalize;
 pub mod pack;
@@ -20,7 +21,7 @@ use std::path::Path;
 /// Versión en lockstep.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 /// Versión del formato.
-pub const PACK_VERSION: u32 = 1;
+pub const PACK_VERSION: u32 = 2;
 
 /// Construye un pack determinista sin consultar git ni leer configuración TypeScript.
 pub fn build_context(
@@ -52,7 +53,7 @@ pub(crate) fn build_with_seed_counts(
         root,
         &ranked,
         &fixed,
-        normalized.budget_tokens,
+        &normalized,
         if inputs.core_files == ContextInputs::default().core_files {
             params.core_files
         } else {
@@ -61,7 +62,7 @@ pub(crate) fn build_with_seed_counts(
         &params,
     )?;
     let mut fixed = fixed.into_iter();
-    let sections_text = vec![
+    let sections_text: Vec<_> = vec![
         fixed.next().expect("rules"),
         selection.core,
         fixed.next().expect("skill"),
@@ -69,7 +70,10 @@ pub(crate) fn build_with_seed_counts(
         selection.related,
         selection.targets,
         fixed.next().expect("request"),
-    ];
+    ]
+    .into_iter()
+    .map(|s| compact::section(s, compact::Options::ALL))
+    .collect();
     let rendered = sections_text
         .iter()
         .map(|s| s.text.as_str())

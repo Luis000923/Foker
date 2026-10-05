@@ -42,6 +42,7 @@ fn render_candidate(
     candidate: &Candidate,
     level: RenderLevel,
     note: Option<String>,
+    explain: bool,
 ) -> Result<RenderedFile, ContextError> {
     let body = render::file_body_indexed(index, root, &candidate.id, level)?;
     let mut file = PackFile {
@@ -52,59 +53,40 @@ fn render_candidate(
         reasons: candidate.reasons.clone(),
         note,
     };
-    let text = render::file(&file, &body);
+    let text = render::file(&file, &body, explain);
     file.tokens = estimate_tokens(&text);
     Ok((file, text))
 }
 const OMITTED: &str =
     "contenido completo omitido por presupuesto; léalo con su herramienta de lectura";
-/// Core independiente de la tarea: los N primeros del PageRank global hasta 10 % de B.
-fn core(
-    state: &MapState,
-    root: &Path,
-    index: &render::RenderIndex<'_>,
-    n: usize,
-    budget: usize,
-    params: &crate::ContextParams,
-) -> Result<(SectionText, Vec<PackFile>), ContextError> {
-    let mut files: Vec<_> = state.map.files.iter().filter(|f| eligible(f)).collect();
-    files.sort_by(|a, b| {
-        b.rank_global
-            .total_cmp(&a.rank_global)
-            .then(a.id.cmp(&b.id))
-    });
-    let mut body = String::new();
-    let mut selected = Vec::new();
-    for file in files.into_iter().take(n) {
-        let candidate = Candidate {
-            id: file.id.clone(),
-            score: file.rank_global,
-            reasons: vec!["CORE".into()],
-            anchor: false,
-        };
-        let (file, text) = render_candidate(index, root, &candidate, RenderLevel::L0, None)?;
-        if estimate_tokens(&format!("## core\n\n{body}{text}\n"))
-            <= (budget as f64 * params.core_fraction).floor() as usize
-        {
-            body.push_str(&text);
-            selected.push(file);
-        }
-    }
-    Ok((
-        SectionText::new("core", "optional", "static", &body),
-        selected,
-    ))
+fn section(id: &str, files: &[RenderedFile]) -> SectionText {
+    render::files_section(
+        id,
+        if id == "targets" {
+            "mandatory"
+        } else {
+            "optional"
+        },
+        "task",
+        files,
+    )
 }
-/// Reserva todas las anclas a L1 antes de subir sus niveles, evitando truncarlas silenciosamente.
+/// Reserva todas las anclas a L1 antes de subir niveles; corta la cola por suficiencia.
 pub fn select(
     state: &MapState,
     root: &Path,
     ranked: &[Candidate],
     fixed: &[SectionText],
-    budget: usize,
+    request: &crate::NormalizedRequest,
     core_files: usize,
     params: &crate::ContextParams,
 ) -> Result<Selection, ContextError> {
+    let budget = request.budget_tokens;
+    let explain = request.explain;
+    let intent = request
+        .intent
+        .unwrap_or_else(|| crate::intent::infer(&request.task));
+    let (related_limit, outline_limit) = params.limits(intent);
     let index = render::RenderIndex::new(state);
     let mut capacity = (budget as f64 * (1.0 - params.margin_fraction)).floor() as usize;
     let mut breakdown: Vec<_> = fixed
@@ -113,23 +95,16 @@ pub fn select(
         .map(|s| (s.section.id.clone(), s.section.tokens))
         .collect();
     let fixed_cost = breakdown.iter().map(|(_, cost)| cost).sum::<usize>();
-    let target_header = estimate_tokens("## targets\n\n\n");
-    let related_header = estimate_tokens("## related\n\n\n");
-    let mut anchors = Vec::new();
+    let render = |candidate: &Candidate, level, note| {
+        render_candidate(&index, root, candidate, level, note, explain)
+    };
+    let mut targets = Vec::new();
     for candidate in ranked.iter().filter(|c| c.anchor) {
-        let pair = render_candidate(
-            &index,
-            root,
-            candidate,
-            RenderLevel::L1,
-            Some(OMITTED.into()),
-        )?;
+        let pair = render(candidate, RenderLevel::L1, Some(OMITTED.into()))?;
         breakdown.push((candidate.id.clone(), pair.0.tokens));
-        anchors.push(pair);
+        targets.push(pair);
     }
-    let minimum = fixed_cost
-        + anchors.iter().map(|p| p.0.tokens).sum::<usize>()
-        + if anchors.is_empty() { 0 } else { target_header };
+    let minimum = fixed_cost + section("targets", &targets).section.tokens;
     if minimum > budget {
         return Err(ContextError::BudgetExceeded {
             limit: budget,
@@ -138,130 +113,125 @@ pub fn select(
         });
     }
     capacity = capacity.max(minimum);
-    let (mut core, mut core_selected) = core(state, root, &index, core_files, budget, params)?;
-    let mut used = minimum;
-    // Core es opcional; nunca provoca un fallo de contexto obligatorio.
-    if used + core.section.tokens + related_header > capacity {
-        core = SectionText::new("core", "optional", "static", "");
-        core_selected.clear();
+    for (position, candidate) in ranked.iter().filter(|c| c.anchor).enumerate() {
+        let minimum_pair = targets[position].clone();
+        let full = render(candidate, RenderLevel::L3, None)?;
+        let mut choices = Vec::new();
+        if full.0.tokens <= (budget as f64 * params.anchor_fraction).floor() as usize {
+            choices.push(full);
+        }
+        choices.push(render(candidate, RenderLevel::L2, Some(OMITTED.into()))?);
+        choices.push(minimum_pair);
+        for pair in choices {
+            targets[position] = pair;
+            if fixed_cost + section("targets", &targets).section.tokens <= capacity {
+                break;
+            }
+        }
     }
-    used += core.section.tokens;
-    let mut targets = String::new();
-    let mut selected = Vec::new();
-    for (candidate, minimum_pair) in ranked.iter().filter(|c| c.anchor).zip(anchors) {
-        used -= minimum_pair.0.tokens;
-        let full = render_candidate(&index, root, candidate, RenderLevel::L3, None)?;
-        let choices = if full.0.tokens > (budget as f64 * params.anchor_fraction).floor() as usize {
-            vec![
-                render_candidate(
-                    &index,
-                    root,
-                    candidate,
-                    RenderLevel::L2,
-                    Some(OMITTED.into()),
-                )?,
-                minimum_pair,
-            ]
-        } else {
-            vec![
-                full,
-                render_candidate(
-                    &index,
-                    root,
-                    candidate,
-                    RenderLevel::L2,
-                    Some(OMITTED.into()),
-                )?,
-                minimum_pair,
-            ]
-        };
-        let pair = choices
-            .into_iter()
-            .find(|p| used + p.0.tokens <= capacity)
-            .expect("L1 ya reservado");
-        used += pair.0.tokens;
-        targets.push_str(&pair.1);
-        selected.push(pair.0);
-    }
-    let mut related = String::new();
+    let target_section = section("targets", &targets);
+    let used = fixed_cost + target_section.section.tokens;
+    let mut related = Vec::new();
     let mut omitted = BTreeMap::new();
-    let mut included: BTreeSet<_> = selected.iter().map(|f| f.id.clone()).collect();
+    let mut included: BTreeSet<_> = targets.iter().map(|p| p.0.id.clone()).collect();
     let maximum = ranked.first().map_or(0.0, |c| c.score);
-    for (position, candidate) in ranked.iter().filter(|c| !c.anchor).enumerate() {
-        if below_relevance(candidate.score, maximum, params.relevance_fraction) {
+    let best_optional = ranked.iter().find(|c| !c.anchor).map_or(0.0, |c| c.score);
+    let sufficient = |c: &Candidate| {
+        !below_relevance(c.score, maximum, params.relevance_fraction)
+            && !below_relevance(c.score, best_optional, params.sufficiency_fraction)
+    };
+    let mut accepted_count = 0;
+    for candidate in ranked.iter().filter(|c| !c.anchor) {
+        if !sufficient(candidate) || accepted_count >= related_limit {
             omitted.insert(candidate.id.clone(), "RANK_CUTOFF");
             continue;
         }
-        let levels = if position < params.l2_count {
-            vec![RenderLevel::L2, RenderLevel::L1]
+        let levels: &[RenderLevel] = if accepted_count < params.l2_count {
+            &[RenderLevel::L2, RenderLevel::L1]
         } else {
-            vec![RenderLevel::L1]
+            &[RenderLevel::L1]
         };
         let mut accepted = false;
-        for level in levels {
-            let pair = render_candidate(&index, root, candidate, level, None)?;
-            let header = if related.is_empty() {
-                related_header
-            } else {
-                0
-            };
-            if used + header + pair.0.tokens <= capacity {
-                used += header + pair.0.tokens;
-                related.push_str(&pair.1);
+        for &level in levels {
+            related.push(render(candidate, level, None)?);
+            if used + section("related", &related).section.tokens <= capacity {
                 included.insert(candidate.id.clone());
-                selected.push(pair.0);
+                accepted_count += 1;
                 accepted = true;
                 break;
             }
+            related.pop();
         }
         if !accepted {
             omitted.insert(candidate.id.clone(), "BUDGET");
         }
     }
-    if capacity.saturating_sub(used) > (budget as f64 * params.l0_min_fraction).floor() as usize {
+    if capacity.saturating_sub(used + section("related", &related).section.tokens)
+        > (budget as f64 * params.l0_min_fraction).floor() as usize
+    {
         let mut outlines = 0;
-        for candidate in ranked.iter().filter(|c| !included.contains(&c.id)) {
-            if below_relevance(candidate.score, maximum, params.relevance_fraction) {
+        for candidate in ranked.iter().filter(|c| !c.anchor) {
+            if included.contains(&candidate.id) || !sufficient(candidate) {
                 continue;
             }
-            if outlines == params.l0_count {
+            if outlines == outline_limit {
                 break;
             }
-            let pair = render_candidate(&index, root, candidate, RenderLevel::L0, None)?;
-            let header = if related.is_empty() {
-                related_header
-            } else {
-                0
-            };
-            if used + header + pair.0.tokens <= capacity {
-                used += header + pair.0.tokens;
-                related.push_str(&pair.1);
-                selected.push(pair.0);
+            related.push(render(candidate, RenderLevel::L0, None)?);
+            if used + section("related", &related).section.tokens <= capacity {
+                included.insert(candidate.id.clone());
                 omitted.remove(&candidate.id);
                 outlines += 1;
+            } else {
+                related.pop();
             }
         }
     }
-    // Core cuenta como inclusión; si el archivo se selecciona a un nivel superior conserva CORE.
-    for mut file in core_selected {
-        if let Some(existing) = selected.iter_mut().find(|f| f.id == file.id) {
-            existing.reasons.push("CORE".into());
-            existing.reasons.sort();
-            existing.reasons.dedup();
-        } else {
-            // El texto core usa centralidad global para mantener su estabilidad;
-            // los metadatos files siempre exponen la puntuación final de la tarea.
-            if let Some(candidate) = ranked.iter().find(|c| c.id == file.id) {
-                file.score = candidate.score;
-            }
+    let related_section = section("related", &related);
+    let mut global: Vec<_> = state.map.files.iter().filter(|f| eligible(f)).collect();
+    global.sort_by(|a, b| {
+        b.rank_global
+            .total_cmp(&a.rank_global)
+            .then(a.id.cmp(&b.id))
+    });
+    let best_global = global.first().map_or(0.0, |f| f.rank_global);
+    let minimum_global = global.last().map_or(0.0, |f| f.rank_global);
+    let mut core = Vec::new();
+    // El mínimo empatado no aporta centralidad significativa. core_files sigue siendo el tope explícito.
+    for file in global
+        .into_iter()
+        .filter(|f| {
+            f.rank_global > minimum_global
+                && !below_relevance(f.rank_global, best_global, params.core_min_relative)
+        })
+        .take(core_files)
+    {
+        if included.contains(&file.id) {
+            continue;
+        }
+        let candidate = Candidate {
+            id: file.id.clone(),
+            score: ranked
+                .iter()
+                .find(|c| c.id == file.id)
+                .map_or(file.rank_global, |c| c.score),
+            reasons: vec!["CORE".into()],
+            anchor: false,
+        };
+        core.push(render(&candidate, RenderLevel::L0, None)?);
+        let cost = section("core", &core).section.tokens;
+        if cost <= (budget as f64 * params.core_fraction).floor() as usize
+            && used + related_section.section.tokens + cost <= capacity
+        {
+            included.insert(file.id.clone());
             omitted.remove(&file.id);
-            selected.push(file);
+        } else {
+            core.pop();
         }
     }
-    let included: BTreeSet<_> = selected.iter().map(|f| f.id.as_str()).collect();
     let excluded = ranked
         .iter()
-        .filter(|c| !included.contains(c.id.as_str()))
+        .filter(|c| !included.contains(&c.id))
         .take(20)
         .map(|c| ExcludedFile {
             id: c.id.clone(),
@@ -270,10 +240,15 @@ pub fn select(
         })
         .collect();
     Ok(Selection {
-        files: selected,
-        core,
-        related: SectionText::new("related", "optional", "task", &related),
-        targets: SectionText::new("targets", "mandatory", "task", &targets),
+        core: section("core", &core),
+        related: section("related", &related),
+        targets: section("targets", &targets),
+        files: targets
+            .into_iter()
+            .chain(related)
+            .chain(core)
+            .map(|p| p.0)
+            .collect(),
         excluded,
     })
 }

@@ -28,7 +28,7 @@ describe(PACKAGE_NAME, () => {
     expect(info.coreVersion).toBe(PACKAGE_VERSION);
     expect(info.nativeApi).toBe(1);
     expect(info.mapSchema).toBe(1);
-    expect(info.contextSchema).toBe(1);
+    expect(info.contextSchema).toBe(2);
     expect(native()).toBe(native());
   });
 
