@@ -38,6 +38,29 @@ function isTs(path) {
   return TS.test(path) && !path.endsWith('.d.ts');
 }
 
+/** Código TS propio: extensión TS sin `.d.ts`, fuera de tests y de EXCLUDE (E2/E3).
+ * @param {string} path */
+export function isOwnSource(path) {
+  return isTs(path) && !TEST.test(path) && !EXCLUDE.test(path);
+}
+
+/** Entradas del diff B→C con renombres explícitos al 50 % (cada entrada una vez).
+ * @param {string} path @param {string} base @param {string} commit */
+export async function diffEntries(path, base, commit) {
+  const tokens = (await git(path, ['diff', '--name-status', '-z', '--find-renames=50%', base, commit, '--'])).split(
+    '\0',
+  );
+  /** @type {{status: string, path: string, oldPath?: string}[]} */
+  const files = [];
+  for (let i = 0; i < tokens.length && tokens[i]; ) {
+    const status = tokens[i++] ?? '';
+    const first = tokens[i++] ?? '';
+    if (/^[RC]/.test(status)) files.push({ status, oldPath: first, path: tokens[i++] ?? '' });
+    else files.push({ status, path: first });
+  }
+  return files;
+}
+
 /** @param {string} path */
 function forbidden(path) {
   const name = basename(path);
@@ -90,18 +113,8 @@ export async function mine(repo, path, identity) {
     }
     const base = parents[0];
     if (!base) throw new Error('Falta el padre único');
-    const tokens = (await git(path, ['diff', '--name-status', '-z', '--find-renames=50%', base, commit, '--'])).split(
-      '\0',
-    );
-    /** @type {{status: string, path: string, oldPath?: string}[]} */
-    const files = [];
-    for (let i = 0; i < tokens.length && tokens[i]; ) {
-      const status = tokens[i++] ?? '';
-      const first = tokens[i++] ?? '';
-      if (/^[RC]/.test(status)) files.push({ status, oldPath: first, path: tokens[i++] ?? '' });
-      else files.push({ status, path: first });
-    }
-    const own = (/** @type {string} */ p) => isTs(p) && !TEST.test(p) && !EXCLUDE.test(p);
+    const files = await diffEntries(path, base, commit);
+    const own = isOwnSource;
     const src_modified = files
       .filter((f) => f.status === 'M' && own(f.path))
       .map((f) => f.path)
