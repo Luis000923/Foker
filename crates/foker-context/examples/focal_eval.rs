@@ -52,16 +52,8 @@ fn delivered_in_file(rendered: &str, file: &str, level: Option<&str>, text: &str
         .take_while(|l| l.starts_with("  ") || l.trim().is_empty())
         .map(str::len)
         .sum::<usize>();
-    let indented: Vec<String> = text
-        .split('\n')
-        .map(|l| {
-            if l.is_empty() {
-                String::new()
-            } else {
-                format!("  {l}")
-            }
-        })
-        .collect();
+    // group_l2 indenta todas las líneas, también las vacías ("  ").
+    let indented: Vec<String> = text.split('\n').map(|l| format!("  {l}")).collect();
     body[..end].contains(&indented.join("\n"))
 }
 
