@@ -1373,3 +1373,28 @@ fn small_l2_files_are_complete_when_cheap_enough() {
     assert!(on.budget.used <= on.budget.limit);
     assert_eq!(pack(64).rendered, on.rendered);
 }
+
+#[test]
+fn small_full_never_replaces_barrels_and_survives_missing_files() {
+    // Revisión Codex y metodológica (ADR-034): un barrel conserva las firmas resueltas.
+    let (dir, map) = temporary_state(&[
+        (
+            "src/small.ts",
+            "/** Busca coincidencias. */\nexport function matches(a: string, b: string) {\n  return a.includes(b);\n}\n".into(),
+        ),
+        ("src/index.ts", "export * from './small';\n".into()),
+    ]);
+    let request = ContextRequest {
+        task: "Busca coincidencias de matches en index y small".into(),
+        ..Default::default()
+    };
+    let pack = build_context(&map, dir.path(), &request, &ContextInputs::default()).unwrap();
+    let index = pack.files.iter().find(|f| f.id == "src/index.ts").unwrap();
+    assert_eq!(index.level, RenderLevel::L2);
+    assert!(!pack.rendered.contains("export * from './small';"));
+    // Una lectura fallida (archivo borrado tras el mapa) descarta el contenido completo sin
+    // abortar el pack; las firmas del mapa siguen disponibles.
+    std::fs::remove_file(dir.path().join("src/small.ts")).unwrap();
+    let fallback = build_context(&map, dir.path(), &request, &ContextInputs::default());
+    assert!(fallback.is_ok(), "{fallback:?}");
+}

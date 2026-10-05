@@ -172,6 +172,15 @@ impl<'a> RenderIndex<'a> {
         Self { symbols }
     }
 }
+impl RenderIndex<'_> {
+    /// ¿Todos los símbolos que L2 mostraría se declaran en el propio archivo? Falso en barrels
+    /// que reexportan firmas de otros archivos (ADR-034).
+    pub fn only_own_symbols(&self, id: &str) -> bool {
+        self.symbols
+            .get(id)
+            .is_none_or(|symbols| symbols.iter().all(|s| s.file() == id))
+    }
+}
 /// Renderiza usando el índice de la construcción actual.
 pub fn file_body_indexed(
     index: &RenderIndex<'_>,

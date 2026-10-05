@@ -1,7 +1,8 @@
 # ADR-034 · Contenido completo de archivos pequeños en L2
 
-- **Estado**: Propuesta. Criterio y umbral fijados **antes** de implementar y de medir (este
-  commit precede al código).
+- **Estado**: Aceptada. Criterio y umbral fijados **antes** de implementar y de medir (commit
+  `4377075`, previo al código). La implementación cambió un detalle, no el umbral: L2 completo
+  sin `files[].note`.
 - **Fecha**: 2026-10-04
 - **Issue**: FKR-096
 - **Modifica**: FOKER-SPEC §9.7 (contenido de L2 en archivos pequeños) y el esquema `ContextPack`
@@ -51,6 +52,34 @@ Reglas complementarias, también fijadas ahora:
 - Parámetro interno `small_full_max_extra` (64; 0 lo desactiva), omitido del JSON cuando vale el
   default; propiedad opcional en el esquema `ContextPack`. Sin cambios en N-API, CLI ni MCP.
 
+## Límites declarados antes de smoke-8 (revisión metodológica)
+
+- **Anfitrión**: Claude Code exige un `Read` previo antes de `Edit`/`Write` sobre un archivo
+  existente. Un `Read` del archivo que luego se modifica **no es evitable** por ningún contenido
+  del pack; el de `skuMatches.ts` en smoke-7, que motivó este ADR, era de ese tipo. Solo son
+  evitables los `Read` de archivos que no se editan después (en smoke-7: `baseline.test.ts`).
+- **Métrica causal de smoke-8**: `Read` sobre archivos cuyo contenido completo ya estaba en el pack,
+  separando «seguido de edición del mismo archivo» (obligatorio) de «sin edición posterior»
+  (evitable). `gold_full` mide `gold_modified` y, por el punto anterior, **no** cuenta `Read`
+  evitables: es un indicador de contenido entregado, no de llamadas ahorradas.
+- **Aritmética del umbral**: el revisor señala que Δ se paga al escribir en caché (1,25) y en
+  cada turno posterior (0,1×), lo que con los mismos supuestos da Δ ≤ 68/1,85 ≈ 37. A cambio,
+  C_turno está subestimado (el prefijo crece ~1.000 tokens por turno, la salida cuesta 5× y el
+  resultado del `Read` se escribe en caché). El 4 % no tiene una fuente medida, y Δ usa el
+  estimador `bytes-lf/3.2`, no el tokenizer de Claude. **El 64 es un límite de orden de
+  magnitud (rango plausible 37–68), no un óptimo**. Se mantiene sin cambios para cumplir el
+  compromiso de no reajustar tras ver resultados (ctx-gold ya se había medido).
+- **Barrels (corrección de revisión)**: si L2 muestra símbolos declarados en otros archivos
+  (reexportaciones resueltas), el contenido literal (`export … from`) perdería esos contratos.
+  Codex y el revisor metodológico lo señalaron en los snapshots, así que **no se sustituye**: es
+  una salvaguarda de corrección (nunca perder información que L2 ya entregaba). El umbral de 64
+  no cambia.
+- **Comparabilidad**: smoke-8 usa el manifiesto archivado de smoke-6/7
+  (`blake3:3ea8e24f…`), Claude Code 2.1.289, `claude-sonnet-5-5`, el mismo orden y una imagen
+  etiquetada `foker-bench:smoke8` construida desde el commit fusionado; se conserva
+  `foker-bench:smoke7`. Una ablación intercalada (brazo Foker con la imagen de smoke-7) aislaría
+  la deriva entre días, pero añade ejecuciones no autorizadas: queda como recomendación.
+
 ## Compromiso de medición
 
 - **No se ajusta el umbral después de ver resultados** (ni con ctx-gold ni con smoke-8).
@@ -64,3 +93,18 @@ Reglas complementarias, también fijadas ahora:
   dentro del ±25 % observado entre smoke-6 y smoke-7.
 - Después de smoke-8 no se siguen ajustando umbrales sobre Fixture A: la siguiente evidencia
   debe venir de Fixture B (PREGUNTA-6).
+
+## Revisiones independientes
+
+| Hallazgo | Revisor | Clasificación | Acción |
+|---|---|---|---|
+| El `Read` de un archivo que se edita es obligatorio en el anfitrión; `gold_full` no mide `Read` evitables | Claude (metodología) | VALID | Límite declarado antes de smoke-8; métrica causal = `Read` sin edición posterior |
+| Aritmética del umbral (Δ pagado en caché, C_turno subestimado, 4 % sin fuente) | Claude (metodología) | VALID | Documentado como orden de magnitud (37–68); 64 sin cambios por compromiso |
+| Barrels pierden firmas resueltas | Codex + Claude | VALID | Salvaguarda `only_own_symbols`; snapshots recuperan las firmas; test |
+| Una lectura fallida del completo aborta el pack | Codex | VALID | Se descarta la opción y sigue la degradación; test con archivo borrado |
+| Lecturas y renders innecesarios | Codex | VALID | Cota inferior por tamaño del mapa antes de leer; L2 reutilizado |
+| `goldFull` acepta coincidencias fuera del bloque del archivo y falla con explain | Codex | VALID | Cuerpos extraídos por id y nivel; tests |
+| §9.7 no describe L2 completo | Claude | VALID | Tabla de niveles actualizada |
+| Comparabilidad de smoke-8 (imagen etiquetada, ablación) | Claude | VALID (parcial) | Imágenes `smoke7`/`smoke8`; ablación pendiente de autorización |
+
+Sin falsos positivos.

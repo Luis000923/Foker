@@ -199,10 +199,47 @@ function summarizeSplits(rows: ({ split: GoldCase['split'] } & Parameters<typeof
   );
 }
 /**
- * ADR-034: fracción de gold_modified cuyo contenido completo llega en rendered (L3 completo,
- * L2 completo individual o agrupado). Indicador de lecturas evitables; los nuevos cuentan 0.
+ * Cuerpos L3/L2 por id extraídos de rendered: bloques individuales `<foker:file … level=L3|L2>`
+ * (sin la cabecera diagnóstica de explain) y entradas del envoltorio L2 agrupado (ruta sin
+ * indentar seguida de líneas indentadas dos espacios, hasta la siguiente ruta).
+ */
+export function fileBodies(rendered: string): Map<string, string[]> {
+  const bodies = new Map<string, string[]>();
+  const add = (id: string, body: string) => bodies.set(id, [...(bodies.get(id) ?? []), body]);
+  const decodeAttribute = (value: string) =>
+    value.replaceAll('&quot;', '"').replaceAll('&lt;', '<').replaceAll('&gt;', '>').replaceAll('&amp;', '&');
+  const single =
+    /<foker:file id="([^"]*)" level="(?:L2|L3)" trust="repository-content">\n([\s\S]*?)\n<\/foker:file>\n/g;
+  for (const match of rendered.matchAll(single)) {
+    const body = (match[2] as string).replace(/^### [^\n]*\n/, '');
+    add(decodeAttribute(match[1] as string), body);
+  }
+  const group = /<foker:files level="L2" trust="repository-content">\n([\s\S]*?)<\/foker:files>\n/g;
+  for (const match of rendered.matchAll(group)) {
+    let id: string | undefined;
+    let lines: string[] = [];
+    const flush = () => {
+      if (id !== undefined) add(id, lines.filter((line, k) => !(k === 0 && line.startsWith('### '))).join('\n'));
+    };
+    for (const line of (match[1] as string).replace(/\n$/, '').split('\n')) {
+      if (line.startsWith('  ')) lines.push(line.slice(2));
+      else {
+        flush();
+        id = line;
+        lines = [];
+      }
+    }
+    flush();
+  }
+  return bodies;
+}
+/**
+ * ADR-034: fracción de gold_modified cuyo contenido completo llega en el bloque L3/L2 de su
+ * propio archivo. Indicador de contenido entregado (no de Read evitables: el anfitrión exige
+ * Read antes de editar). Los archivos nuevos cuentan 0.
  */
 export function goldFull(rendered: string, root: string, gold: string[]): number {
+  const bodies = fileBodies(rendered);
   const full = gold.filter((id) => {
     let content: string;
     try {
@@ -211,16 +248,7 @@ export function goldFull(rendered: string, root: string, gold: string[]): number
       return false;
     }
     const escaped = content.replaceAll('<foker:', '&lt;foker:').replaceAll('</foker:', '&lt;/foker:');
-    const attr = id.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
-    const single = (level: string) =>
-      rendered.includes(
-        `<foker:file id="${attr}" level="${level}" trust="repository-content">\n${escaped}\n</foker:file>`,
-      );
-    const grouped = `\n${id}\n${escaped
-      .split('\n')
-      .map((line) => `  ${line}`)
-      .join('\n')}\n`;
-    return single('L3') || single('L2') || rendered.includes(grouped);
+    return (bodies.get(id) ?? []).some((body) => body === escaped);
   });
   return full.length / gold.length;
 }

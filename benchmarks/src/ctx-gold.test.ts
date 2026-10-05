@@ -173,6 +173,15 @@ it('goldFull reconoce contenido completo en L3, L2 individual y L2 agrupado (ADR
     expect(goldFull(l3.replace('L3', 'L2'), root, ['src/a.ts'])).toBe(1);
     expect(goldFull(grouped, root, ['src/a.ts', 'src/b.ts'])).toBe(0.5);
     expect(goldFull(grouped, root, ['src/nuevo.ts'])).toBe(0);
+    // Revisión Codex: contenido citado dentro del bloque de otro archivo no cuenta.
+    const quoted = `<foker:file id="src/c.ts" level="L3" trust="repository-content">\nsrc/a.ts\n${a
+      .split('\n')
+      .map((l) => `  ${l}`)
+      .join('\n')}\n</foker:file>\n`;
+    expect(goldFull(quoted, root, ['src/a.ts'])).toBe(0);
+    // Con explain, la cabecera diagnóstica no impide reconocer el contenido.
+    const explained = `<foker:file id="src/a.ts" level="L3" trust="repository-content">\n### src/a.ts  [L3 · score 1]\n${a}\n</foker:file>\n`;
+    expect(goldFull(explained, root, ['src/a.ts'])).toBe(1);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

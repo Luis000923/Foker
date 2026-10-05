@@ -234,11 +234,31 @@ pub fn select(
         };
         let mut accepted = false;
         // ADR-034: un L2 pequeño se entrega completo si cuesta ≤ small_full_max_extra más que
-        // sus firmas; sigue siendo L2 (no es objetivo) y prueba antes que L2/L1.
-        if levels[0] == RenderLevel::L2 && params.small_full_max_extra > 0 {
-            let signatures = render(candidate, RenderLevel::L2, None)?;
-            let complete = render_complete_l2(&index, root, candidate, explain)?;
-            if complete.0.tokens <= signatures.0.tokens + params.small_full_max_extra {
+        // sus firmas; sigue siendo L2 (no es objetivo) y prueba antes que L2/L1. Nunca si L2
+        // muestra símbolos de otros archivos (barrels): el contenido perdería esos contratos.
+        let mut signatures = None;
+        if levels[0] == RenderLevel::L2
+            && params.small_full_max_extra > 0
+            && index.only_own_symbols(&candidate.id)
+        {
+            let l2 = render(candidate, RenderLevel::L2, None)?;
+            let limit = l2.0.tokens + params.small_full_max_extra;
+            // Cota inferior barata (tamaño del mapa, descontando un CR por línea): evita leer
+            // archivos que no pueden cumplir el umbral.
+            let lower = state
+                .map
+                .files
+                .binary_search_by(|f| f.id.as_str().cmp(&candidate.id))
+                .ok()
+                .map_or(0, |i| {
+                    let file = &state.map.files[i];
+                    file.size_bytes.saturating_sub(u64::from(file.lines)) as usize * 5 / 16
+                });
+            // Una lectura fallida descarta la opción y sigue la degradación habitual.
+            if lower <= limit
+                && let Ok(complete) = render_complete_l2(&index, root, candidate, explain)
+                && complete.0.tokens <= limit
+            {
                 related.push(complete);
                 if used + section("related", &related).section.tokens <= capacity {
                     included.insert(candidate.id.clone());
@@ -247,9 +267,14 @@ pub fn select(
                 }
                 related.pop();
             }
+            signatures = Some(l2);
         }
         for &level in levels {
-            related.push(render(candidate, level, None)?);
+            let pair = match (level, signatures.take()) {
+                (RenderLevel::L2, Some(pair)) => pair,
+                _ => render(candidate, level, None)?,
+            };
+            related.push(pair);
             if used + section("related", &related).section.tokens <= capacity {
                 included.insert(candidate.id.clone());
                 accepted_count += 1;
