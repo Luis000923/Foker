@@ -455,12 +455,12 @@
     {
       "name": "foker_task_begin",
       "title": "Empezar tarea",
-      "description": "Crea tarea con alcance y perfil; context=true u objeto incluye el código. Conserva task_id si falla el pack. client_token deduplica; inactividad 4 h → BLOCKED.",
+      "description": "Crea tarea y pack con context. Omite scope para derivarlo; un alcance inexistente se rechaza sin tarea. client_token deduplica; conserva task_id si falla el pack final.",
       "inputSchema": {
         "title": "FokerTaskBeginInput",
         "type": "object",
         "additionalProperties": false,
-        "required": ["description", "scope"],
+        "required": ["description"],
         "properties": {
           "description": {
             "type": "string",
@@ -516,6 +516,14 @@
               }
             ]
           }
+        },
+        "if": {
+          "not": {
+            "required": ["scope"]
+          }
+        },
+        "then": {
+          "required": ["context"]
         }
       },
       "outputSchema": {
@@ -587,6 +595,10 @@
                     "type": "boolean"
                   }
                 }
+              },
+              "scope_derived": {
+                "description": "La llamada omitió scope; allowed_paths contiene el alcance derivado o reutilizado de la tarea.",
+                "type": "boolean"
               }
             },
             "not": {

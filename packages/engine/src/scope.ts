@@ -1,4 +1,6 @@
-import { FokerError, matchGlobs } from '@foker/core';
+import { readdir } from 'node:fs/promises';
+import { join, posix } from 'node:path';
+import { FokerError, matchGlobs, normalizePath } from '@foker/core';
 
 const literalPrefix = (glob: string) => glob.split(/[?*{[]/, 1)[0] ?? '';
 const representative = (glob: string) =>
@@ -29,4 +31,35 @@ export function assertUnprotectedScope(scope: string[], protectedGlobs: string[]
   const protected_paths_in_scope = protectedPathsInScope(scope, protectedGlobs, files);
   if (protected_paths_in_scope.length)
     throw new FokerError('FKR-POL-002', `Alcance protegido: ${JSON.stringify({ protected_paths_in_scope })}`);
+}
+
+/** Admite archivos nuevos solo cuando su directorio ya existe; no sigue symlinks. */
+export async function nonexistentScopePaths(root: string, scope: string[], files: string[]): Promise<string[]> {
+  for (const glob of scope) {
+    normalizePath(root, glob);
+    matchGlobs('validation', [glob]);
+  }
+  const unmatched = scope.filter((glob) => !files.some((file) => matchGlobs(file, [glob])));
+  if (!unmatched.length) return [];
+  const directories = ['.'];
+  async function walk(directory: string) {
+    for (const entry of await readdir(join(root, directory), { withFileTypes: true })) {
+      if (!entry.isDirectory() || ['.git', '.foker', 'node_modules'].includes(entry.name)) continue;
+      const path = directory === '.' ? entry.name : `${directory}/${entry.name}`;
+      directories.push(path);
+      await walk(path);
+    }
+  }
+  await walk('.');
+  return unmatched.filter((glob) => {
+    const parent = glob.endsWith('/') ? glob.slice(0, -1) : posix.dirname(glob);
+    return !directories.some(
+      (directory) =>
+        // Ancla el directorio al root: «src» como glob de basename también
+        // coincidiría con packages/catalog/src y aceptaría un «src/**» inventado.
+        (parent === '.' && directory === '.') ||
+        matchGlobs(`root/${directory}`, [`root/${glob}`, `root/${parent}`]) ||
+        matchGlobs(`root/${directory}/`, [`root/${glob}`, `root/${parent}`]),
+    );
+  });
 }

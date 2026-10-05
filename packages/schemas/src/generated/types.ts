@@ -188,6 +188,10 @@ code: ErrorCode
 message: string
 recoverable: boolean
 }
+/**
+ * La llamada omitió scope; allowed_paths contiene el alcance derivado o reutilizado de la tarea.
+ */
+scope_derived?: boolean
 } | McpToolError)
 export type FokerTaskGetOutput = (TaskRecord | McpToolError)
 export type FokerTaskSubmitOutput = ({
@@ -1200,7 +1204,7 @@ export interface FokerStatusInput {
 }
 export interface FokerTaskBeginInput {
 description: string
-scope: TaskScope
+scope?: TaskScope
 profile?: string
 skill?: string
 max_attempts?: number

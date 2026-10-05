@@ -76,6 +76,15 @@ async function tree(root: string, prefix = ''): Promise<Record<string, string>> 
   }
   return result;
 }
+async function monorepo(root: string) {
+  await writeFile(join(root, 'package.json'), JSON.stringify({ name: 'workspace', private: true }));
+  await writeFile(join(root, 'pnpm-workspace.yaml'), 'packages:\n  - packages/*\n');
+  for (const name of ['catalog', 'cart']) {
+    await mkdir(join(root, `packages/${name}/src`), { recursive: true });
+    await writeFile(join(root, `packages/${name}/package.json`), JSON.stringify({ name: `@demo/${name}` }));
+    await writeFile(join(root, `packages/${name}/src/index.ts`), `export const ${name} = 1;\n`);
+  }
+}
 it('root inválido es error de protocolo', async () => {
   await expect(createFokerServer({ root: '/does/not/exist' })).rejects.toMatchObject({
     code: -32602,
@@ -417,6 +426,125 @@ it('check y submit omiten output_tail en pass y eliminan ANSI en fail sin cambia
 });
 
 for (const legacy of [false, true]) {
+  it(`alcance inexistente rechaza sin tarea ni ledger y permite corregir el mismo token (legacy=${legacy})`, async () => {
+    const f = await fixture(legacy);
+    try {
+      await monorepo(f.root);
+      const args = { description: 'Modificar catalog', client_token: 'scope-retry' };
+      const result = await f.call('foker_task_begin', {
+        ...args,
+        scope: { paths: ['packages/catalog/src/**', 'src/**'] },
+      });
+      expect(result).toMatchObject({
+        isError: true,
+        error: { code: 'FKR-INP-001', recoverable: true, message: expect.stringContaining('packages/catalog/src/**') },
+      });
+      const message = (result.structuredContent as { message: string }).message;
+      const suggestions = JSON.parse(/Alcances sugeridos: (\[[^\]]*\])/.exec(message)?.[1] ?? 'null');
+      expect(suggestions.length).toBeGreaterThan(0);
+      expect(suggestions.length).toBeLessThanOrEqual(5);
+      expect(await readdir(join(f.root, '.foker/tasks')).catch(() => [])).toEqual([]);
+      expect(await new engineApi.TaskStore(f.root).list()).toEqual([]);
+      const corrected = await f.call('foker_task_begin', { ...args, scope: { paths: ['packages/catalog/src/**'] } });
+      expect(corrected.isError).toBe(false);
+      expect(await new engineApi.TaskStore(f.root).list()).toHaveLength(1);
+    } finally {
+      await f.client.close();
+      await f.server.close();
+    }
+  });
+
+  it(`scope omitido deriva directorios monorepo; reintentos conservan alcance y ledger (legacy=${legacy})`, async () => {
+    const f = await fixture(legacy);
+    try {
+      await monorepo(f.root);
+      const args = { description: 'Modificar catalog', client_token: 'derived' };
+      const first = await f.call('foker_task_begin', {
+        ...args,
+        context: { anchors: { files: ['packages/catalog/src/index.ts'] } },
+      });
+      expect(first).toMatchObject({
+        isError: false,
+        structuredContent: { scope_derived: true, allowed_paths: ['packages/catalog/src/**'] },
+      });
+      const id = (first.structuredContent as { task_id: string }).task_id;
+      expect((first.structuredContent as { context: { rendered: string } }).context.rendered).toContain(id);
+      const store = new engineApi.TaskStore(f.root);
+      const task = await store.inspect(id);
+      expect(task.scope.paths).toEqual(['packages/catalog/src/**']);
+      const ledger = await readFile(join(f.root, `.foker/tasks/${id}.events.jsonl`), 'utf8');
+      const retryArgs = {
+        ...args,
+        context: { budget_tokens: 1000, anchors: { files: ['packages/cart/src/index.ts'] } },
+      };
+      const retries = await Promise.all([f.call('foker_task_begin', retryArgs), f.call('foker_task_begin', retryArgs)]);
+      for (const retry of retries)
+        expect(retry).toMatchObject({
+          isError: false,
+          structuredContent: { task_id: id, allowed_paths: ['packages/catalog/src/**'], scope_derived: true },
+        });
+      expect(await f.call('foker_task_begin', { ...retryArgs, description: 'Otra tarea' })).toMatchObject({
+        isError: true,
+        error: { code: 'FKR-INP-001', recoverable: true },
+      });
+      expect(await readFile(join(f.root, `.foker/tasks/${id}.events.jsonl`), 'utf8')).toBe(ledger);
+      expect(await store.list()).toHaveLength(1);
+    } finally {
+      await f.client.close();
+      await f.server.close();
+    }
+  });
+
+  it(`derivación respeta protected_paths antes de crear tarea (legacy=${legacy})`, async () => {
+    const f = await fixture(legacy);
+    try {
+      await monorepo(f.root);
+      const configPath = join(f.root, 'foker.config.yaml');
+      await writeFile(
+        configPath,
+        `${await readFile(configPath, 'utf8')}policy:\n  protected_paths: [packages/catalog/src/private.ts]\n`,
+      );
+      expect(
+        await f.call('foker_task_begin', {
+          description: 'Modificar catalog',
+          context: { anchors: { files: ['packages/catalog/src/index.ts'] } },
+        }),
+      ).toMatchObject({ isError: true, error: { code: 'FKR-POL-002' } });
+      expect(await readdir(join(f.root, '.foker/tasks')).catch(() => [])).toEqual([]);
+      expect(await new engineApi.TaskStore(f.root).list()).toEqual([]);
+    } finally {
+      await f.client.close();
+      await f.server.close();
+    }
+  });
+
+  it(`sin scope ni context se rechaza; sin objetivos no crea tarea (legacy=${legacy})`, async () => {
+    const f = await fixture(legacy);
+    try {
+      expect(await f.call('foker_task_begin', { description: 'Nada' })).toMatchObject({
+        isError: true,
+        error: { code: 'FKR-INP-001', recoverable: true },
+      });
+      await rm(join(f.root, 'index.ts'));
+      expect(await f.call('foker_task_begin', { description: 'Nada', context: true })).toMatchObject({
+        isError: true,
+        error: { code: 'FKR-INP-001', recoverable: true, message: expect.stringContaining('Alcances sugeridos:') },
+      });
+      expect(await readdir(join(f.root, '.foker/tasks')).catch(() => [])).toEqual([]);
+      await writeFile(join(f.root, 'foker/rules.md'), 'reglas obligatorias\n'.repeat(1000));
+      expect(await f.call('foker_task_begin', { description: 'Nada', context: { budget_tokens: 1000 } })).toMatchObject(
+        {
+          isError: true,
+          error: { code: 'FKR-INP-001', recoverable: true, message: expect.stringContaining('Alcances sugeridos:') },
+        },
+      );
+      expect(await readdir(join(f.root, '.foker/tasks')).catch(() => [])).toEqual([]);
+    } finally {
+      await f.client.close();
+      await f.server.close();
+    }
+  });
+
   it(`contexto compacto contiene código; explain conserva el pack completo (legacy=${legacy})`, async () => {
     const f = await fixture(legacy);
     try {

@@ -10,6 +10,7 @@ import {
   gatherContextInputs,
   loadConfig,
   loadSkill,
+  nonexistentScopePaths,
   normalizePath,
   openEngine,
   submitTask,
@@ -42,6 +43,7 @@ import {
 } from '@modelcontextprotocol/server';
 import { type ServeStdioOptions, serveStdio } from '@modelcontextprotocol/server/stdio';
 import { Audit, limitOutput, sanitize, TokenBucket } from './safety.js';
+import { deriveScopePaths, scopeSuggestions } from './scope.js';
 
 export const PACKAGE_NAME = '@foker/mcp';
 const version = (createRequire(import.meta.url)('../package.json') as { version: string }).version;
@@ -237,9 +239,54 @@ function serverFactory(options: FokerServerOptions) {
         if (!profile) throw new FokerError('FKR-VAL-001', 'Perfil inexistente');
         if (input.skill) await gatherContextInputs(root, { skill: input.skill });
         const project = JSON.parse(await engine.exportMapJson()) as ProjectMap;
-        assertUnprotectedScope(input.scope.paths, loaded.policy.protected_paths, Object.keys(project.files));
         const { context, ...taskInput } = input;
-        const task = await tasks.begin(taskInput);
+        const files = Object.keys(project.files);
+        const contextInput: FokerContextInput = {
+          task: input.description,
+          ...(input.skill ? { skill: input.skill } : {}),
+          ...(context === true ? {} : context),
+        };
+        async function invalidScope(message: string, pack?: ContextPack | null): Promise<never> {
+          // Las sugerencias no deben convertir un error de alcance en fallo del pack.
+          if (pack === undefined) {
+            try {
+              pack = await buildPack(engine, loaded, contextInput);
+            } catch {
+              // Si el presupuesto/reglas impiden el pack, quedan las raíces de paquetes.
+            }
+          }
+          const suggestions = scopeSuggestions(project, loaded.policy.protected_paths, pack ?? undefined);
+          throw new FokerError(
+            'FKR-INP-001',
+            `${message} Alcances sugeridos: ${JSON.stringify(suggestions)}. Usa un alcance existente u omite scope con context y anchors.`,
+          );
+        }
+        // También se comprueba la política en reintentos; begin conserva la identidad
+        // y ejecuta la derivación/validación únicamente al crear una tarea nueva.
+        if (input.scope) assertUnprotectedScope(input.scope.paths, loaded.policy.protected_paths, files);
+        const task = await tasks.begin(taskInput, async () => {
+          let scope = input.scope;
+          if (!scope) {
+            if (!context) return invalidScope('Falta scope o context.');
+            let preliminary: ContextPack;
+            try {
+              preliminary = await buildPack(engine, loaded, contextInput);
+            } catch {
+              return invalidScope('No se pudo construir el pack para derivar el alcance.', null);
+            }
+            const paths = deriveScopePaths(preliminary);
+            const [first, ...rest] = paths;
+            if (first === undefined)
+              return invalidScope('El pack no contiene objetivos L3 ni archivos L2.', preliminary);
+            scope = { paths: [first, ...rest] };
+          }
+          assertUnprotectedScope(scope.paths, loaded.policy.protected_paths, files);
+          const missing = await nonexistentScopePaths(root, scope.paths, files);
+          if (missing.length)
+            return invalidScope(`Alcance sin archivos ni directorios existentes: ${JSON.stringify(missing)}.`);
+          return scope;
+        });
+        assertUnprotectedScope(task.scope.paths, loaded.policy.protected_paths, files);
         let contextResult: Record<string, unknown> = {};
         if (context) {
           try {
@@ -278,6 +325,7 @@ function serverFactory(options: FokerServerOptions) {
               dirty_files_truncated: task.baseline.dirty_files.length > dirtyFiles.length,
             },
             allowed_paths: task.scope.paths,
+            ...(!input.scope ? { scope_derived: true } : {}),
             protected_paths_in_scope: [],
             checks: profile.checks,
           },

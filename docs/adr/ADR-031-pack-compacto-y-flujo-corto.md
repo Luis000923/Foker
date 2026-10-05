@@ -1,6 +1,6 @@
 # ADR-031 · Context Pack compacto (v2) y flujo corto
 
-- **Estado**: Fases 1 y 1c implementadas y medidas (objetivo del 85 % pendiente; diccionario de fase 1b rechazado); fase 2 implementada y medida localmente (smoke de anfitrión pendiente); fase 3 propuesta
+- **Estado**: Fases 1 y 1c implementadas y medidas (objetivo del 85 % pendiente; diccionario de fase 1b rechazado); fase 2 implementada y medida localmente; smoke-5 de anfitrión recibido y fase 2b implementada; fase 3 propuesta
 - **Fecha**: 2026-10-04
 - **Modifica**: FOKER-SPEC §9.7, §9.8, §9.9, §10.2–10.3 (`foker_context`, `foker_task_begin`) y la skill `foker-workflow`
 - **Amplía**: ADR-028 y ADR-030
@@ -559,3 +559,90 @@ No se modifican N-API ni contratos JSON, ni fuentes de MCP, integrations,
 skills o schemas. La gramática de rendered v2 revisada queda registrada
 solo en este ADR y FOKER-SPEC §9.9. La evidencia nueva corresponde a esta
 suite y al estimador; la medición o200k citada es la aportada por el revisor.
+
+
+## Resultados smoke-5 y fase 2b
+
+### Evidencia del anfitrión
+
+En `bench-smoke-5` con Claude Code real, a-01 y a-15 obligaron al modelo a
+adivinar `scope.paths` **antes de ver el pack**. Propuso `src/**`, inexistente
+en el monorepo cuyos fuentes están en `packages/*/src`. Foker creó la tarea
+igualmente. El modelo abrió otra con el alcance correcto y envió la tarea
+huérfana a submit (`REJECTED`), porque el Stop hook bloquea con tareas
+`RUNNING`. El coste observado fue **tres llamadas extra por tarea: nueve
+frente a las seis del camino ideal**. Esta evidencia se recibe del smoke;
+no es una nueva ejecución del benchmark en esta sesión.
+
+### Decisión e implementación
+
+- Antes de crear una tarea MCP, cada patrón explícito debe coincidir con un
+  archivo del mapa o con un directorio existente, incluido el padre de un
+  archivo nuevo. La comprobación de directorios se ancla al root: el glob
+  de basename `src` no puede validar `src/**` a través de `packages/*/src`.
+  No se recorren symlinks ni `.git`, `.foker` o `node_modules`.
+- Un alcance inexistente devuelve `FKR-INP-001` recuperable, con hasta cinco
+  sugerencias: directorios de archivos ordenados por puntuación descendente
+  y ruta ascendente en empate, seguidos de raíces de paquetes ordenadas.
+  Se deduplican y excluyen alcances protegidos. Si el pack para sugerir no
+  se puede construir, se conservan las raíces disponibles. No se captura
+  baseline ni se escribe tarea, eventos o ancla de integridad. La auditoría
+  MCP sigue registrando el rechazo; no es el ledger de tareas.
+- `scope` es opcional únicamente con `context`. El pack preliminar se
+  construye con descripción, skill, anclas, intención, presupuesto y demás
+  defaults existentes, **sin task_id ni taskScope**. Se toman todos sus
+  archivos L3; si no hay L3, los tres primeros L2 por puntuación descendente
+  y ruta ascendente. Cada archivo aporta su directorio + `/**` (en raíz,
+  `**`); se deduplican y ordenan por ruta. No se amplía desde L1/L0. Sin
+  candidatos, o si falla el pack preliminar, se devuelve el error recuperable
+  anterior antes de crear la tarea. `assertUnprotectedScope` rechaza cualquier
+  intersección con `protected_paths`, incluso rutas omitidas del mapa.
+- El alcance se persiste en el `scope` existente de TaskRecord y se devuelve
+  mediante `allowed_paths`; las llamadas sin scope incluyen `scope_derived:
+  true`. No cambia ningún formato persistido ni la API nativa. Solo cambia
+  el contrato MCP, definido en `mcp-tools.json` y sus tipos regenerados.
+- Tras crear la tarea se construye el pack definitivo con su task_id,
+  alcance y checks del perfil. Así se evita la dependencia circular: la
+  selección preliminar fija el alcance y el pack definitivo incorpora la
+  identidad y restricciones reales. Ambos siguen siendo deterministas
+  para sus entradas; no se promete igualdad de hashes entre ellos. Si
+  falla el definitivo, se conserva task_id y context_error como en fase 2.
+- La resolución/validación al crear se ejecuta bajo el lock de begin,
+  **después de comprobar client_token y antes de baseline/ledger**. El
+  reintento sin scope usa el alcance registrado y nunca vuelve a derivarlo,
+  aunque varíen anclas/presupuesto/intención o cambie el mapa. El reintento
+  con alcance explícito mantiene la comparación existente; cambiar otros
+  campos de identidad sigue rechazándose. La política protegida se aplica
+  también al alcance reutilizado. Los reintentos no añaden eventos begin.
+- La skill y el bloque común de los cuatro targets/roles indican omitir
+  scope y pasar context con anchors si se desconoce el directorio exacto;
+  los alcances inventados se rechazan sin crear tarea. Los snapshots y
+  las pruebas de paridad reflejan esas instrucciones.
+
+### Verificación local de fase 2b
+
+Se ejecuta sin red, pnpm, operaciones Git de escritura, cambios en crates
+ni recompilar el addon. Un wrapper temporal en `/tmp/foker-phase2b-bin`
+permite solo lecturas Git y bloquea pnpm de subprocess; se usa
+`GIT_OPTIONAL_LOCKS=0`. Las pruebas nuevas cubren monorepo, errores con
+sugerencias y sin ledger, archivos nuevos en directorios vacíos, orden y
+selección L3/L2, rutas protegidas fuera del mapa, recuperación con el mismo
+token, reintentos concurrentes sin eventos nuevos y paridad de los targets.
+
+- `./node_modules/.bin/vitest run packages`: **467 pasan, 31 fallan**;
+  30 archivos pasan y siete fallan. Los 27 fallos por Git de escritura
+  bloqueado son: 23 E2E de CLI, dos tests de contexto del engine, uno de
+  baseline del TaskStore y uno de doctor CLI. Se informan separados de
+  los otros cuatro: dos tests de schemas con `spawnSync node EPERM` y
+  dos E2E MCP stdio con conexión cerrada. Los scripts generadores invocados
+  directamente sí pasan; ambos protocolos MCP pasan en memoria. No se
+  certifica stdio en este sandbox ni se simula una suite completa verde.
+- `./node_modules/.bin/tsc -p tsconfig.json`: verde.
+- `./node_modules/.bin/biome check packages skills docs`: verde (135 archivos).
+- `node packages/schemas/scripts/generate.mjs --check`: verde; incluye
+  la comprobación de gen-config-docs.
+
+Log completo: `/tmp/foker-phase2b-vitest-final.log`. Las comprobaciones
+usan los ejecutables locales y el addon existente. No se modifica ningún
+artefacto de benchmark ni se atribuye una nueva reducción de tokens:
+la medida de aceptación posterior de fase 2b en el anfitrión queda pendiente.

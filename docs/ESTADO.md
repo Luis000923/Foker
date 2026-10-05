@@ -50,6 +50,16 @@ M0, M2, M3, M4 y E6 completos en local; M1 con todo lo que no gasta API (manifie
 
 ## Trabajo 2026-10-04
 
+- **ADR-031 fases 1b/1c/2/2b**: pack sin pérdida (rangos de hermanos, L2 compartido, firma inline;
+  diccionario de macros rechazado por riesgo de calidad). ctx-gold: mediana rendered 5552 → 903
+  (−83,7 %; o200k 664) con recall idéntico. MCP: código del pack en `structuredContent` (Claude Code
+  no entrega `content[0]`), `foker_task_begin` con `context`, flujo obligatorio 4 → 2 llamadas;
+  2b: alcance inexistente rechazado antes de crear tarea, `scope` derivable del pack.
+- **Smoke real `bench-smoke-5`** (antes de 2b): éxito 2/3 por brazo, igual que smoke-4. Archivos
+  expuestos 56 → 1 (a-01). Tokens de entrada Foker: a-01 219k → 201k, a-09 222k → 141k,
+  a-15 151k → 174k (control ~64–67k; a-09 control 165k, falla). En a-01 y a-15 el modelo adivinó
+  `scope: src/**`, abrió una segunda tarea y cerró la huérfana: +3 llamadas. Corregido en 2b;
+  falta medirlo con un smoke nuevo.
 - **ADR-031 fase 1 · Pack compacto v2**: implementada y medida sin red ni git de escritura.
   Recall idéntico por caso en los 60 ctx-gold (total 0,7444; calibration 0,7389;
   validation 0,7500). Mediana rendered 5552 → 1049 (−81,11 %); no alcanza −85 %.

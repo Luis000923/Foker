@@ -138,7 +138,7 @@ export class TaskStore {
       if (/^tsk_[0-9A-HJKMNP-TV-Z]{26}\.json$/.test(name)) tasks.push(await this.get(name.slice(0, -5)));
     return tasks;
   }
-  async begin(input: FokerTaskBeginInput): Promise<TaskRecord> {
+  async begin(input: FokerTaskBeginInput, resolveScope?: () => Promise<TaskRecord['scope']>): Promise<TaskRecord> {
     const normalized = {
       description: input.description,
       scope: input.scope,
@@ -160,11 +160,14 @@ export class TaskStore {
             max_attempts: existing.max_attempts,
             client_token: existing.client_token,
           };
-          if (hash(original) !== hash(normalized))
+          if (hash(original) !== hash({ ...normalized, scope: input.scope ?? existing.scope }))
             throw new FokerError('FKR-INP-001', 'client_token usado con otra entrada');
           return existing;
         }
       }
+      // Resuelve y valida antes del baseline/ledger, bajo el lock de idempotencia.
+      normalized.scope = resolveScope ? await resolveScope() : input.scope;
+      if (!normalized.scope) throw new FokerError('FKR-INP-001', 'Falta el alcance de la tarea.');
       const id = taskId(this.clock(), this.options.random);
       const now = this.now();
       const task: TaskRecord = {
@@ -172,6 +175,7 @@ export class TaskStore {
         task_id: id,
         state: 'RUNNING',
         ...normalized,
+        scope: normalized.scope,
         attempt: 1,
         created_at: now,
         updated_at: now,
@@ -183,7 +187,7 @@ export class TaskStore {
         next_action: 'work_and_submit',
       };
       checked('task', task);
-      for (const path of input.scope.paths) {
+      for (const path of task.scope.paths) {
         normalizePath(this.root, path);
         matchGlobs('validation', [path]);
       }
@@ -198,7 +202,7 @@ export class TaskStore {
       } catch (error) {
         if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
       }
-      task.baseline = await captureBaseline(this.root, id, input.scope.paths);
+      task.baseline = await captureBaseline(this.root, id, task.scope.paths);
       await this.record(task, null, this.actor, 'begin');
       return task;
     });
