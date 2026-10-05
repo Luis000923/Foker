@@ -91,3 +91,91 @@ brazos.
   se derivan de los tests y se auditan.
 - El autor del selector (Claude) ve las tareas: el motor queda congelado para Fixture B
   (ningún ajuste con estos datos).
+
+## Resultados de la preparación (OBSERVACIÓN, 2026-10-05)
+
+### Elegibilidad E1–E8 en el SHA de identidad
+
+| Repo | E1 licencia | E2 TS propio | E3 archivos / LOC TS | Categoría | E4/E8 (3 preparaciones limpias, 2 CPU / 8 GiB) |
+|---|---|---:|---:|---|---|
+| Vite | MIT | 96,96 % | 164 / 40.805 | mixto (small por archivos, medium por LOC); no monorepo por la regla | install+build 57–70 s, evaluación sin red 43–44 s, pico 3,1 GiB |
+| TanStack Query | MIT | 93,82 % | 384 / 33.771 | medium; monorepo | install 46–106 s, evaluación 42–43 s, pico 3,1 GiB |
+| Zod | MIT | 99,75 % | 162 / 30.960 | mixto | install+build 44–58 s, evaluación 87–88 s, pico 3,2 GiB |
+
+Los tres cumplen E1–E8 y **se aceptan**. Conteos en `benchmarks/fixture-b/eligibility-*.json`.
+E7: build/herramientas (Vite), estado/UI multi-framework (Query) y biblioteca de validación (Zod).
+Hallazgos de entorno:
+- Vite y Zod necesitan compilar antes de testear (como en su CI).
+- El corepack de Node 22.14 no activa pnpm 12, así que Vite usa Node 24.16 (dentro de sus `engines`).
+- Zod usa `nub` 0.8.3 en el SHA de identidad (instalador con checksum), pero pnpm 10.12.1 en sus bases.
+- Las bases traen sus propias instrucciones de agente (`CLAUDE.md`, `AGENTS.md` y similares).
+
+### Minado y verificación
+
+Ventana 2026-04-01..2026-09-30. Candidatos tras las reglas 1–6: Vite 112, Query 69 y Zod 172.
+Verificados en orden de semilla, con 3 repeticiones sin red y el **entorno de B**
+(`packageManager` y `.nvmrc` de cada base, imagen fijada por digest), hasta 15 aceptados:
+
+| Repo | Procesados | Aceptados | Rechazos (motivo) |
+|---|---:|---:|---|
+| Vite | 27 | 15 | 11 tests e2e de `playground` que requieren navegador (`f2p_load_only` + `f2p_fails_after`), 1 `f2p_passes_before` |
+| Query | 24 | 15 | 6 `p2p_fails_after`, 4 `f2p_fails_after`, 2 `quality_fails_after`, 2 `f2p_passes_before` |
+| Zod | 15 | 15 | — |
+
+Tipos: 36 fix, 4 feat, 1 perf y 4 «otro» (asunto sin prefijo convencional). Tareas, entorno,
+comandos y verificación en `benchmarks/fixture-b/tasks.jsonl`. El gold no se guarda: se regenera
+con `git diff B C` excluyendo los tests ocultos. Cambios en la verificación respecto al plan: el
+entorno es por base y no por repo, y se fija `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1` (la descarga
+de Chromium se colgaba; los tests e2e se rechazan igual en ambos brazos).
+
+**Sesgos de selección**: en Vite solo entran bugs con tests unitarios (sin navegador). Zod
+aceptó sus 15 primeros candidatos, que se concentran en `v4`. En Query, los rechazos P2P
+excluyen tareas cuyo paquete tenía tests ya rotos en B.
+
+### Enunciados
+
+Codex los redactó en modo solo lectura a partir del título del PR y del diff de los tests
+(sin el gold). Claude auditó los 45 con un detector de fugas (identificadores del gold ausentes
+de los tests, nombres de archivos del gold, rutas) y una lectura completa: **0 fugas reales**
+(10 falsos positivos por palabras genéricas o el nombre del paquete). Limitación: derivados de
+los tests, describen la conducta esperada con más detalle que un issue real (igual en ambos
+brazos). La revisión humana (§6 de los criterios) sigue pendiente.
+
+### Evaluación offline de Foker (motor congelado, presupuesto 8000)
+
+`benchmarks/fixture-b/results/offline-eval-2026-10-05.json`; 45 casos (24 calibration / 21 validation).
+
+| Configuración | Recall pack | Precisión pack | Recall flujo begin | Cobertura de alcance | Recall de símbolos (anclas = gold) | `gold_full` |
+|---|---:|---:|---:|---:|---:|---:|
+| default (ADR-032/033/034) | **0,408** | 0,048 | **0,396** | 0,544 | **0,370** | 0,00 |
+| sin ADR-034 | 0,408 | 0,047 | 0,374 | 0,544 | 0,370 | 0,00 |
+| sin ADR-033 | 0,408 | 0,048 | 0,396 | 0,544 | 0,326 | 0,00 |
+| plegado flexivo on | 0,378 | 0,045 | 0,374 | 0,589 | 0,370 | 0,00 |
+
+Por repo (default): Query pack 0,62 / flujo 0,53 / símbolos 0,54; Vite 0,47 / 0,43 / 0,37;
+Zod 0,13 / 0,23 / 0,20. Mediana de tokens del pack: 7.590 (llena el presupuesto; en Fixture A,
+~1.000). Mapa por base: 404–1.550 archivos, construcción mediana 144 ms; `build_context`
+mediano 62 ms.
+
+**Fallos de anclas**: 12 de 45 evaluaciones con anclas = gold fallan con `FKR-CTX-001` (10 de
+ellas en Zod). La reserva mínima obligatoria de un ancla (L1, todas sus firmas) supera el
+presupuesto en archivos como `packages/zod/src/v4/core/schemas.ts`, antes de que la vista focal
+pueda actuar. En el flujo begin real, un agente que anclara ese archivo recibiría
+`context_error` sin código.
+
+**INTERPRETACIÓN**:
+- El recall en repos reales (0,41) es casi la mitad que en Fixture A (0,74): Fixture A
+  sobreestimaba la calidad de selección.
+- ADR-034 no entrega ningún gold completo (son archivos grandes); solo mueve el flujo +2,2 pp.
+- ADR-033 aporta +4,4 pp de recall de símbolos.
+- El plegado empeora validation (−6,4 pp): sigue desactivado.
+- El motor queda **congelado** para Fixture B. Corregir la reserva de anclas grandes (por
+  ejemplo, L0 o focal como mínimo) exige un ADR nuevo y un conjunto reservado distinto, no
+  estos 45 casos.
+
+### Pendiente antes del benchmark pagado (FKR-015)
+
+El arnés solo prepara Fixture A. Falta: preparación por tarea con la imagen y el gestor de B,
+checkout sin historial ni remotos, instalación con red en fase separada, montaje de los tests
+ocultos solo en la evaluación, comandos de evaluación por tarea, `foker init` en el brazo
+Foker sin alterar las instrucciones upstream del control, y revisión de seguridad del montaje.
