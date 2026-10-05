@@ -430,6 +430,10 @@ params?: {
  */
 lexical_expansion?: boolean
 /**
+ * Interno: plegado flexivo es/en en BM25 (ADR-032); solo presente si difiere del default.
+ */
+inflection_folding?: boolean
+/**
  * Interno: corte relativo BM25 (ADR-028); solo presente si difiere del default.
  */
 bm25_min_relative?: number

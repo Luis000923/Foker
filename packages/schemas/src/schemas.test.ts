@@ -139,6 +139,9 @@ describe('ContextPack v2 (ADR-031)', () => {
     expectInvalid('context-pack', pack({ sufficiency_fraction: 1.1 }), '/request/params/sufficiency_fraction');
     expectInvalid('context-pack', pack({ related_limits: [8] }), '/request/params/related_limits');
     expectInvalid('context-pack', pack({ related_limits: [8, 8, -1, 8, 8, 8] }), '/request/params/related_limits/2');
+    // ADR-032: el pack serializado con plegado flexivo activado debe seguir validando.
+    expectValid('context-pack', pack({ inflection_folding: true }));
+    expectInvalid('context-pack', pack({ inflection_folding: 1 }), '/request/params/inflection_folding');
     expectInvalid('context-pack', pack({ arbitrary: 1 }), '/request/params');
   });
 });
