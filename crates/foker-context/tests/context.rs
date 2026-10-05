@@ -1239,6 +1239,7 @@ fn large_anchor_uses_focal_view_only_when_enabled() {
             focal_min_tokens,
             ..Default::default()
         }),
+        budget_tokens: 4000,
         ..Default::default()
     };
     let build =
@@ -1249,9 +1250,9 @@ fn large_anchor_uses_focal_view_only_when_enabled() {
         .iter()
         .find(|f| f.id == "src/metrics.ts")
         .unwrap();
-    assert_eq!(target.level, RenderLevel::L3);
-    assert!(target.note.is_none());
-    assert!(full.rendered.contains("total += value * 3;"));
+    // Sin vista focal, el ancla supera anchor_fraction (40 % de 4000) y degrada a L2 sin cuerpos.
+    assert_eq!(target.level, RenderLevel::L2);
+    assert!(!full.rendered.contains("total += value * 17;"));
 
     let focal = build(500);
     let target = focal
@@ -1265,7 +1266,7 @@ fn large_anchor_uses_focal_view_only_when_enabled() {
             .note
             .as_deref()
             .unwrap()
-            .starts_with("vista focal: src/metrics.ts#metric17")
+            .starts_with("vista focal: 1 símbolos completos;")
     );
     // Foco completo, cabecera, resto como firma y aviso visible en rendered.
     assert!(
@@ -1293,9 +1294,10 @@ fn large_anchor_uses_focal_view_only_when_enabled() {
             .unwrap()
             .tokens
     };
+    // La vista focal (con el cuerpo del foco) cuesta menos que la L2 degradada (sin cuerpos).
     assert!(
-        anchor_tokens(&focal) * 4 < anchor_tokens(&full),
-        "focal {} frente a completo {}",
+        anchor_tokens(&focal) < anchor_tokens(&full),
+        "focal {} frente a L2 {}",
         anchor_tokens(&focal),
         anchor_tokens(&full)
     );
@@ -1305,7 +1307,7 @@ fn large_anchor_uses_focal_view_only_when_enabled() {
     assert_eq!(build(500).rendered, focal.rendered);
     assert_ne!(focal.pack_hash, full.pack_hash);
 
-    // Sin foco determinista, el archivo va completo aunque la vista esté activa.
+    // Sin foco determinista no hay vista focal: se conserva la degradación anterior.
     let unfocused = build_context(
         &map,
         dir.path(),
@@ -1316,5 +1318,18 @@ fn large_anchor_uses_focal_view_only_when_enabled() {
         &ContextInputs::default(),
     )
     .unwrap();
-    assert!(unfocused.rendered.contains("total += value * 3;"));
+    assert!(!unfocused.rendered.contains("vista focal"));
+    // Política ADR-033: si el L3 completo cabe, gana aunque la vista esté activa.
+    let roomy = build_context(
+        &map,
+        dir.path(),
+        &ContextRequest {
+            budget_tokens: 8000,
+            ..request(500)
+        },
+        &ContextInputs::default(),
+    )
+    .unwrap();
+    assert!(roomy.rendered.contains("total += value * 3;"));
+    assert!(!roomy.rendered.contains("vista focal"));
 }

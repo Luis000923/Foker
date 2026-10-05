@@ -59,23 +59,17 @@ fn render_candidate(
 }
 /// Ancla L3 con vista focal (ADR-033); `None` sin foco o sin reducción.
 fn focal_candidate(
-    state: &MapState,
+    symbols: &[&foker_map::model::MapSymbol],
     root: &Path,
     candidate: &Candidate,
     request: &crate::NormalizedRequest,
     params: &crate::ContextParams,
     explain: bool,
 ) -> Result<Option<RenderedFile>, ContextError> {
-    let symbols: Vec<_> = state
-        .map
-        .symbols
-        .iter()
-        .filter(|s| s.file() == candidate.id)
-        .collect();
     let focal =
-        crate::focal::focal_symbols(&symbols, &request.task, &request.anchors.symbols, params);
+        crate::focal::focal_symbols(symbols, &request.task, &request.anchors.symbols, params);
     let source = render::read(root, &candidate.id)?;
-    let Some(view) = crate::focal::render(&source, &symbols, &focal) else {
+    let Some(view) = crate::focal::render(&source, symbols, &focal) else {
         return Ok(None);
     };
     let mut file = PackFile {
@@ -84,9 +78,10 @@ fn focal_candidate(
         tokens: 0,
         score: candidate.score,
         reasons: candidate.reasons.clone(),
+        // Sin datos del repositorio: la nota se renderiza fuera de foker:file (REQ-CTX-002).
         note: Some(format!(
-            "vista focal: {}; {} líneas omitidas",
-            view.symbols.join(", "),
+            "vista focal: {} símbolos completos; {} líneas omitidas",
+            view.symbols.len(),
             view.omitted_lines
         )),
     };
@@ -136,6 +131,7 @@ pub fn select(
         render_candidate(&index, root, candidate, level, note, explain)
     };
     let mut targets = Vec::new();
+    let mut symbols_by_file: Option<BTreeMap<&str, Vec<&foker_map::model::MapSymbol>>> = None;
     for candidate in ranked.iter().filter(|c| c.anchor) {
         let pair = render(candidate, RenderLevel::L1, Some(OMITTED.into()))?;
         breakdown.push((candidate.id.clone(), pair.0.tokens));
@@ -153,27 +149,45 @@ pub fn select(
     for (position, candidate) in ranked.iter().filter(|c| c.anchor).enumerate() {
         let minimum_pair = targets[position].clone();
         let full = render(candidate, RenderLevel::L3, None)?;
-        let mut choices = Vec::new();
-        // ADR-033: un ancla grande con foco determinista prefiere la vista focal al archivo
-        // completo; también sustituye a L2 cuando el completo no cabe en anchor_fraction.
-        if params.focal_min_tokens > 0
-            && full.0.tokens > params.focal_min_tokens
-            && let Some(pair) = focal_candidate(state, root, candidate, request, params, explain)?
-            && pair.0.tokens < full.0.tokens
-            && pair.0.tokens <= (budget as f64 * params.anchor_fraction).floor() as usize
-        {
-            choices.push(pair);
-        }
-        if full.0.tokens <= (budget as f64 * params.anchor_fraction).floor() as usize {
-            choices.push(full);
-        }
-        choices.push(render(candidate, RenderLevel::L2, Some(OMITTED.into()))?);
-        choices.push(minimum_pair);
-        for pair in choices {
-            targets[position] = pair;
-            if fixed_cost + section("targets", &targets).section.tokens <= capacity {
-                break;
+        let fraction = (budget as f64 * params.anchor_fraction).floor() as usize;
+        let fits = |targets: &[RenderedFile]| {
+            fixed_cost + section("targets", targets).section.tokens <= capacity
+        };
+        if full.0.tokens <= fraction {
+            targets[position] = full.clone();
+            if fits(&targets) {
+                continue;
             }
+        }
+        // ADR-033: la vista focal solo sustituye a la degradación (el L3 completo supera
+        // anchor_fraction o no cabe en la capacidad restante); nunca a un L3 completo que cabe.
+        if params.focal_min_tokens > 0 && full.0.tokens > params.focal_min_tokens {
+            let symbols = symbols_by_file
+                .get_or_insert_with(|| {
+                    let mut by_file: BTreeMap<&str, Vec<&foker_map::model::MapSymbol>> =
+                        BTreeMap::new();
+                    for symbol in &state.map.symbols {
+                        by_file.entry(symbol.file()).or_default().push(symbol);
+                    }
+                    by_file
+                })
+                .get(candidate.id.as_str())
+                .cloned()
+                .unwrap_or_default();
+            if let Some(pair) =
+                focal_candidate(&symbols, root, candidate, request, params, explain)?
+                && pair.0.tokens < full.0.tokens
+                && pair.0.tokens <= fraction
+            {
+                targets[position] = pair;
+                if fits(&targets) {
+                    continue;
+                }
+            }
+        }
+        targets[position] = render(candidate, RenderLevel::L2, Some(OMITTED.into()))?;
+        if !fits(&targets) {
+            targets[position] = minimum_pair;
         }
     }
     let target_section = section("targets", &targets);

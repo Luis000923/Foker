@@ -11,10 +11,10 @@ pub struct ContextParams {
     /// Plegado flexivo es/en en BM25 (ADR-032), desactivable para medir el baseline.
     #[serde(skip_serializing_if = "plegado_predeterminado")]
     pub inflection_folding: bool,
-    /// Vista focal de anclas cuyo L3 supera estos tokens (ADR-033); 0 la desactiva.
+    /// Vista focal de anclas cuyo L3 supera estos tokens y no cabe (ADR-033); 0 la desactiva.
     #[serde(skip_serializing_if = "focal_min_predeterminado")]
     pub focal_min_tokens: usize,
-    /// Máximo de símbolos focales por ancla (incluye anclas e identificadores citados).
+    /// Máximo de símbolos focales añadidos por BM25; anclas e identificadores citados siempre entran.
     #[serde(skip_serializing_if = "focal_max_predeterminado")]
     pub focal_max_symbols: usize,
     /// Corte léxico relativo al mejor símbolo del archivo para entrar en el foco.
@@ -90,7 +90,7 @@ impl Default for ContextParams {
         Self {
             lexical_expansion: true,
             inflection_folding: false,
-            focal_min_tokens: 0,
+            focal_min_tokens: 500,
             focal_max_symbols: 5,
             focal_relative: 0.5,
             bm25_min_relative: 0.0,

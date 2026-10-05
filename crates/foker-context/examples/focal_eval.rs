@@ -2,7 +2,7 @@
 //! Uso: focal_eval <cases.jsonl> <dir con un árbol por commit padre> <salida.json> [umbral...]
 //! Cada caso usa sus gold_modified como anclas (evaluación condicionada al archivo): mide si el
 //! texto completo de cada gold_symbol llega en rendered y cuánto cuesta cada ancla.
-use foker_context::{Anchors, ContextInputs, ContextParams, ContextRequest, build_context};
+use foker_context::{Anchors, ContextInputs, ContextParams, ContextRequest, build_context, render};
 use foker_map::{
     build::{ParseCache, build},
     config::MapConfig,
@@ -19,6 +19,39 @@ struct Case {
     split: String,
     gold_modified: Vec<String>,
     gold_symbols: Vec<String>,
+}
+
+/// ¿Llega el texto completo dentro del bloque de su propio archivo? Bloque individual L3/L2
+/// literal, o envoltorio L2 compartido con cuerpos indentados dos espacios (ADR-031 1c).
+fn delivered_in_file(rendered: &str, file: &str, level: Option<&str>, text: &str) -> bool {
+    for lvl in ["L3", "L2"] {
+        let open = format!("<foker:file id=\"{file}\" level=\"{lvl}\"");
+        if let Some(start) = rendered.find(&open)
+            && let Some(end) = rendered[start..].find("</foker:file>")
+        {
+            return rendered[start..start + end].contains(text);
+        }
+    }
+    if level != Some("L2") {
+        return false;
+    }
+    let header = format!("\n{file}\n");
+    let Some(start) = rendered.find(&header) else {
+        return false;
+    };
+    let body = &rendered[start + header.len()..];
+    let end = body.find("\n</foker:files>").unwrap_or(body.len());
+    let indented: Vec<String> = text
+        .split('\n')
+        .map(|l| {
+            if l.is_empty() {
+                String::new()
+            } else {
+                format!("  {l}")
+            }
+        })
+        .collect();
+    body[..end].contains(&indented.join("\n"))
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -47,17 +80,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             );
         }
         let state = &states[&case.commit];
-        // Texto completo de cada símbolo gold en el árbol del padre.
+        // Texto completo de cada símbolo gold en el árbol del padre, con el mismo escape que
+        // rendered. Un gold ausente del mapa es un error de integridad del dataset.
         let mut gold_text = BTreeMap::new();
         for id in &case.gold_symbols {
-            let Some(symbol) = state.map.symbols.iter().find(|s| &s.id == id) else {
-                continue;
-            };
+            let symbol = state
+                .map
+                .symbols
+                .iter()
+                .find(|s| &s.id == id)
+                .ok_or_else(|| format!("{}: gold_symbol ausente del mapa: {id}", case.id))?;
             let source = std::fs::read_to_string(root.join(symbol.file()))?.replace("\r\n", "\n");
             let lines: Vec<_> = source.split('\n').collect();
             let text =
                 lines[symbol.range.start.line as usize..=symbol.range.end.line as usize].join("\n");
-            gold_text.insert(id.clone(), text);
+            gold_text.insert(id.clone(), (symbol.file().to_owned(), render::data(&text)));
         }
         // Informativo: recall de archivos sin anclas (repositorio real, sin vista focal posible).
         let open = ContextRequest {
@@ -94,9 +131,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             };
             let row = match build_context(state, &root, &request, &ContextInputs::default()) {
                 Ok(pack) => {
+                    // Solo cuenta si el texto completo está en el bloque de su propio archivo.
                     let delivered = gold_text
-                        .iter()
-                        .filter(|(_, text)| pack.rendered.contains(text.as_str()))
+                        .values()
+                        .filter(|(file, text)| {
+                            let level = pack
+                                .files
+                                .iter()
+                                .find(|f| f.id == *file)
+                                .map(|f| f.level.as_str());
+                            delivered_in_file(&pack.rendered, file, level, text)
+                        })
                         .count();
                     let anchors: Vec<Value> = pack
                         .files

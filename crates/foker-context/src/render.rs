@@ -45,7 +45,8 @@ fn header(value: &str) -> String {
         })
         .collect()
 }
-fn data(value: &str) -> String {
+/// Escapa contenido del repositorio para que no cierre el delimitador de confianza.
+pub fn data(value: &str) -> String {
     // El contenido no puede cerrar el delimitador de confianza.
     value
         .replace("<foker:", "&lt;foker:")

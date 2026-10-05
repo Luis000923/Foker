@@ -35,10 +35,15 @@ pub fn focal_symbols(
     let mut focal = BTreeSet::new();
     for symbol in symbols {
         let qualified = symbol.id.split_once('#').map_or("", |(_, q)| q);
-        if anchor_symbols
-            .iter()
-            .any(|a| *a == symbol.id || *a == symbol.name || *a == qualified)
-            || identifiers.contains(symbol.name.as_str())
+        // Un ancla con archivo (`ruta#símbolo`) solo casa por id exacto; sin archivo, por
+        // nombre o nombre cualificado dentro de este archivo.
+        if anchor_symbols.iter().any(|a| {
+            if a.contains('#') {
+                *a == symbol.id
+            } else {
+                *a == symbol.name || *a == qualified
+            }
+        }) || identifiers.contains(symbol.name.as_str())
         {
             focal.insert(symbol.id.clone());
         }
@@ -122,9 +127,24 @@ enum Shape {
     Reference,
 }
 
-fn is_comment(line: &str) -> bool {
-    let t = line.trim_start();
-    t.starts_with("//") || t.starts_with("/*") || t.starts_with('*') || t.starts_with('@')
+/// Primera línea del bloque de comentarios/decoradores contiguo a `s` sin bajar de `floor`.
+/// Los comentarios de bloque se recorren hasta su `/*` de apertura.
+fn leading_trivia(lines: &[&str], floor: usize, s: usize) -> usize {
+    let mut doc = s;
+    while doc > floor {
+        let line = lines[doc - 1].trim();
+        if line.ends_with("*/") {
+            match (floor..doc).rev().find(|&k| lines[k].contains("/*")) {
+                Some(open) => doc = open,
+                None => break,
+            }
+        } else if line.starts_with("//") || line.starts_with('@') {
+            doc -= 1;
+        } else {
+            break;
+        }
+    }
+    doc
 }
 
 /// Renderiza la vista focal; `None` si no hay foco o no reduce el archivo.
@@ -194,6 +214,17 @@ pub fn render(source: &str, symbols: &[&MapSymbol], focal: &[String]) -> Option<
         &mut out,
         &mut shown,
     );
+    // Invariante: todo símbolo anunciado como focal se entrega completo. Rangos solapados o
+    // descartados por el recorrido abandonan la vista (se entrega el archivo completo).
+    for id in &focal_set {
+        let symbol = by_id.get(id.as_str())?;
+        if !shown[symbol.range.start.line as usize..=symbol.range.end.line as usize]
+            .iter()
+            .all(|s| *s)
+        {
+            return None;
+        }
+    }
     let omitted_lines = shown
         .iter()
         .zip(&lines)
@@ -274,14 +305,13 @@ fn block(
     let mut run: Option<Run> = None;
     for node in nodes {
         let (s, e) = (node.range.start.line as usize, node.range.end.line as usize);
-        if s < cursor || e >= end {
+        // `end` es la línea de cierre del contenedor (exclusiva para huecos): un hijo puede
+        // terminar en ella (`}};`), nunca después. En la raíz, `end` es el fin del archivo.
+        if s < cursor || e > end || (parent.is_none() && e >= end) {
             continue;
         }
         // Comentarios/decoradores contiguos sobre el símbolo se entregan con él.
-        let mut doc = s;
-        while doc > cursor && is_comment(lines[doc - 1]) {
-            doc -= 1;
-        }
+        let doc = leading_trivia(lines, cursor, s);
         let shape = tree.shape(node);
         if shape == Shape::Reference {
             if header && first {
@@ -306,9 +336,22 @@ fn block(
         match shape {
             Shape::Full => emit(lines, s, e + 1, out, shown),
             Shape::Open => {
-                emit(lines, s, s + 1, out, shown);
-                block(tree, lines, Some(&node.id), s + 1, e, false, out, shown);
-                emit(lines, e, e + 1, out, shown);
+                // Cabecera completa (decoradores, extends en varias líneas) hasta la llave.
+                let opening = (s..e).find(|&k| lines[k].contains('{')).unwrap_or(s);
+                emit(lines, s, opening + 1, out, shown);
+                block(
+                    tree,
+                    lines,
+                    Some(&node.id),
+                    opening + 1,
+                    e,
+                    false,
+                    out,
+                    shown,
+                );
+                if !shown[e] {
+                    emit(lines, e, e + 1, out, shown);
+                }
             }
             _ => {
                 shown[s] = true;
@@ -464,6 +507,77 @@ mod tests {
         assert_eq!(
             lexical,
             focal_symbols(&refs, "ordena resultados", &[], &params)
+        );
+    }
+    fn at(id: &str, kind: SymbolKind, lines: (u32, u32), parent: Option<&str>) -> MapSymbol {
+        symbol(id, kind, lines, parent)
+    }
+
+    #[test]
+    fn solapamiento_que_oculta_un_foco_abandona_la_vista() {
+        // Ambos declaradores comparten el rango de la declaración (revisión Codex 2).
+        let source = "const a = () => {\n  return 1;\n}, target = () => {\n  return 2;\n};\nfunction other() {\n  return 3;\n}";
+        let owned = [
+            at("a", SymbolKind::Variable, (0, 4), None),
+            at("target", SymbolKind::Variable, (0, 4), None),
+            at("other", SymbolKind::Function, (5, 7), None),
+        ];
+        let refs: Vec<_> = owned.iter().collect();
+        let view = render(source, &refs, &["a.ts#target".into()]);
+        // O se entrega el cuerpo completo del foco, o no hay vista (archivo completo).
+        if let Some(view) = view {
+            assert!(view.body.contains("return 2;"));
+        }
+    }
+
+    #[test]
+    fn hijo_que_cierra_en_la_linea_del_contenedor_y_cabecera_multilinea() {
+        // Revisión agente 1 y Codex 3: decorador, extends en otra línea y `}}` final.
+        let source = "@sealed\nexport class Box\n  extends Base {\n  other() { return 0; }\n  focus() {\n    return 1;\n  }}\nconst tail = 2;\nfunction rest() {\n  return 3;\n}";
+        let owned = [
+            at("Box", SymbolKind::Class, (0, 6), None),
+            at("Box.other", SymbolKind::Method, (3, 3), Some("Box")),
+            at("Box.focus", SymbolKind::Method, (4, 6), Some("Box")),
+            at("tail", SymbolKind::Variable, (7, 7), None),
+            at("rest", SymbolKind::Function, (8, 10), None),
+        ];
+        let refs: Vec<_> = owned.iter().collect();
+        let view = render(source, &refs, &["a.ts#Box.focus".into()]).unwrap();
+        assert!(
+            view.body
+                .contains("@sealed\nexport class Box\n  extends Base {\n")
+        );
+        assert!(view.body.contains("  focus() {\n    return 1;\n  }}"));
+        assert_eq!(view.body.matches("  }}").count(), 1);
+        assert!(view.body.contains("omitidas: rest"));
+    }
+
+    #[test]
+    fn comentario_de_bloque_sin_asteriscos_se_entrega_completo() {
+        // Revisión Codex 4.
+        let source = "function first() {\n  return 0;\n}\n/*\nexplicación sin asterisco\n*/\nexport function target() {\n  return 1;\n}";
+        let owned = [
+            at("first", SymbolKind::Function, (0, 2), None),
+            at("target", SymbolKind::Function, (6, 8), None),
+        ];
+        let refs: Vec<_> = owned.iter().collect();
+        let view = render(source, &refs, &["a.ts#target".into()]).unwrap();
+        assert!(
+            view.body
+                .contains("/*\nexplicación sin asterisco\n*/\nexport function target() {")
+        );
+    }
+
+    #[test]
+    fn ancla_con_archivo_solo_casa_por_id_exacto() {
+        // Revisión agente 6: `otro.ts#helper` no marca el `helper` de este archivo.
+        let owned = symbols();
+        let refs: Vec<_> = owned.iter().collect();
+        let params = ContextParams::default();
+        assert!(focal_symbols(&refs, "xyzzy", &["otro.ts#helper".into()], &params).is_empty());
+        assert_eq!(
+            focal_symbols(&refs, "xyzzy", &["a.ts#helper".into()], &params),
+            ["a.ts#helper"]
         );
     }
 }
