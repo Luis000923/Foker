@@ -292,3 +292,12 @@ calibration, tanto en recall como en tokens y rendered_tokens.
 - `inflection_folding` (plegado es/en en BM25) es un parámetro interno **desactivado**: mejora
   el recall de calibration pero regresa a-49; ver tablas en el ADR.
 - Diagnóstico por gold: `cargo run --offline -p foker-context --example recall_diagnose -- <fixture-a> [split]`.
+
+## Vista focal por símbolo · ADR-033
+
+- `focal_min_tokens` (interno, **0 = desactivada**, default) entrega anclas grandes como L3 focal:
+  FULL para el foco y contratos pequeños, OPEN para contenedores, SIGNATURE para lo que usa el
+  foco y REFERENCE agrupado para el resto, con aviso y marcas de omisión dentro de `rendered`.
+- Foco: anclas de símbolo, identificadores citados y BM25 dentro del archivo. Sin foco, archivo completo.
+- Evaluación: `cargo run --release --offline -p foker-context --example focal_eval -- <cases> <trees> <out>`
+  sobre `benchmarks/ctx-gold/foker-self` (FKR-095). Resultados y criterio en el ADR.
