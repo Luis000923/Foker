@@ -179,3 +179,36 @@ El arnés solo prepara Fixture A. Falta: preparación por tarea con la imagen y 
 checkout sin historial ni remotos, instalación con red en fase separada, montaje de los tests
 ocultos solo en la evaluación, comandos de evaluación por tarea, `foker init` en el brazo
 Foker sin alterar las instrucciones upstream del control, y revisión de seguridad del montaje.
+
+## Revisión independiente (Codex) y verificador v2
+
+| Hallazgo | Clasificación | Corrección |
+|---|---|---|
+| P1 · P2P no se comprobaba sobre B | VALID | Fase `p2p_before` sobre B puro (sin tests nuevos) |
+| P1 · Snapshots de test tratados como gold (`b-vite-13`) | VALID | Tests ocultos = todos los archivos de C que casan con la regex de tests, incluidos `.snap` |
+| P2 · Query solo evaluaba los paquetes con tests (`b-query-15`) | VALID | Paquetes = tests ∪ implementación modificada |
+| P2 · Digest registrado pero no usado | VALID | Ejecución con `node@sha256:…` |
+| P2 · Sin estabilidad entre repeticiones | VALID | Mismo conjunto de casos F2P fallidos y mismos conteos P2P en las 3; `new_skips` |
+| P2 · Herramientas externas no fijadas | VALID | Instalador de nub con sha256, `cloc` 1.96 verificado, manifiesto versionado; el lote usa el verificador hermano |
+| P2 · Reutilización y concurrencia | VALID | Preparaciones en directorio nuevo, cerrojo por ejecución, huella del verificador en cada veredicto |
+| P3 · Sin resultados por caso | VALID | Se versionarán los resultados por caso con la reevaluación |
+
+La selección v1 (45 tareas) queda **invalidada**. Se reverifica desde cero con v2, en el mismo
+orden de semilla y con las mismas reglas; la evidencia v1 se conserva aparte (`verify-v1`).
+
+## Arnés de Fixture B (FKR-015, implementado sin ejecución pagada)
+
+- Imágenes `foker-bench-b:node-<versión>` construidas desde el `node@sha256` de cada base, con el
+  mismo Claude Code (2.1.289) y la misma build de Foker que `foker-bench:smoke8`.
+- Preparación idéntica en ambos brazos: árbol de B sin historial ni remotos, gestor de B,
+  instalación congelada y build con red; en el brazo Foker, además, `foker init/trust/map`.
+  Commit «Preparado» como referencia.
+- Entrega del agente = `git diff` contra ese commit; los symlinks upstream se conservan; se
+  rechazan los symlinks nuevos que escapan del repo y los cambios en rutas protegidas.
+- Evaluación sin red sobre una copia del árbol preparado: entrega, tests ocultos sobrescritos
+  con su versión de C, build, F2P, P2P (suite sin los archivos F2P) y calidad.
+- Validado sin API con agentes simulados (gold → éxito; noop → F2P falso y P2P verdadero) en
+  Vite, Query y Zod, y en el brazo Foker.
+- Limitaciones: P2P excluye por nombre de archivo (vitest 4) y podría excluir un test homónimo
+  del mismo paquete. `task_type` del esquema v1: perf → refactor, otro → fix. `retries` y
+  `ccr_relevante` no se instrumentan (null).
