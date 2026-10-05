@@ -2,8 +2,8 @@ import { mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { expect, it, vi } from 'vitest';
-import { evaluateContext, loadCases, renderedBytes, renderedTokens } from './ctx-gold.js';
+import { describe, expect, it, vi } from 'vitest';
+import { evaluateContext, flowPack, type GoldCase, loadCases, renderedBytes, renderedTokens } from './ctx-gold.js';
 
 it('particiona cada byte del render incluso con cabeceras literales y UTF-8', () => {
   const text =
@@ -68,4 +68,83 @@ it('rechaza ids que permitirían salir del directorio de volcado', async () => {
   } finally {
     vi.unstubAllEnvs();
   }
+});
+
+it('el flujo begin deriva alcance, usa taskScope y mide cobertura de alcance', async () => {
+  const repo = fileURLToPath(new URL('../../', import.meta.url));
+  const cases = loadCases(readFileSync(new URL('../ctx-gold/cases.jsonl', import.meta.url), 'utf8'));
+  const item = cases.find((c) => c.id === 'a-02');
+  if (!item) throw new Error('Caso ausente');
+  const report = await evaluateContext([item], repo);
+  const flow = report.rows[0]?.flow;
+  if (!flow) throw new Error('Flujo ausente');
+  expect(flow.scope_error).toBe(false);
+  expect(flow.scope.length).toBeGreaterThan(0);
+  expect(flow.scope.every((glob) => glob.endsWith('/**'))).toBe(true);
+  expect(flow.scope_coverage).toBeGreaterThanOrEqual(0);
+  expect(flow.scope_coverage).toBeLessThanOrEqual(1);
+  expect(flow.rendered_tokens).toBeGreaterThan(0);
+  expect(report.flow?.recall).toBe(flow.recall);
+  expect(report.flow?.scope_errors).toBe(0);
+});
+
+describe('flowPack registra los rechazos de begin sin abortar (revisión Codex, ADR-032)', () => {
+  const item: GoldCase = {
+    id: 'x',
+    fixture: 'fixture-a',
+    task: 't',
+    gold_modified: ['README.md'],
+    split: 'calibration',
+  };
+  const preliminary = (files: { id: string; level: string; score: number; reasons: string[] }[]) => ({
+    json: JSON.stringify({ files: files.map((f) => ({ ...f, tokens: 1 })) }),
+  });
+  const engine = (build: () => Promise<never>) => ({ buildContext: build });
+  it('alcance vacío: FKR-INP-001, sin pack definitivo', async () => {
+    const build = vi.fn();
+    const flow = await flowPack(engine(build), { task: 't' }, preliminary([]), item);
+    expect(flow).toMatchObject({ scope_error: true, error: 'FKR-INP-001', recall: 0, scope_coverage: 0 });
+    expect(build).not.toHaveBeenCalled();
+  });
+  it('un alcance que intersecta rutas protegidas se rechaza: FKR-POL-002', async () => {
+    const build = vi.fn();
+    const flow = await flowPack(
+      engine(build),
+      { task: 't' },
+      preliminary([{ id: 'foker/rules.md', level: 'L3', score: 1, reasons: ['ANCHOR'] }]),
+      item,
+    );
+    expect(flow.scope).toEqual(['foker/**']);
+    expect(flow).toMatchObject({ scope_error: true, error: 'FKR-POL-002', recall: 0, scope_coverage: 0 });
+    expect(build).not.toHaveBeenCalled();
+  });
+  it('un archivo de la raíz ya no deriva ** y begin lo acepta', async () => {
+    const flow = await flowPack(
+      engine(() => Promise.reject(Object.assign(new Error('x'), { code: 'FKR-CTX-001' }))),
+      { task: 't' },
+      preliminary([{ id: 'README.md', level: 'L3', score: 1, reasons: ['ANCHOR'] }]),
+      item,
+    );
+    expect(flow).toMatchObject({ scope: ['README.md'], scope_error: false, scope_coverage: 1 });
+  });
+  it('si el pack definitivo falla se registra context_error con recall 0', async () => {
+    const error = Object.assign(new Error('presupuesto'), { code: 'FKR-CTX-001' });
+    const flow = await flowPack(
+      engine(() => Promise.reject(error)),
+      { task: 't' },
+      preliminary([{ id: 'docs/README.md', level: 'L3', score: 1, reasons: ['ANCHOR'] }]),
+      { ...item, gold_modified: ['docs/README.md'] },
+    );
+    expect(flow).toMatchObject({ scope_error: false, error: 'FKR-CTX-001', recall: 0, scope_coverage: 1 });
+  });
+  it('errores ajenos a Foker se propagan', async () => {
+    await expect(
+      flowPack(
+        engine(() => Promise.reject(new TypeError('bug'))),
+        { task: 't' },
+        preliminary([{ id: 'docs/a.md', level: 'L3', score: 1, reasons: ['ANCHOR'] }]),
+        item,
+      ),
+    ).rejects.toThrow('bug');
+  });
 });

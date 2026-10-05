@@ -1,6 +1,7 @@
 import { readdir } from 'node:fs/promises';
 import { join, posix } from 'node:path';
 import { FokerError, matchGlobs, normalizePath } from '@foker/core';
+import type { ContextPack } from '@foker/schemas';
 
 const literalPrefix = (glob: string) => glob.split(/[?*{[]/, 1)[0] ?? '';
 const representative = (glob: string) =>
@@ -62,4 +63,37 @@ export async function nonexistentScopePaths(root: string, scope: string[], files
         matchGlobs(`root/${directory}/`, [`root/${glob}`, `root/${parent}`]),
     );
   });
+}
+
+const compare = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
+/**
+ * Directorio de un archivo como alcance glob. Un archivo de la raíz se acota a sí mismo:
+ * `**` intersecta siempre las rutas protegidas y begin lo rechazaría (ADR-032).
+ */
+export const directoryScope = (file: string) => {
+  const directory = posix.dirname(file);
+  return directory === '.' ? file : `${directory}/**`;
+};
+/** Puntuación descendente, id ascendente en empate. */
+export const rankPackFiles = (files: ContextPack['files']) =>
+  [...files].sort((a, b) => b.score - a.score || compare(a.id, b.id));
+
+const DIRECT = /^(ANCHOR|PATH_MENTION|SYMBOL_MENTION|LEXICAL:)/;
+/** Señal propia de la tarea; CORE o DEPENDENCY_OF/DEPENDENT_OF solo llegan por el grafo. */
+const directSignal = (file: ContextPack['files'][number]) => file.reasons.some((reason) => DIRECT.test(reason));
+
+/**
+ * Alcance derivado del pack preliminar (ADR-031 fase 2b); usa niveles, nunca texto renderizado.
+ * Sin L3, toma tres L2 y antepone los de señal directa a los alcanzados por el grafo (ADR-032).
+ */
+export function deriveScopePaths(pack: Pick<ContextPack, 'files'>): string[] {
+  const targets = pack.files.filter((file) => file.level === 'L3');
+  const l2 = pack.files.filter((file) => file.level === 'L2');
+  const files = targets.length
+    ? targets
+    : [...rankPackFiles(l2.filter(directSignal)), ...rankPackFiles(l2.filter((file) => !directSignal(file)))].slice(
+        0,
+        3,
+      );
+  return [...new Set(files.map((file) => directoryScope(file.id)))].sort(compare);
 }

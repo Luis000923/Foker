@@ -5,6 +5,7 @@ import { stripVTControlCharacters } from 'node:util';
 import {
   assertUnprotectedScope,
   type ContextRequest,
+  deriveScopePaths,
   type Engine,
   FokerError,
   gatherContextInputs,
@@ -43,7 +44,7 @@ import {
 } from '@modelcontextprotocol/server';
 import { type ServeStdioOptions, serveStdio } from '@modelcontextprotocol/server/stdio';
 import { Audit, limitOutput, sanitize, TokenBucket } from './safety.js';
-import { deriveScopePaths, scopeSuggestions } from './scope.js';
+import { scopeSuggestions } from './scope.js';
 
 export const PACKAGE_NAME = '@foker/mcp';
 const version = (createRequire(import.meta.url)('../package.json') as { version: string }).version;

@@ -229,6 +229,27 @@ fn spanish_root(term: &str) -> String {
     singular.to_owned()
 }
 
+/// Clave flexiva ligera es/en (ADR-032): sin tildes, plural y -e final plegados.
+/// Solo empareja BM25 (consulta y documento por igual); nunca altera texto, rutas ni anclas.
+/// `referencias`/`referencia`, `importes`/`importe`, `unidades`/`unidad`, `matches`/`match`.
+pub fn fold_inflection(term: &str) -> String {
+    let mut key: String = term
+        .nfd()
+        .filter(|c| !unicode_normalization::char::is_combining_mark(*c))
+        .collect();
+    let long = |s: &str, n: usize| s.chars().count() > n;
+    if key.ends_with("ies") && long(&key, 4) {
+        key.truncate(key.len() - 3);
+        key.push('y');
+    } else if key.ends_with('s') && !key.ends_with("ss") && long(&key, 3) {
+        key.pop();
+    }
+    if key.ends_with('e') && long(&key, 3) {
+        key.pop();
+    }
+    key
+}
+
 /// Conserva multiplicidad original y añade cada alternativa una sola vez.
 pub fn expand_terms(terms: &[String]) -> Vec<String> {
     let mut additions = BTreeSet::new();
@@ -254,6 +275,29 @@ pub fn expand_terms(terms: &[String]) -> Vec<String> {
 #[cfg(test)]
 mod expansion_tests {
     use super::*;
+    #[test]
+    fn plegado_flexivo_es_en_simetrico_y_conservador() {
+        for (a, b) in [
+            ("referencias", "referencia"),
+            ("importes", "importe"),
+            ("unidades", "unidad"),
+            ("cantidades", "cantidad"),
+            ("matches", "match"),
+            ("processes", "process"),
+            ("categories", "category"),
+            ("búsqueda", "busqueda"),
+            ("prices", "price"),
+        ] {
+            assert_eq!(fold_inflection(a), fold_inflection(b), "{a} ~ {b}");
+        }
+        for (a, b) in [("cart", "card"), ("user", "users-x"), ("sku", "skus-")] {
+            assert_ne!(fold_inflection(a), fold_inflection(b));
+        }
+        // Términos cortos no se pliegan.
+        for short in ["es", "as", "bus", "ies", "use"] {
+            assert_eq!(fold_inflection(short), short);
+        }
+    }
     #[test]
     fn expansion_bilingue_plural_acentos_y_multiplicidad() {
         let es = expand_terms(&tokenize("usuarios autenticación precios").terms);

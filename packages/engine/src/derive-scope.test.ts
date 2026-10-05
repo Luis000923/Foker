@@ -6,12 +6,13 @@ const file = (
   id: string,
   level: ContextPack['files'][number]['level'],
   score: number,
+  reasons: [string, ...string[]] = ['CORE'],
 ): ContextPack['files'][number] => ({
   id,
   level,
   score,
   tokens: 1,
-  reasons: ['test'],
+  reasons,
 });
 
 it('deriva todos los L3, deduplica y ordena directorios sin añadir L2', () => {
@@ -39,4 +40,33 @@ it('sin L3 usa los tres primeros L2 por puntuación e id, antes de deduplicar', 
   expect(deriveScopePaths({ files })).toEqual(expected);
   expect(deriveScopePaths({ files: files.reverse() })).toEqual(expected);
   expect(deriveScopePaths({ files: [file('index.ts', 'L0', 1)] })).toEqual([]);
+});
+
+it('sin L3 antepone L2 con señal directa a hubs alcanzados solo por el grafo (ADR-032)', () => {
+  const files = [
+    file('packages/catalog/src/index.ts', 'L2', 0.09),
+    file('packages/users/src/index.ts', 'L2', 0.065),
+    file('packages/cart/src/index.ts', 'L2', 0.054),
+    file('packages/users/src/isAdmin.ts', 'L2', 0.059, ['LEXICAL:consulta']),
+    file('packages/ui/src/search.ts', 'L2', 0.045, ['DEPENDENT_OF:x', 'SYMBOL_MENTION']),
+    file('packages/orders/src/staff.ts', 'L1', 0.5, ['LEXICAL:staff']),
+  ];
+  expect(deriveScopePaths({ files })).toEqual([
+    'packages/catalog/src/**',
+    'packages/ui/src/**',
+    'packages/users/src/**',
+  ]);
+  expect(deriveScopePaths({ files: files.reverse() })).toEqual([
+    'packages/catalog/src/**',
+    'packages/ui/src/**',
+    'packages/users/src/**',
+  ]);
+});
+
+it('un archivo de la raíz se acota a sí mismo, no a ** (siempre protegido) (ADR-032)', () => {
+  const files = [
+    file('vitest.config.ts', 'L2', 0.9, ['LEXICAL:test']),
+    file('packages/orders/src/a.ts', 'L2', 0.5, ['LEXICAL:x']),
+  ];
+  expect(deriveScopePaths({ files })).toEqual(['packages/orders/src/**', 'vitest.config.ts']);
 });

@@ -2,7 +2,8 @@ import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } f
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { type ContextRequest, openEngine } from '@foker/core';
+import { type ContextRequest, matchGlobs, openEngine } from '@foker/core';
+import { deriveScopePaths, protectedPathsInScope, resolveConfig } from '@foker/engine';
 import { generate } from '../fixtures/fixture-a/generate.mjs';
 
 export interface GoldCase {
@@ -136,6 +137,7 @@ function summarize(
     bytes: ReturnType<typeof renderedBytes>;
     recall: number;
     precision: number;
+    flow?: FlowResult;
   }[],
 ) {
   const median = (values: number[]) => {
@@ -159,6 +161,19 @@ function summarize(
     median_rendered_tokens: rows.length ? median(rows.map((r) => r.rendered_tokens)) : null,
     mean_rendered_tokens: rows.length ? mean(rows.map((r) => r.rendered_tokens)) : null,
     median_rendered_bytes: rows.length ? median(rows.map((r) => r.rendered_bytes)) : null,
+    flow:
+      rows.length && rows.every((r) => r.flow)
+        ? {
+            recall: mean(rows.map((r) => (r.flow as FlowResult).recall)),
+            precision: mean(rows.map((r) => (r.flow as FlowResult).precision)),
+            scope_coverage: mean(rows.map((r) => (r.flow as FlowResult).scope_coverage)),
+            scope_errors: rows.filter((r) => (r.flow as FlowResult).scope_error).length,
+            context_errors: rows.filter((r) => !(r.flow as FlowResult).scope_error && (r.flow as FlowResult).error)
+              .length,
+            median_rendered_tokens: median(rows.map((r) => (r.flow as FlowResult).rendered_tokens)),
+            mean_rendered_tokens: mean(rows.map((r) => (r.flow as FlowResult).rendered_tokens)),
+          }
+        : null,
     mean_rendered_bytes: rows.length ? mean(rows.map((r) => r.rendered_bytes)) : null,
     // Media de las filas centrales: suma exactamente la mediana de bytes, a diferencia
     // de sumar medianas independientes de categorías.
@@ -179,6 +194,74 @@ function summarizeSplits(rows: ({ split: GoldCase['split'] } & Parameters<typeof
   return Object.fromEntries(
     (['calibration', 'validation'] as const).map((split) => [split, summarize(rows.filter((r) => r.split === split))]),
   );
+}
+/** Id fijo y checks del perfil default: el flujo es determinista y no depende de un ledger. */
+const FLOW_TASK_ID = 'tsk_00000000000000000000000000';
+const FLOW_CHECKS = ['typecheck', 'lint', 'test', 'secrets'];
+export interface FlowResult {
+  scope: string[];
+  /** begin no crea tarea: alcance vacío o protegido (FKR-INP-001, FKR-POL-002). */
+  scope_error: boolean;
+  /** Código del error de begin o del pack definitivo (context_error); null si hubo código. */
+  error: string | null;
+  /** Fracción de gold_modified editable: dentro del alcance aceptado por begin; 0 si se rechaza. */
+  scope_coverage: number;
+  recall: number;
+  precision: number;
+  rendered_tokens: number;
+  exposed: string[];
+}
+/** Política de rutas protegidas por defecto, la misma que aplica begin sin configuración propia. */
+const DEFAULT_PROTECTED = resolveConfig({ version: 1, project: { name: 'ctx-gold' } }).policy.protected_paths;
+type FlowEngine = Pick<Awaited<ReturnType<typeof openEngine>>, 'buildContext'>;
+/**
+ * Emula foker_task_begin sin scope y con context (ADR-031 fase 2b, ADR-032): el pack preliminar
+ * deriva el alcance, begin lo valida contra la política protegida y el pack definitivo se construye
+ * con taskScope. Si begin rechaza el alcance o el pack definitivo falla (context_error), el agente
+ * no recibe código: recall 0, registrado con su código en vez de abortar la evaluación.
+ */
+export async function flowPack(
+  engine: FlowEngine,
+  request: ContextRequest,
+  preliminary: { json: string },
+  item: GoldCase,
+  files: string[] = [],
+): Promise<FlowResult> {
+  const scope = deriveScopePaths(JSON.parse(preliminary.json));
+  const failed = (error: string, scope_error: boolean): FlowResult => ({
+    scope,
+    scope_error,
+    error,
+    scope_coverage: 0,
+    recall: 0,
+    precision: 0,
+    rendered_tokens: 0,
+    exposed: [],
+  });
+  if (!scope.length) return failed('FKR-INP-001', true);
+  if (protectedPathsInScope(scope, DEFAULT_PROTECTED, files).length) return failed('FKR-POL-002', true);
+  const scope_coverage = item.gold_modified.filter((id) => matchGlobs(id, scope)).length / item.gold_modified.length;
+  let pack: Awaited<ReturnType<FlowEngine['buildContext']>>;
+  try {
+    pack = await engine.buildContext({
+      ...request,
+      taskScope: { taskId: FLOW_TASK_ID, description: request.task, paths: scope, checks: FLOW_CHECKS },
+    });
+  } catch (error) {
+    const code = (error as { code?: unknown }).code;
+    if (typeof code !== 'string' || !code.startsWith('FKR-')) throw error;
+    return { ...failed(code, false), scope_coverage };
+  }
+  const exposed = pack.files.filter((f) => f.level !== 'L0').map((f) => f.id);
+  return {
+    scope,
+    scope_error: false,
+    error: null,
+    scope_coverage,
+    ...score(exposed, item.gold_modified, item.gold_read),
+    rendered_tokens: renderedTokens(pack.rendered),
+    exposed,
+  };
 }
 export async function evaluateContext(
   cases: GoldCase[],
@@ -204,16 +287,23 @@ export async function evaluateContext(
     cpSync(join(repo, 'fixtures/monorepo-pnpm'), mono, { recursive: true });
     const engines = { 'fixture-a': await openEngine(synthetic), 'monorepo-pnpm': await openEngine(mono) };
     for (const engine of Object.values(engines)) await engine.refresh();
+    // begin valida el alcance también contra rutas protegidas omitidas del mapa; se pasan sus ids.
+    const mapFiles: Record<string, string[]> = {};
+    for (const [fixture, engine] of Object.entries(engines)) {
+      mapFiles[fixture] = Object.keys((JSON.parse(await engine.exportMapJson()) as { files: object }).files);
+    }
     const rows = [];
     for (const item of cases) {
       const engine = engines[item.fixture];
       if (!engine || !item.id || !item.task) throw new Error('Caso ctx-gold inválido');
-      const pack = await engine.buildContext({
+      const request: ContextRequest = {
         task: item.task,
         budgetTokens: budget,
         ...(params ? { params } : {}),
         ...(item.anchors ? { anchors: item.anchors } : {}),
-      });
+      };
+      const pack = await engine.buildContext(request);
+      const flow = await flowPack(engine, request, pack, item, mapFiles[item.fixture] ?? []);
       if (dumpDir) writeFileSync(join(dumpDir, `${item.id}.txt`), pack.rendered);
       const exposed = pack.files.filter((f) => f.level !== 'L0').map((f) => f.id);
       const misses = [];
@@ -272,6 +362,7 @@ export async function evaluateContext(
         misses,
         sections: pack.sections.map(({ id, tokens }) => ({ id, tokens })),
         occupants: pack.files.map(({ id, level, tokens }) => ({ id, level, tokens })),
+        flow,
       });
     }
     if (!rows.length) throw new Error('Suite vacía');
@@ -304,7 +395,7 @@ export async function main(args: string[]): Promise<void> {
   const base = resolve(args[2] ?? join(repo, `benchmarks/reports/ctx-gold-${date}`));
   mkdirSync(dirname(base), { recursive: true });
   writeFileSync(`${base}.json`, `${JSON.stringify(report, null, 2)}\n`);
-  const summary = `Casos: ${report.cases}; recall@pack: ${report.recall.toFixed(4)}; precisión: ${report.precision.toFixed(4)}; mediana/media tokens: ${report.median_tokens}/${report.mean_tokens}; mediana/media rendered_tokens: ${report.median_rendered_tokens}/${report.mean_rendered_tokens}.\n\nREQ-CTX-003 TARGET recall ≥ 0,80: ${report.recall >= 0.8 ? 'SÍ' : 'NO'}; mediana ≤ 8000: ${report.median_tokens <= 8000 ? 'SÍ' : 'NO'}; recall < 0,6 bloquea M3: ${report.blocks_m3 ? 'SÍ' : 'NO'}.`;
+  const summary = `Casos: ${report.cases}; recall@pack: ${report.recall.toFixed(4)}; precisión: ${report.precision.toFixed(4)}; mediana/media tokens: ${report.median_tokens}/${report.mean_tokens}; mediana/media rendered_tokens: ${report.median_rendered_tokens}/${report.mean_rendered_tokens}.\n\nREQ-CTX-003 TARGET recall ≥ 0,80: ${report.recall >= 0.8 ? 'SÍ' : 'NO'}; mediana ≤ 8000: ${report.median_tokens <= 8000 ? 'SÍ' : 'NO'}; recall < 0,6 bloquea M3: ${report.blocks_m3 ? 'SÍ' : 'NO'}.\n\nFlujo begin sin scope (ADR-032): recall ${report.flow?.recall.toFixed(4)}; precisión ${report.flow?.precision.toFixed(4)}; cobertura de alcance ${report.flow?.scope_coverage.toFixed(4)}; errores de alcance ${report.flow?.scope_errors}; context_error ${report.flow?.context_errors}; mediana/media rendered_tokens ${report.flow?.median_rendered_tokens}/${report.flow?.mean_rendered_tokens}.`;
   writeFileSync(
     `${base}.md`,
     `# ctx-gold · ${date}\n\n${summary}\n\n${Object.entries(report.splits)
@@ -317,6 +408,7 @@ export async function main(args: string[]): Promise<void> {
       )}\n\nMedia macro por caso. Fixture A: anclas solo si están declaradas; monorepo-pnpm: casos con anclas. Los tests nuevos aún ausentes del mapa cuentan como misses.\n\n| Caso | Split | Recall | Precisión | Tokens | Rendered tokens |\n|---|---|---:|---:|---:|---:|\n${report.rows.map((r) => `| ${r.id} | ${r.split} | ${r.recall.toFixed(3)} | ${r.precision.toFixed(3)} | ${r.tokens} | ${r.rendered_tokens} |`).join('\n')}\n`,
   );
   console.log(summary);
+  console.log(`Flujo begin (ADR-032): ${JSON.stringify(report.flow)}`);
   console.log(JSON.stringify(report.splits, null, 2));
   console.log(`Informes: ${base}.{json,md}`);
 }

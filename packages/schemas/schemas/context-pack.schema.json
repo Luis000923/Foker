@@ -151,6 +151,10 @@
               "description": "Interno: expansión léxica es/en v1 (ADR-028); solo presente si difiere del default.",
               "type": "boolean"
             },
+            "inflection_folding": {
+              "description": "Interno: plegado flexivo es/en en BM25 (ADR-032); solo presente si difiere del default.",
+              "type": "boolean"
+            },
             "bm25_min_relative": {
               "description": "Interno: corte relativo BM25 (ADR-028); solo presente si difiere del default.",
               "type": "number",

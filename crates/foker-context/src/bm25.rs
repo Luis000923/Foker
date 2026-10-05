@@ -1,5 +1,5 @@
 //! Índice léxico de un documento por archivo (FKR-031).
-use crate::normalize::tokenize;
+use crate::normalize::{fold_inflection, tokenize};
 use foker_map::model::ProjectMap;
 use foker_map::parse::Exported;
 use std::collections::{BTreeMap, BTreeSet};
@@ -16,6 +16,8 @@ pub struct Bm25 {
     documents: Vec<Document>,
     frequencies: BTreeMap<String, usize>,
     average: f64,
+    /// Claves plegadas por flexión (ADR-032) en documentos y consulta.
+    folded: bool,
 }
 /// Coincidencia léxica normalizada.
 #[derive(Debug, Clone)]
@@ -30,6 +32,10 @@ pub struct Hit {
 impl Bm25 {
     /// Construye documentos desde rutas y símbolos exportados del mapa.
     pub fn new(map: &ProjectMap) -> Self {
+        Self::with_folding(map, crate::ContextParams::default().inflection_folding)
+    }
+    /// Índice con o sin plegado flexivo de términos (ADR-032).
+    pub fn with_folding(map: &ProjectMap, folded: bool) -> Self {
         let mut documents = Vec::new();
         let mut frequencies = BTreeMap::new();
         let by_id: BTreeMap<_, _> = map.symbols.iter().map(|s| (s.id.as_str(), s)).collect();
@@ -61,7 +67,8 @@ impl Bm25 {
             let len = terms.len();
             let mut counts = BTreeMap::new();
             for term in terms {
-                *counts.entry(term).or_insert(0) += 1;
+                let key = if folded { fold_inflection(&term) } else { term };
+                *counts.entry(key).or_insert(0) += 1;
             }
             for term in counts.keys() {
                 *frequencies.entry(term.clone()).or_insert(0) += 1;
@@ -83,6 +90,7 @@ impl Bm25 {
             documents,
             frequencies,
             average,
+            folded,
         }
     }
     /// Top 20 puntuaciones positivas, normalizadas por el máximo, empates por id.
@@ -96,8 +104,13 @@ impl Bm25 {
             let mut score = 0.0;
             let mut matched = Vec::new();
             for term in terms {
-                if let Some(&count) = document.terms.get(term) {
-                    let df = self.frequencies[term] as f64;
+                let key = if self.folded {
+                    fold_inflection(term)
+                } else {
+                    term.clone()
+                };
+                if let Some(&count) = document.terms.get(&key) {
+                    let df = self.frequencies[&key] as f64;
                     let idf =
                         libm::log(1.0 + (self.documents.len() as f64 - df + 0.5) / (df + 0.5));
                     let tf = count as f64;
@@ -158,6 +171,7 @@ mod tests {
             ],
             frequencies: BTreeMap::from([("cart".into(), 3)]),
             average: 34.0,
+            folded: false,
         };
         let mut params = crate::ContextParams {
             bm25_top: 1,
@@ -195,6 +209,7 @@ mod tests {
             ],
             frequencies: BTreeMap::from([("cart".into(), 2)]),
             average: 2.0,
+            folded: false,
         };
         let hits = index.search(&["cart".into()]);
         assert_eq!(

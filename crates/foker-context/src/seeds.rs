@@ -133,7 +133,9 @@ pub fn build(
     } else {
         tokens.terms.clone()
     };
-    for hit in Bm25::new(map).search_with_params(&terms, &params) {
+    for hit in
+        Bm25::with_folding(map, params.inflection_folding).search_with_params(&terms, &params)
+    {
         seeds.add(
             map,
             &hit.id,
@@ -162,10 +164,17 @@ pub fn build(
     if let Some(scope) = &inputs.task_scope {
         let matcher = GlobMatcher::new(&scope.paths, false)
             .map_err(|e| ContextError::InvalidInput(e.to_string()))?;
-        for file in &map.files {
-            if matcher.is_match(&file.id) {
-                seeds.add(map, &file.id, params.w_task_scope, "TASK_SCOPE");
-            }
+        // ADR-032: el alcance es una región, no n señales independientes. Reparte una masa
+        // total w_task_scope (como un ancla ambigua, 1/n) para no diluir la evidencia léxica.
+        let matched: Vec<_> = map
+            .files
+            .iter()
+            .filter(|file| matcher.is_match(&file.id))
+            .map(|file| file.id.as_str())
+            .collect();
+        let weight = params.w_task_scope / matched.len().max(1) as f64;
+        for id in matched {
+            seeds.add(map, id, weight, "TASK_SCOPE");
         }
     }
     if let Some(skill) = &inputs.skill {
@@ -201,6 +210,44 @@ pub fn build(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn task_scope_spreads_fixed_mass_over_matched_files() {
+        let map = &crate::fixture_state().map;
+        let req = crate::normalize::request(
+            &crate::ContextRequest {
+                task: "xyzzy".into(),
+                ..Default::default()
+            },
+            &ContextInputs::default(),
+        )
+        .unwrap();
+        let scoped = |paths: &[&str]| {
+            let inputs = ContextInputs {
+                task_scope: Some(crate::TaskScopeInput {
+                    task_id: "tsk_00000000000000000000000000".into(),
+                    description: "x".into(),
+                    paths: paths.iter().map(|p| (*p).into()).collect(),
+                    checks: vec![],
+                }),
+                ..Default::default()
+            };
+            build(map, &req, &inputs, &Tokens::default()).unwrap()
+        };
+        let w = crate::ContextParams::default().w_task_scope;
+        let one = scoped(&["packages/ui/src/button.tsx"]);
+        assert_eq!(one.weights.iter().sum::<f64>(), w);
+        // Un directorio con n archivos aporta la misma masa total que un archivo (ADR-032).
+        let wide = scoped(&["packages/**"]);
+        let matched = wide.weights.iter().filter(|w| **w > 0.0).count();
+        assert!(matched > 1);
+        assert!((wide.weights.iter().sum::<f64>() - w).abs() < 1e-12);
+        assert!(
+            wide.weights
+                .iter()
+                .filter(|w| **w > 0.0)
+                .all(|x| (*x - w / matched as f64).abs() < 1e-15)
+        );
+    }
     #[test]
     fn anchors_are_additive_and_missing_is_recoverable() {
         let map = &crate::fixture_state().map;

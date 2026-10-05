@@ -8,6 +8,9 @@ pub struct ContextParams {
     /// Expansión léxica es/en v1, desactivable para medir el baseline.
     #[serde(skip_serializing_if = "expansion_predeterminada")]
     pub lexical_expansion: bool,
+    /// Plegado flexivo es/en en BM25 (ADR-032), desactivable para medir el baseline.
+    #[serde(skip_serializing_if = "plegado_predeterminado")]
+    pub inflection_folding: bool,
     /// Corte BM25 relativo al máximo; cero conserva top-k.
     #[serde(skip_serializing_if = "corte_bm25_predeterminado")]
     pub bm25_min_relative: f64,
@@ -77,6 +80,7 @@ impl Default for ContextParams {
     fn default() -> Self {
         Self {
             lexical_expansion: true,
+            inflection_folding: false,
             bm25_min_relative: 0.0,
             relevance_fraction: 0.01,
             sufficiency_fraction: 0.025,
@@ -217,6 +221,9 @@ impl ContextParams {
 
 // Los campos añadidos se omiten cuando coinciden con los defaults de ADR-028:
 // los overrides anteriores conservan la forma JSON reconocida por el esquema v1.
+fn plegado_predeterminado(value: &bool) -> bool {
+    *value == ContextParams::default().inflection_folding
+}
 fn expansion_predeterminada(value: &bool) -> bool {
     *value == ContextParams::default().lexical_expansion
 }

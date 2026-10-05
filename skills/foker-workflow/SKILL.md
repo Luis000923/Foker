@@ -9,6 +9,8 @@ metadata:
 
 # foker-workflow
 
+## Procedimiento
+
 1. `foker_task_begin` con descripción, alcance mínimo, perfil y `context: true` u objeto
    `{budget_tokens?, anchors?, intent?}`. Conserva `task_id`; con `context_error`, pide `foker_context` usando ese id.
    Si no conoces el directorio exacto, omite `scope` y pasa `context` con `anchors`:
