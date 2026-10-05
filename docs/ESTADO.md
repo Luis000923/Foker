@@ -33,6 +33,7 @@ M0, M2, M3, M4 y E6 completos en local; M1 con todo lo que no gasta API (manifie
 | FKR-010/012/013/017 | Manifiesto, evaluador, Fixture A, ctx-gold | hecho | feat/FKR-010-benchmark-base | 20 tareas verificadas con install real; ctx-gold 30 casos (AC final ≥ 60) |
 | FKR-011/016 | Arnés headless y análisis | hecho (sin ejecución real) | feat/FKR-011-arnes | Imagen foker-bench construida y probada; falta PREGUNTA-2 |
 | FKR-014/015/018 | Fixture B, línea base, benchmark completo | bloqueado | — | PREGUNTA-6 y PREGUNTA-2 |
+| FKR-093 | Criterios reproducibles y candidatos para Fixture B | hecho (documentación) | feat/FKR-093-fixture-b-criterios | [Criterios](bench/fixture-b-criterios.md), [8 candidatos](bench/fixture-b-candidatos.md) y propuesta compatible de manifiesto; SHAs/tamaños/offline pendientes, selección humana PREGUNTA-6 |
 | FKR-080 | Publicación npm | bloqueado | — | PREGUNTA-3 |
 | FKR-040…042 | Config, trust, ejecutor seguro | hecho | feat/FKR-040-config-trust-exec | ADR-022 (shims .cmd en Windows) |
 | FKR-043/044 | Parsers de hallazgos, escáner de secretos | hecho | feat/FKR-043-parsers-secretos | 24 reglas |
@@ -149,6 +150,8 @@ Sesión 2026-10-03 (usuario luis):
 - Smoke de darwin x64/arm64, win32 x64/arm64 y linux arm64 en runners nativos.
 
 ## PENDIENTES y preguntas para el usuario
+
+- PREGUNTA-6 / FKR-093: decidir repos de Fixture B tras revisar [criterios](bench/fixture-b-criterios.md) y [candidatos](bench/fixture-b-candidatos.md); verificar SHAs, licencias al commit, conteos TS/LOC, ≥ 15 tareas por repo y tiempos/tests offline. Propuestas metodológicas requieren ADR; no se modificó manifiesto ni esquema.
 
 - spec/ es una reconstrucción; contratos reescritos por decisión del usuario (ADR-019).
 - PREGUNTA-2: modelo `claude-sonnet-5-5` y 2 USD/ejecución fijados; sin API key, el benchmark pasará a suscripción (ADR-027). PREGUNTA-6 (repos reales) bloquea Fixture B.
