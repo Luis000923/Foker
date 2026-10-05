@@ -1333,3 +1333,94 @@ fn large_anchor_uses_focal_view_only_when_enabled() {
     assert!(roomy.rendered.contains("total += value * 3;"));
     assert!(!roomy.rendered.contains("vista focal"));
 }
+
+#[test]
+fn small_l2_files_are_complete_when_cheap_enough() {
+    // ADR-034: Δ = completo − L2 ≤ small_full_max_extra (64) → contenido completo, nivel L2.
+    let big_body = (0..60)
+        .map(|i| format!("  const v{i} = values.length * {i};\n"))
+        .collect::<String>();
+    let (dir, map) = temporary_state(&[
+        (
+            "src/small.ts",
+            "/** Busca coincidencias. */\nexport function matches(a: string, b: string) {\n  return a.includes(b);\n}\n".into(),
+        ),
+        (
+            "src/large.ts",
+            format!("/** Busca coincidencias grandes. */\nexport function matchesLarge(values: string[]) {{\n{big_body}  return values;\n}}\n"),
+        ),
+    ]);
+    let request = |extra: usize| ContextRequest {
+        task: "Busca coincidencias de matches y matchesLarge".into(),
+        params: Some(ContextParams {
+            small_full_max_extra: extra,
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    let pack = |extra| {
+        build_context(&map, dir.path(), &request(extra), &ContextInputs::default()).unwrap()
+    };
+    let on = pack(64);
+    let level = |p: &ContextPack, id: &str| p.files.iter().find(|f| f.id == id).unwrap().level;
+    assert_eq!(level(&on, "src/small.ts"), RenderLevel::L2);
+    assert!(on.rendered.contains("return a.includes(b);"));
+    // El archivo grande supera el umbral: solo firmas.
+    assert_eq!(level(&on, "src/large.ts"), RenderLevel::L2);
+    assert!(!on.rendered.contains("const v59"));
+    let off = pack(0);
+    assert!(!off.rendered.contains("return a.includes(b);"));
+    assert!(on.budget.used <= on.budget.limit);
+    assert_eq!(pack(64).rendered, on.rendered);
+}
+
+#[test]
+fn small_full_never_replaces_barrels_and_survives_missing_files() {
+    // Revisión Codex y metodológica (ADR-034): un barrel conserva las firmas resueltas.
+    let (dir, map) = temporary_state(&[
+        (
+            "src/small.ts",
+            "/** Busca coincidencias. */\nexport function matches(a: string, b: string) {\n  return a.includes(b);\n}\n".into(),
+        ),
+        ("src/index.ts", "export * from './small';\n".into()),
+    ]);
+    let request = ContextRequest {
+        task: "Busca coincidencias de matches en index y small".into(),
+        ..Default::default()
+    };
+    let pack = build_context(&map, dir.path(), &request, &ContextInputs::default()).unwrap();
+    let index = pack.files.iter().find(|f| f.id == "src/index.ts").unwrap();
+    assert_eq!(index.level, RenderLevel::L2);
+    assert!(!pack.rendered.contains("export * from './small';"));
+    // Una lectura fallida (archivo borrado tras el mapa) descarta el contenido completo sin
+    // abortar el pack; las firmas del mapa siguen disponibles.
+    std::fs::remove_file(dir.path().join("src/small.ts")).unwrap();
+    let fallback = build_context(&map, dir.path(), &request, &ContextInputs::default());
+    assert!(fallback.is_ok(), "{fallback:?}");
+}
+
+#[test]
+fn small_full_uses_current_size_not_stale_map() {
+    // Segunda revisión Codex: un mapa con tamaño antiguo no debe descartar un completo válido.
+    let big = format!(
+        "/** Grande. */\nexport function f() {{\n{}  return 1;\n}}\n",
+        "  // relleno\n".repeat(400)
+    );
+    let (dir, map) = temporary_state(&[("src/a.ts", big)]);
+    std::fs::write(
+        dir.path().join("src/a.ts"),
+        "/** Grande. */\nexport function f() {\n  return 1;\n}\n",
+    )
+    .unwrap();
+    let pack = build_context(
+        &map,
+        dir.path(),
+        &ContextRequest {
+            task: "Corrige f grande".into(),
+            ..Default::default()
+        },
+        &ContextInputs::default(),
+    )
+    .unwrap();
+    assert!(pack.rendered.contains("  return 1;"), "{}", pack.rendered);
+}

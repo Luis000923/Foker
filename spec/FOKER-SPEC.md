@@ -494,7 +494,7 @@ Niveles de renderizado por archivo:
 | Nivel | Contenido | Uso típico |
 |---|---|---|
 | L3 | Contenido completo, o **vista focal** si el completo no cabe (ADR-033: cuerpos focales completos, firmas de lo que usan, nombres del resto y marcas de omisión) | Anclas (archivos a editar) |
-| L2 | Firmas exportadas + tipos/interfaces completos + JSDoc | Dependencias directas de mayor puntuación |
+| L2 | Firmas exportadas + tipos/interfaces completos + JSDoc; o el **contenido completo** del archivo si cuesta como máximo 64 tokens más (ADR-034) | Dependencias directas de mayor puntuación |
 | L1 | Solo firmas exportadas | Resto de seleccionados |
 | L0 | Ruta + nombres exportados en una línea | Contorno de lo no seleccionado relevante |
 

@@ -137,6 +137,7 @@ function summarize(
     bytes: ReturnType<typeof renderedBytes>;
     recall: number;
     precision: number;
+    gold_full?: number;
     flow?: FlowResult;
   }[],
 ) {
@@ -155,6 +156,7 @@ function summarize(
   return {
     cases: rows.length,
     recall: rows.length ? mean(rows.map((r) => r.recall)) : null,
+    gold_full: rows.length ? mean(rows.map((r) => r.gold_full ?? 0)) : null,
     precision: rows.length ? mean(rows.map((r) => r.precision)) : null,
     median_tokens: rows.length ? median(rows.map((r) => r.tokens)) : null,
     mean_tokens: rows.length ? mean(rows.map((r) => r.tokens)) : null,
@@ -167,6 +169,7 @@ function summarize(
             recall: mean(rows.map((r) => (r.flow as FlowResult).recall)),
             precision: mean(rows.map((r) => (r.flow as FlowResult).precision)),
             scope_coverage: mean(rows.map((r) => (r.flow as FlowResult).scope_coverage)),
+            gold_full: mean(rows.map((r) => (r.flow as FlowResult).gold_full)),
             scope_errors: rows.filter((r) => (r.flow as FlowResult).scope_error).length,
             context_errors: rows.filter((r) => !(r.flow as FlowResult).scope_error && (r.flow as FlowResult).error)
               .length,
@@ -195,6 +198,63 @@ function summarizeSplits(rows: ({ split: GoldCase['split'] } & Parameters<typeof
     (['calibration', 'validation'] as const).map((split) => [split, summarize(rows.filter((r) => r.split === split))]),
   );
 }
+/**
+ * Cuerpos L3/L2 por id extraídos de rendered: bloques individuales `<foker:file … level=L3|L2>`
+ * (sin la cabecera diagnóstica de explain) y entradas del envoltorio L2 agrupado (ruta sin
+ * indentar seguida de líneas indentadas dos espacios, hasta la siguiente ruta).
+ */
+// Solo la cabecera diagnóstica exacta de explain (`### <id>  [`), no cualquier `### ` literal.
+const stripDiagnostic = (body: string, id: string) =>
+  body.startsWith(`### ${id}  [`) ? body.slice(body.indexOf('\n') + 1) : body;
+export function fileBodies(rendered: string): Map<string, string[]> {
+  const bodies = new Map<string, string[]>();
+  const add = (id: string, body: string) => bodies.set(id, [...(bodies.get(id) ?? []), body]);
+  const decodeAttribute = (value: string) =>
+    value.replaceAll('&quot;', '"').replaceAll('&lt;', '<').replaceAll('&gt;', '>').replaceAll('&amp;', '&');
+  const single =
+    /<foker:file id="([^"]*)" level="(?:L2|L3)" trust="repository-content">\n([\s\S]*?)\n<\/foker:file>\n/g;
+  for (const match of rendered.matchAll(single)) {
+    const id = decodeAttribute(match[1] as string);
+    add(id, stripDiagnostic(match[2] as string, id));
+  }
+  const group = /<foker:files level="L2" trust="repository-content">\n([\s\S]*?)<\/foker:files>\n/g;
+  for (const match of rendered.matchAll(group)) {
+    let id: string | undefined;
+    let lines: string[] = [];
+    const flush = () => {
+      if (id !== undefined) add(id, stripDiagnostic(lines.join('\n'), id));
+    };
+    for (const line of (match[1] as string).replace(/\n$/, '').split('\n')) {
+      if (line.startsWith('  ')) lines.push(line.slice(2));
+      else {
+        flush();
+        id = line;
+        lines = [];
+      }
+    }
+    flush();
+  }
+  return bodies;
+}
+/**
+ * ADR-034: fracción de gold_modified cuyo contenido completo llega en el bloque L3/L2 de su
+ * propio archivo. Indicador de contenido entregado (no de Read evitables: el anfitrión exige
+ * Read antes de editar). Los archivos nuevos cuentan 0.
+ */
+export function goldFull(rendered: string, root: string, gold: string[]): number {
+  const bodies = fileBodies(rendered);
+  const full = gold.filter((id) => {
+    let content: string;
+    try {
+      content = readFileSync(join(root, id), 'utf8').replace(/\r\n/g, '\n');
+    } catch {
+      return false;
+    }
+    const escaped = content.replaceAll('<foker:', '&lt;foker:').replaceAll('</foker:', '&lt;/foker:');
+    return (bodies.get(id) ?? []).some((body) => body === escaped);
+  });
+  return full.length / gold.length;
+}
 /** Id fijo y checks del perfil default: el flujo es determinista y no depende de un ledger. */
 const FLOW_TASK_ID = 'tsk_00000000000000000000000000';
 const FLOW_CHECKS = ['typecheck', 'lint', 'test', 'secrets'];
@@ -210,6 +270,8 @@ export interface FlowResult {
   precision: number;
   rendered_tokens: number;
   exposed: string[];
+  /** ADR-034: gold con contenido completo en el pack definitivo. */
+  gold_full: number;
 }
 /** Política de rutas protegidas por defecto, la misma que aplica begin sin configuración propia. */
 const DEFAULT_PROTECTED = resolveConfig({ version: 1, project: { name: 'ctx-gold' } }).policy.protected_paths;
@@ -226,6 +288,7 @@ export async function flowPack(
   preliminary: { json: string },
   item: GoldCase,
   files: string[] = [],
+  root?: string,
 ): Promise<FlowResult> {
   const scope = deriveScopePaths(JSON.parse(preliminary.json));
   const failed = (error: string, scope_error: boolean): FlowResult => ({
@@ -237,6 +300,7 @@ export async function flowPack(
     precision: 0,
     rendered_tokens: 0,
     exposed: [],
+    gold_full: 0,
   });
   if (!scope.length) return failed('FKR-INP-001', true);
   if (protectedPathsInScope(scope, DEFAULT_PROTECTED, files).length) return failed('FKR-POL-002', true);
@@ -261,6 +325,7 @@ export async function flowPack(
     ...score(exposed, item.gold_modified, item.gold_read),
     rendered_tokens: renderedTokens(pack.rendered),
     exposed,
+    gold_full: root ? goldFull(pack.rendered, root, item.gold_modified) : 0,
   };
 }
 export async function evaluateContext(
@@ -285,6 +350,7 @@ export async function evaluateContext(
     generate(synthetic);
     const mono = join(temp, 'monorepo-pnpm');
     cpSync(join(repo, 'fixtures/monorepo-pnpm'), mono, { recursive: true });
+    const roots: Record<string, string> = { 'fixture-a': synthetic, 'monorepo-pnpm': mono };
     const engines = { 'fixture-a': await openEngine(synthetic), 'monorepo-pnpm': await openEngine(mono) };
     for (const engine of Object.values(engines)) await engine.refresh();
     // begin valida el alcance también contra rutas protegidas omitidas del mapa; se pasan sus ids.
@@ -303,7 +369,7 @@ export async function evaluateContext(
         ...(item.anchors ? { anchors: item.anchors } : {}),
       };
       const pack = await engine.buildContext(request);
-      const flow = await flowPack(engine, request, pack, item, mapFiles[item.fixture] ?? []);
+      const flow = await flowPack(engine, request, pack, item, mapFiles[item.fixture] ?? [], roots[item.fixture]);
       if (dumpDir) writeFileSync(join(dumpDir, `${item.id}.txt`), pack.rendered);
       const exposed = pack.files.filter((f) => f.level !== 'L0').map((f) => f.id);
       const misses = [];
@@ -352,6 +418,7 @@ export async function evaluateContext(
         fixture: item.fixture,
         split: item.split,
         ...score(exposed, item.gold_modified, item.gold_read),
+        gold_full: goldFull(pack.rendered, roots[item.fixture] as string, item.gold_modified),
         tokens: pack.budget.used,
         rendered_tokens,
         rendered: pack.rendered,

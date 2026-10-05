@@ -426,6 +426,10 @@ explain: boolean
  */
 params?: {
 /**
+ * Interno: contenido completo de L2 no ancla si cuesta como máximo estos tokens más que sus firmas; 0 lo desactiva (ADR-034). Solo presente si difiere del default.
+ */
+small_full_max_extra?: number
+/**
  * Interno: vista focal de anclas con L3 mayor que este número de tokens; 0 la desactiva (ADR-033). Solo presente si difiere del default.
  */
 focal_min_tokens?: number

@@ -11,6 +11,9 @@ pub struct ContextParams {
     /// Plegado flexivo es/en en BM25 (ADR-032), desactivable para medir el baseline.
     #[serde(skip_serializing_if = "plegado_predeterminado")]
     pub inflection_folding: bool,
+    /// Contenido completo de L2 no ancla si cuesta como máximo estos tokens más (ADR-034); 0 lo desactiva.
+    #[serde(skip_serializing_if = "pequeno_completo_predeterminado")]
+    pub small_full_max_extra: usize,
     /// Vista focal de anclas cuyo L3 supera estos tokens y no cabe (ADR-033); 0 la desactiva.
     #[serde(skip_serializing_if = "focal_min_predeterminado")]
     pub focal_min_tokens: usize,
@@ -90,6 +93,7 @@ impl Default for ContextParams {
         Self {
             lexical_expansion: true,
             inflection_folding: false,
+            small_full_max_extra: 64,
             focal_min_tokens: 500,
             focal_max_symbols: 5,
             focal_relative: 0.5,
@@ -196,6 +200,7 @@ impl ContextParams {
             .any(|v| *v > 1.0)
             || self.bm25_k1 == 0.0
             || self.focal_min_tokens > 200_000
+            || self.small_full_max_extra > 200_000
             || [
                 self.bm25_top,
                 self.l2_count,
@@ -242,6 +247,9 @@ impl ContextParams {
 
 // Los campos añadidos se omiten cuando coinciden con los defaults de ADR-028:
 // los overrides anteriores conservan la forma JSON reconocida por el esquema v1.
+fn pequeno_completo_predeterminado(value: &usize) -> bool {
+    *value == ContextParams::default().small_full_max_extra
+}
 fn focal_min_predeterminado(value: &usize) -> bool {
     *value == ContextParams::default().focal_min_tokens
 }
