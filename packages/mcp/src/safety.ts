@@ -44,7 +44,8 @@ export function limitOutput(data: Record<string, unknown>, text?: string) {
     structured['diagnostics'] = [...diagnostics, truncation];
   for (let iteration = 0; size() > OUTPUT_LIMIT && iteration < 100; iteration++) {
     if (rendered && rendered.length > 512) {
-      rendered = rendered.slice(0, Math.floor(rendered.length / 2));
+      rendered = `${rendered.slice(0, Math.floor(rendered.length / 2))}\n[FKR-MCP-101: contenido omitido por límite MCP.]\n`;
+      if (typeof structured['rendered'] === 'string') structured['rendered'] = rendered;
       continue;
     }
     let candidate:
@@ -53,7 +54,7 @@ export function limitOutput(data: Record<string, unknown>, text?: string) {
     const walk = (node: unknown) => {
       if (!node || typeof node !== 'object') return;
       for (const [key, value] of Object.entries(node)) {
-        if (key === 'diagnostics') continue;
+        if (key === 'diagnostics' || key === 'task_id' || key === 'pack_hash') continue;
         if ((typeof value === 'string' && value.length > 512) || (Array.isArray(value) && value.length > 0)) {
           if (!candidate || JSON.stringify(value).length > JSON.stringify(candidate.value).length)
             candidate = { container: node as Record<string, unknown>, key, value };
@@ -65,6 +66,7 @@ export function limitOutput(data: Record<string, unknown>, text?: string) {
     if (!candidate) throw new FokerError('FKR-INT-001', 'No se puede truncar la salida conservando su contrato.');
     const { container, key, value } = candidate;
     (container as Record<string, unknown>)[key] = value.slice(0, Math.floor(value.length / 2));
+    if (rendered !== undefined && typeof structured['rendered'] === 'string') rendered = structured['rendered'];
   }
   if (size() > OUTPUT_LIMIT) throw new FokerError('FKR-INT-001', 'Salida demasiado grande.');
   return { structured, rendered, diagnostics: [truncation] };

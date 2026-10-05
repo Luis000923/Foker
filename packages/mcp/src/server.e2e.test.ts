@@ -64,7 +64,7 @@ for (const legacy of [false, true])
         client.callTool({ name, arguments: args }).then((result) => {
           if (!('content' in result)) throw new Error('Resultado de herramienta sin content');
           if (!result.isError) return result;
-          expect(result).not.toHaveProperty('structuredContent');
+          expect(result).toHaveProperty('structuredContent');
           const content = result.content as Array<{ type: string; text: string }>;
           expect(content[0]?.type).toBe('text');
           return { ...result, error: JSON.parse(content[0]?.text ?? '') };
@@ -80,8 +80,10 @@ for (const legacy of [false, true])
         description: 'Editar botón',
         scope: { paths: ['packages/ui/**'] },
         client_token: 'once',
+        context: { budget_tokens: 8000, anchors: { files: ['packages/ui/src/button.tsx'] } },
       });
       expect(begun.isError).toBe(false);
+      expect(begun.structuredContent).toHaveProperty('context.rendered');
       const id = (begun.structuredContent as { task_id: string }).task_id;
       expect(
         await call('foker_task_begin', {
@@ -92,7 +94,7 @@ for (const legacy of [false, true])
       ).toMatchObject({ structuredContent: { task_id: id } });
       const context = await call('foker_context', { task: 'Editar botón', task_id: id, budget_tokens: 8000 });
       expect(context.isError).toBe(false);
-      expect(context.structuredContent).not.toHaveProperty('rendered');
+      expect(context.structuredContent).toHaveProperty('rendered');
       const path = join(root, 'packages/ui/src/button.tsx');
       await writeFile(path, `${await readFile(path, 'utf8')}\n// cambio MCP\n`);
       expect(await call('foker_task_submit', { task_id: id })).toMatchObject({

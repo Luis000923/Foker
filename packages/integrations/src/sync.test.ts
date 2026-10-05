@@ -217,3 +217,19 @@ it('informa conflicto si no puede insertar arrays bajo un escalar', () => {
     expect(plan.manifest.files['.claude/settings.json']).toBeUndefined();
   }
 });
+
+it('los cuatro targets generan el flujo corto y la misma instrucción de no releer objetivos', () => {
+  const workflow = 'El pack contiene el código objetivo: no releas esos archivos salvo aviso de omisión.';
+  for (const target of ['claude-code', 'codex', 'antigravity', 'opencode'] as const) {
+    const plan = planSync(input({ targets: [target] }), fs().io);
+    const agents = plan.writes.find((w) => w.path === 'AGENTS.md')?.content;
+    expect(agents).toContain('`context: true`');
+    expect(agents).toContain(workflow);
+    expect(agents).toContain('`foker_task_submit` ejecuta checks y gates');
+    expect(agents).toContain('`foker_check` opcional');
+    expect(agents).not.toContain('2. `foker_context`');
+    const implementer = plan.writes.find((w) => /foker-implementer\.(md|toml)$/.test(w.path))?.content;
+    expect(implementer).toContain(workflow);
+    expect(implementer).toContain('`context: true`');
+  }
+});

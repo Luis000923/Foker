@@ -50,8 +50,8 @@ async function fixture(legacy = false) {
     client.callTool({ name, arguments: args }).then((result) => {
       if (!('content' in result)) throw new Error('Resultado de herramienta sin content');
       if (!result.isError) return result;
-      expect(result).not.toHaveProperty('structuredContent');
-      const content = result.content as Array<{ type: string; text: string }>;
+      expect(result).toHaveProperty('structuredContent');
+      const content = result['content'] as Array<{ type: string; text: string }>;
       expect(content[0]?.type).toBe('text');
       return { ...result, error: JSON.parse(content[0]?.text ?? '') };
     });
@@ -128,7 +128,7 @@ for (const legacy of [false, true])
       const context = await f.call('foker_context', { task: 'demo', task_id: id });
       expect(context.isError).toBe(false);
       expect(context.structuredContent).toMatchObject({ pack_version: 2 });
-      expect(context.structuredContent).not.toHaveProperty('rendered');
+      expect(context.structuredContent).toHaveProperty('rendered');
       expect(await f.call('foker_task_submit', { task_id: id })).toMatchObject({
         isError: false,
         structuredContent: { state: 'COMPLETED' },
@@ -411,6 +411,173 @@ it('check y submit omiten output_tail en pass y eliminan ANSI en fail sin cambia
   } finally {
     validate.mockRestore();
     submit.mockRestore();
+    await f.client.close();
+    await f.server.close();
+  }
+});
+
+for (const legacy of [false, true]) {
+  it(`contexto compacto contiene código; explain conserva el pack completo (legacy=${legacy})`, async () => {
+    const f = await fixture(legacy);
+    try {
+      await f.client.listTools();
+      const args = { task: 'Cambiar demo', anchors: { files: ['index.ts'] }, dirty_files: false };
+      const result = await f.call('foker_context', args);
+      const data = result.structuredContent as Record<string, unknown>;
+      expect(Object.keys(data).sort()).toEqual(['budget', 'diagnostics', 'pack_hash', 'pack_version', 'rendered']);
+      expect(Object.keys(data['budget'] as object).sort()).toEqual(['limit', 'used']);
+      expect(data['rendered']).toContain('export const demo = 1;');
+      expect(result['content']).toEqual([{ type: 'text', text: data['rendered'] }]);
+      const explained = await f.call('foker_context', { ...args, explain: true });
+      expect(explained.structuredContent).toMatchObject({
+        files: expect.any(Array),
+        sections: expect.any(Array),
+        excluded: expect.any(Array),
+        budget: { estimator: expect.any(String) },
+        rendered: expect.stringContaining('export const demo = 1;'),
+      });
+      expect(explained['content']).toEqual([
+        { type: 'text', text: (explained.structuredContent as { rendered: string }).rendered },
+      ]);
+    } finally {
+      await f.client.close();
+      await f.server.close();
+    }
+  });
+
+  it(`begin con contexto usa task_id y defaults/opciones sin alterar client_token (legacy=${legacy})`, async () => {
+    const f = await fixture(legacy);
+    try {
+      await f.client.listTools();
+      const args = {
+        description: 'Modificar demo',
+        scope: { paths: ['index.ts'] },
+        skill: 'demo',
+        client_token: 'combined',
+      };
+      const result = await f.call('foker_task_begin', { ...args, context: true });
+      const data = result.structuredContent as {
+        task_id: string;
+        context: { pack_hash: string; budget: { limit: number }; rendered: string };
+      };
+      expect(result.isError).toBe(false);
+      expect(data.context.rendered).toContain(data.task_id);
+      expect(data.context.rendered).toContain('demo');
+      const context = { budget_tokens: 8000, anchors: { files: ['index.ts'] }, intent: 'fix' };
+      const retry = await f.call('foker_task_begin', { ...args, context });
+      const retried = retry.structuredContent as typeof data;
+      expect(retried.task_id).toBe(data.task_id);
+      expect(retried.context.budget.limit).toBe(8000);
+      expect(retried.context.rendered).toContain('export const demo = 1;');
+      expect(JSON.parse((retry['content'] as { text: string }[])[0]?.text ?? '')).toEqual(retry.structuredContent);
+      const standalone = await f.call('foker_context', {
+        task: args.description,
+        task_id: data.task_id,
+        skill: 'demo',
+        ...context,
+      });
+      expect(standalone.structuredContent).toMatchObject(retried.context);
+      expect(await f.call('foker_task_begin', args)).toMatchObject({ structuredContent: { task_id: data.task_id } });
+      expect(await new engineApi.TaskStore(f.root).list()).toHaveLength(1);
+      expect(await f.call('foker_task_get', { task_id: data.task_id })).not.toHaveProperty('structuredContent.context');
+      expect(await f.call('foker_task_begin', { ...args, description: 'Otra tarea', context: true })).toMatchObject({
+        isError: true,
+        error: { code: 'FKR-INP-001' },
+      });
+    } finally {
+      await f.client.close();
+      await f.server.close();
+    }
+  });
+
+  it(`un pack fallido conserva tarea y permite recuperar con el mismo token (legacy=${legacy})`, async () => {
+    const f = await fixture(legacy);
+    try {
+      await f.client.listTools();
+      const args = { description: 'demo', scope: { paths: ['index.ts'] }, client_token: 'recover' };
+      for (const context of [false, { budget_tokens: 999 }, { explain: true }, { anchors: { extra: [] } }])
+        expect(await f.call('foker_task_begin', { ...args, context })).toMatchObject({
+          isError: true,
+          error: { code: 'FKR-INP-001' },
+        });
+      expect(await new engineApi.TaskStore(f.root).list()).toHaveLength(0);
+      await writeFile(join(f.root, 'foker/rules.md'), 'reglas obligatorias\n'.repeat(1000));
+      const result = await f.call('foker_task_begin', { ...args, context: { budget_tokens: 1000 } });
+      expect(result).toMatchObject({
+        isError: false,
+        structuredContent: { task_id: expect.any(String), context_error: { code: 'FKR-CTX-001', recoverable: true } },
+      });
+      expect(result.structuredContent).not.toHaveProperty('context');
+      const id = (result.structuredContent as { task_id: string }).task_id;
+      expect(await f.call('foker_task_get', { task_id: id })).toMatchObject({
+        structuredContent: { state: 'RUNNING' },
+      });
+      await writeFile(join(f.root, 'foker/rules.md'), '# Reglas\n');
+      expect(await f.call('foker_task_begin', { ...args, context: true })).toMatchObject({
+        isError: false,
+        structuredContent: { task_id: id, context: { rendered: expect.any(String) } },
+      });
+      expect(await new engineApi.TaskStore(f.root).list()).toHaveLength(1);
+    } finally {
+      await f.client.close();
+      await f.server.close();
+    }
+  });
+}
+
+it('truncado conserva rendered idéntico y task_id; redacta el código de ambos transportes', () => {
+  const secret = 'AK' + 'IA' + 'A1B2C3D4E5F6G7H8';
+  const rendered = `${secret}\n${'código\n'.repeat(30000)}`;
+  const result = limitOutput(
+    { pack_version: 2, pack_hash: 'a'.repeat(64), budget: { used: 1000, limit: 8000 }, rendered, diagnostics: [] },
+    rendered,
+  );
+  expect(result.structured['rendered']).toBe(result.rendered);
+  expect(result.rendered).not.toContain(secret);
+  expect(result.rendered).toContain('FKR-MCP-101');
+  expect(result.structured['diagnostics']).toContainEqual(expect.objectContaining({ code: 'FKR-MCP-101' }));
+  expect(
+    JSON.stringify({ content: [{ type: 'text', text: result.rendered }], structuredContent: result.structured }).length,
+  ).toBeLessThanOrEqual(80000);
+  const taskId = 'tsk_00000000000000000000000000';
+  const begin = limitOutput({
+    task_id: taskId,
+    context: { pack_hash: 'b'.repeat(64), budget: { used: 1000, limit: 8000 }, rendered },
+  });
+  expect(begin.structured['task_id']).toBe(taskId);
+  expect(begin.structured).toHaveProperty('diagnostics');
+});
+
+it('valida el pack completo antes de proyectarlo y conserva task_id si falla en begin', async () => {
+  const f = await fixture();
+  const engine = await engineApi.openEngine(f.root);
+  await engine.refresh();
+  const build = engine.buildContext.bind(engine);
+  const mocked = vi.spyOn(engine, 'buildContext').mockImplementation(async (input) => {
+    const pack = await build(input);
+    const data = JSON.parse(pack.json);
+    delete data.map_hash;
+    return { ...pack, json: JSON.stringify(data) };
+  });
+  const opened = vi.spyOn(engineApi, 'openEngine').mockResolvedValue(engine);
+  try {
+    await expect(f.call('foker_context', { task: 'demo' })).rejects.toMatchObject({
+      code: -32603,
+      data: { code: 'FKR-INT-001' },
+    });
+    const result = await f.call('foker_task_begin', {
+      description: 'demo',
+      scope: { paths: ['index.ts'] },
+      context: true,
+    });
+    expect(result).toMatchObject({
+      isError: false,
+      structuredContent: { task_id: expect.any(String), context_error: { code: 'FKR-INT-001' } },
+    });
+    expect(await new engineApi.TaskStore(f.root).list()).toHaveLength(1);
+  } finally {
+    opened.mockRestore();
+    mocked.mockRestore();
     await f.client.close();
     await f.server.close();
   }

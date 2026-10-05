@@ -90,10 +90,16 @@ timeout_s?: number
  * Argumento de argv. ${affected_packages} es el único marcador permitido y debe ocupar el argumento entero.
  */
 export type Argument = ("${affected_packages}" | string)
+export type FokerCheckOutput = ({
+ok: boolean
+results: McpCheckResult[]
+diagnostics?: Diagnostics
+} | McpToolError)
 /**
  * Avisos no fatales, p. ej. salida truncada a 80.000 caracteres (FOKER-SPEC §10.5).
  */
 export type Diagnostics = Diagnostic[]
+export type FokerContextOutput = ((McpContextPack | ContextPack) | McpToolError)
 export type FokerImpactInput = ({
 [k: string]: unknown | undefined
 } & {
@@ -110,6 +116,92 @@ symbols?: [string]|[string, string]|[string, string, string]|[string, string, st
 direction?: ("dependents" | "dependencies" | "both")
 depth?: number
 })
+export type FokerImpactOutput = ({
+/**
+ * Ordenados por distancia e id.
+ */
+nodes: {
+id: string
+distance: number
+/**
+ * Tipo de arista por la que se llegó; null para el origen.
+ */
+via: (string | null)
+kind: ("file" | "symbol" | "package")
+}[]
+packages: string[]
+tests: FileId[]
+diagnostics?: Diagnostics
+} | McpToolError)
+export type FokerSearchOutput = ({
+hits: {
+id: string
+kind: ("file" | "symbol")
+name: string
+file: FileId
+signature?: string
+score: number
+}[]
+diagnostics?: Diagnostics
+} | McpToolError)
+export type FokerStatusOutput = ({
+foker_version: Semver
+foker_mcp_api: number
+/**
+ * Revisión MCP negociada.
+ */
+protocol: string
+/**
+ * Nombre del directorio raíz (nunca la ruta absoluta).
+ */
+root_name: string
+map: {
+content_hash: Hash
+files: number
+symbols: number
+stale_files: number
+schema_version: number
+}
+profiles: string[]
+active_tasks: {
+task_id: TaskId
+state: TaskState
+}[]
+trust: ("trusted" | "untrusted")
+diagnostics?: Diagnostics
+} | McpToolError)
+export type FokerTaskBeginOutput = ({
+task_id: TaskId
+state: "RUNNING"
+attempt: 1
+baseline: McpBaseline
+allowed_paths: Glob[]
+protected_paths_in_scope: string[]
+checks: string[]
+diagnostics?: Diagnostics
+context?: McpTaskContext
+/**
+ * La tarea existe; el pack falló. Recupera contexto con task_id.
+ */
+context_error?: {
+code: ErrorCode
+message: string
+recoverable: boolean
+}
+} | McpToolError)
+export type FokerTaskGetOutput = (TaskRecord | McpToolError)
+export type FokerTaskSubmitOutput = ({
+task_id: TaskId
+state: TaskState
+attempt: number
+gates: McpGateResult[]
+/**
+ * Ruta relativa al root del evidence.json.
+ */
+evidence: string
+next_action: ("done" | "fix_and_resubmit" | "await_human_approval" | "blocked_contact_human" | "failed")
+diagnostics?: Diagnostics
+} | McpToolError)
 
 export interface FokerSchemaTypes {
 projectMap?: ProjectMap
@@ -1060,11 +1152,6 @@ checks?: []|[string]|[string, string]|[string, string, string]|[string, string, 
  */
 packages?: string[]
 }
-export interface FokerCheckOutput {
-ok: boolean
-results: McpCheckResult[]
-diagnostics?: Diagnostics
-}
 export interface McpCheckResult {
 check: string
 status: ("pass" | "fail" | "timeout" | "skipped")
@@ -1076,6 +1163,12 @@ findings: Finding[]
  */
 output_tail?: string
 }
+export interface McpToolError {
+code: ErrorCode
+message: string
+recoverable: boolean
+retry_after_ms?: number
+}
 export interface FokerContextInput {
 task: string
 anchors?: Anchors
@@ -1086,105 +1179,24 @@ task_id?: TaskId
 dirty_files?: boolean
 explain?: boolean
 }
-/**
- * Salida determinista del Context Engine (FOKER-SPEC §9). Las claves usan snake_case en JSON; la API nativa expone camelCase.
- */
-export interface FokerContextOutput {
-/**
- * v1 histórico; el motor emite v2 compacto (ADR-031 fase 1).
- */
+export interface McpContextPack {
 pack_version: (1 | 2)
 pack_hash: Hash
-map_hash: Hash
-request: NormalizedContextRequest
-intent: Intent
-intent_source: ("request" | "inferred")
-budget: {
-limit: number
+budget: McpContextBudget
+rendered: string
+diagnostics: Diagnostics
+}
+export interface McpContextBudget {
 used: number
-/**
- * Identificador versionado del estimador de tokens, p. ej. bytes-lf/3.2@1.
- */
-estimator: string
-}
-/**
- * Secciones en orden de renderizado, estable → dinámico (FOKER-SPEC §9.8).
- */
-sections: PackSection[]
-files: PackFile[]
-/**
- * Siguientes candidatos descartados (máx. 20), para depuración.
- *
- * @maxItems 20
- */
-excluded: []|[ExcludedFile]|[ExcludedFile, ExcludedFile]|[ExcludedFile, ExcludedFile, ExcludedFile]|[ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile]|[ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile]|[ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile]|[ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile]|[ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile]|[ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile]|[ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile]|[ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile]|[ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile]|[ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile]|[ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile]|[ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile]|[ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile]|[ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile]|[ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile]|[ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile]|[ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile]
-diagnostics: Diagnostic[]
-/**
- * Markdown estable→dinámico. Omitido en structuredContent MCP salvo explain=true (va en content[0]).
- */
-rendered?: string
-}
-export interface FokerImpactOutput {
-/**
- * Ordenados por distancia e id.
- */
-nodes: {
-id: string
-distance: number
-/**
- * Tipo de arista por la que se llegó; null para el origen.
- */
-via: (string | null)
-kind: ("file" | "symbol" | "package")
-}[]
-packages: string[]
-tests: FileId[]
-diagnostics?: Diagnostics
+limit: number
 }
 export interface FokerSearchInput {
 query: string
 kind?: ("file" | "symbol" | "any")
 limit?: number
 }
-export interface FokerSearchOutput {
-hits: {
-id: string
-kind: ("file" | "symbol")
-name: string
-file: FileId
-signature?: string
-score: number
-}[]
-diagnostics?: Diagnostics
-}
 export interface FokerStatusInput {
 
-}
-export interface FokerStatusOutput {
-foker_version: Semver
-foker_mcp_api: number
-/**
- * Revisión MCP negociada.
- */
-protocol: string
-/**
- * Nombre del directorio raíz (nunca la ruta absoluta).
- */
-root_name: string
-map: {
-content_hash: Hash
-files: number
-symbols: number
-stale_files: number
-schema_version: number
-}
-profiles: string[]
-active_tasks: {
-task_id: TaskId
-state: TaskState
-}[]
-trust: ("trusted" | "untrusted")
-diagnostics?: Diagnostics
 }
 export interface FokerTaskBeginInput {
 description: string
@@ -1193,16 +1205,14 @@ profile?: string
 skill?: string
 max_attempts?: number
 client_token?: string
-}
-export interface FokerTaskBeginOutput {
-task_id: TaskId
-state: "RUNNING"
-attempt: 1
-baseline: McpBaseline
-allowed_paths: Glob[]
-protected_paths_in_scope: string[]
-checks: string[]
-diagnostics?: Diagnostics
+/**
+ * Pack en esta llamada; true usa defaults. Opciones de transporte, no cambian la identidad de la tarea.
+ */
+context?: (true | {
+budget_tokens?: number
+anchors?: Anchors
+intent?: Intent
+})
 }
 export interface McpBaseline {
 git_head: (string | null)
@@ -1217,51 +1227,17 @@ dirty_files_total?: number
  */
 dirty_files_truncated?: boolean
 }
+export interface McpTaskContext {
+pack_hash: Hash
+budget: McpContextBudget
+rendered: string
+}
 export interface FokerTaskGetInput {
 task_id: TaskId
-}
-/**
- * Registro de tarea en .foker/tasks/<task_id>.json y salida de foker_task_get (FOKER-SPEC §12). Los eventos van en <task_id>.events.jsonl (cada línea = $defs/event). La evidencia de cada intento en .foker/runs/<task_id>/<attempt>/evidence.json (= $defs/evidence).
- */
-export interface FokerTaskGetOutput {
-schema_version: 1
-task_id: TaskId
-state: TaskState
-description: string
-scope: TaskScope
-profile: string
-skill?: (string | null)
-/**
- * 0 antes del primer RUNNING.
- */
-attempt: number
-max_attempts: number
-client_token?: (string | null)
-created_at: Timestamp
-updated_at: Timestamp
-last_activity_at?: Timestamp
-created_by: Actor
-baseline: TaskBaseline
-approvals: TaskApproval[]
-last_gates: GateResult[]
-next_action: NextAction
-blocked_reason?: (string | null)
 }
 export interface FokerTaskSubmitInput {
 task_id: TaskId
 summary?: string
-}
-export interface FokerTaskSubmitOutput {
-task_id: TaskId
-state: TaskState
-attempt: number
-gates: McpGateResult[]
-/**
- * Ruta relativa al root del evidence.json.
- */
-evidence: string
-next_action: ("done" | "fix_and_resubmit" | "await_human_approval" | "blocked_contact_human" | "failed")
-diagnostics?: Diagnostics
 }
 export interface McpGateResult {
 /**

@@ -1,6 +1,7 @@
 import { readdir, readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'yaml';
+import { implementerBody } from './content.js';
 import { splitFrontmatter } from './text.js';
 import type { Role } from './types.js';
 
@@ -22,7 +23,12 @@ export function parseRole(markdown: string): Role {
 
 async function readRoles(dir: string): Promise<Role[]> {
   const names = (await readdir(dir)).filter((n) => n.endsWith('.md')).sort();
-  return Promise.all(names.map(async (n) => parseRole(await readFile(`${dir}${n}`, 'utf8'))));
+  return Promise.all(
+    names.map(async (n) => {
+      const role = parseRole(await readFile(`${dir}${n}`, 'utf8'));
+      return role.name === 'foker-implementer' ? { ...role, body: implementerBody() } : role;
+    }),
+  );
 }
 
 /** Roles incluidos con Foker, ordenados por nombre. */

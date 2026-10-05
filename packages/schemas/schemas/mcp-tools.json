@@ -8,7 +8,7 @@
     {
       "name": "foker_check",
       "title": "Ejecutar checks",
-      "description": "Ejecuta un perfil de validación del proyecto (typecheck, lint, test, secrets…) y devuelve hallazgos estructurados. No cambia el estado de ninguna tarea. Úsalo para feedback rápido antes de foker_task_submit.",
+      "description": "Feedback intermedio opcional: ejecuta checks del perfil sin cambiar tareas. Requiere trust; submit ya ejecuta checks.",
       "inputSchema": {
         "title": "FokerCheckInput",
         "type": "object",
@@ -42,22 +42,30 @@
       "outputSchema": {
         "title": "FokerCheckOutput",
         "type": "object",
-        "additionalProperties": false,
-        "required": ["ok", "results"],
-        "properties": {
-          "ok": {
-            "type": "boolean"
-          },
-          "results": {
-            "type": "array",
-            "items": {
-              "$ref": "#/$defs/mcpCheckResult"
+        "anyOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["ok", "results"],
+            "properties": {
+              "ok": {
+                "type": "boolean"
+              },
+              "results": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/mcpCheckResult"
+                }
+              },
+              "diagnostics": {
+                "$ref": "#/$defs/diagnostics"
+              }
             }
           },
-          "diagnostics": {
-            "$ref": "#/$defs/diagnostics"
+          {
+            "$ref": "#/$defs/mcpToolError"
           }
-        }
+        ]
       },
       "annotations": {
         "readOnlyHint": false,
@@ -70,7 +78,7 @@
     {
       "name": "foker_context",
       "title": "Contexto para una tarea",
-      "description": "Devuelve el contexto mínimo suficiente para una tarea: reglas del proyecto, núcleo, skill, firmas de dependencias y contenido de los archivos objetivo, con la razón de cada inclusión. Pasa anclas (archivos o símbolos) si las conoces.",
+      "description": "Pack de reglas, skill, dependencias y código objetivo. Usa anclas conocidas; explain=true añade razones. No releas objetivos salvo aviso de omisión.",
       "inputSchema": {
         "title": "FokerContextInput",
         "type": "object",
@@ -113,7 +121,23 @@
       },
       "outputSchema": {
         "title": "FokerContextOutput",
-        "$ref": "../context-pack/v1.json"
+        "type": "object",
+        "anyOf": [
+          {
+            "type": "object",
+            "oneOf": [
+              {
+                "$ref": "#/$defs/mcpContextPack"
+              },
+              {
+                "$ref": "../context-pack/v1.json"
+              }
+            ]
+          },
+          {
+            "$ref": "#/$defs/mcpToolError"
+          }
+        ]
       },
       "annotations": {
         "readOnlyHint": true,
@@ -125,7 +149,7 @@
     {
       "name": "foker_impact",
       "title": "Radio de impacto",
-      "description": "Lista qué archivos, paquetes y tests dependen de los archivos o símbolos dados (o de qué dependen), hasta una profundidad de 3.",
+      "description": "Dependientes/dependencias de archivos o símbolos, con paquetes y tests; profundidad ≤3.",
       "inputSchema": {
         "title": "FokerImpactInput",
         "type": "object",
@@ -174,51 +198,59 @@
       "outputSchema": {
         "title": "FokerImpactOutput",
         "type": "object",
-        "additionalProperties": false,
-        "required": ["nodes", "packages", "tests"],
-        "properties": {
-          "nodes": {
-            "description": "Ordenados por distancia e id.",
-            "type": "array",
-            "items": {
-              "type": "object",
-              "additionalProperties": false,
-              "required": ["id", "distance", "via", "kind"],
-              "properties": {
-                "id": {
-                  "type": "string"
-                },
-                "distance": {
-                  "type": "integer",
-                  "minimum": 0,
-                  "maximum": 3
-                },
-                "via": {
-                  "description": "Tipo de arista por la que se llegó; null para el origen.",
-                  "type": ["string", "null"]
-                },
-                "kind": {
-                  "enum": ["file", "symbol", "package"]
+        "anyOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["nodes", "packages", "tests"],
+            "properties": {
+              "nodes": {
+                "description": "Ordenados por distancia e id.",
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["id", "distance", "via", "kind"],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "distance": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 3
+                    },
+                    "via": {
+                      "description": "Tipo de arista por la que se llegó; null para el origen.",
+                      "type": ["string", "null"]
+                    },
+                    "kind": {
+                      "enum": ["file", "symbol", "package"]
+                    }
+                  }
                 }
+              },
+              "packages": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "tests": {
+                "type": "array",
+                "items": {
+                  "$ref": "../common/v1.json#/$defs/fileId"
+                }
+              },
+              "diagnostics": {
+                "$ref": "#/$defs/diagnostics"
               }
             }
           },
-          "packages": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "tests": {
-            "type": "array",
-            "items": {
-              "$ref": "../common/v1.json#/$defs/fileId"
-            }
-          },
-          "diagnostics": {
-            "$ref": "#/$defs/diagnostics"
+          {
+            "$ref": "#/$defs/mcpToolError"
           }
-        }
+        ]
       },
       "annotations": {
         "readOnlyHint": true,
@@ -230,7 +262,7 @@
     {
       "name": "foker_search",
       "title": "Buscar archivos y símbolos",
-      "description": "Busca archivos y símbolos del proyecto por nombre o ruta usando el Project Map (sin leer archivos).",
+      "description": "Busca archivos/símbolos por nombre o ruta (BM25). Opcional si el pack no basta.",
       "inputSchema": {
         "title": "FokerSearchInput",
         "type": "object",
@@ -257,42 +289,50 @@
       "outputSchema": {
         "title": "FokerSearchOutput",
         "type": "object",
-        "additionalProperties": false,
-        "required": ["hits"],
-        "properties": {
-          "hits": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "additionalProperties": false,
-              "required": ["id", "kind", "name", "file", "score"],
-              "properties": {
-                "id": {
-                  "type": "string"
-                },
-                "kind": {
-                  "enum": ["file", "symbol"]
-                },
-                "name": {
-                  "type": "string"
-                },
-                "file": {
-                  "$ref": "../common/v1.json#/$defs/fileId"
-                },
-                "signature": {
-                  "type": "string"
-                },
-                "score": {
-                  "type": "number",
-                  "minimum": 0
+        "anyOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["hits"],
+            "properties": {
+              "hits": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["id", "kind", "name", "file", "score"],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "kind": {
+                      "enum": ["file", "symbol"]
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "file": {
+                      "$ref": "../common/v1.json#/$defs/fileId"
+                    },
+                    "signature": {
+                      "type": "string"
+                    },
+                    "score": {
+                      "type": "number",
+                      "minimum": 0
+                    }
+                  }
                 }
+              },
+              "diagnostics": {
+                "$ref": "#/$defs/diagnostics"
               }
             }
           },
-          "diagnostics": {
-            "$ref": "#/$defs/diagnostics"
+          {
+            "$ref": "#/$defs/mcpToolError"
           }
-        }
+        ]
       },
       "annotations": {
         "readOnlyHint": true,
@@ -304,7 +344,7 @@
     {
       "name": "foker_status",
       "title": "Estado de Foker",
-      "description": "Versión de Foker, estado del Project Map, perfiles de validación disponibles, confianza del workspace y tareas activas.",
+      "description": "Estado: versiones, mapa/frescura, perfiles, trust y tareas activas.",
       "inputSchema": {
         "title": "FokerStatusInput",
         "type": "object",
@@ -314,88 +354,96 @@
       "outputSchema": {
         "title": "FokerStatusOutput",
         "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "foker_version",
-          "foker_mcp_api",
-          "protocol",
-          "root_name",
-          "map",
-          "profiles",
-          "active_tasks",
-          "trust"
-        ],
-        "properties": {
-          "foker_version": {
-            "$ref": "../common/v1.json#/$defs/semver"
-          },
-          "foker_mcp_api": {
-            "type": "integer",
-            "minimum": 1
-          },
-          "protocol": {
-            "description": "Revisión MCP negociada.",
-            "type": "string"
-          },
-          "root_name": {
-            "description": "Nombre del directorio raíz (nunca la ruta absoluta).",
-            "type": "string"
-          },
-          "map": {
+        "anyOf": [
+          {
             "type": "object",
             "additionalProperties": false,
-            "required": ["content_hash", "files", "symbols", "stale_files", "schema_version"],
+            "required": [
+              "foker_version",
+              "foker_mcp_api",
+              "protocol",
+              "root_name",
+              "map",
+              "profiles",
+              "active_tasks",
+              "trust"
+            ],
             "properties": {
-              "content_hash": {
-                "$ref": "../common/v1.json#/$defs/hash"
+              "foker_version": {
+                "$ref": "../common/v1.json#/$defs/semver"
               },
-              "files": {
-                "type": "integer",
-                "minimum": 0
-              },
-              "symbols": {
-                "type": "integer",
-                "minimum": 0
-              },
-              "stale_files": {
-                "type": "integer",
-                "minimum": 0
-              },
-              "schema_version": {
+              "foker_mcp_api": {
                 "type": "integer",
                 "minimum": 1
-              }
-            }
-          },
-          "profiles": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "active_tasks": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "additionalProperties": false,
-              "required": ["task_id", "state"],
-              "properties": {
-                "task_id": {
-                  "$ref": "../common/v1.json#/$defs/taskId"
-                },
-                "state": {
-                  "$ref": "../task/v1.json#/$defs/state"
+              },
+              "protocol": {
+                "description": "Revisión MCP negociada.",
+                "type": "string"
+              },
+              "root_name": {
+                "description": "Nombre del directorio raíz (nunca la ruta absoluta).",
+                "type": "string"
+              },
+              "map": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["content_hash", "files", "symbols", "stale_files", "schema_version"],
+                "properties": {
+                  "content_hash": {
+                    "$ref": "../common/v1.json#/$defs/hash"
+                  },
+                  "files": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "symbols": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "stale_files": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "schema_version": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
                 }
+              },
+              "profiles": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "active_tasks": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["task_id", "state"],
+                  "properties": {
+                    "task_id": {
+                      "$ref": "../common/v1.json#/$defs/taskId"
+                    },
+                    "state": {
+                      "$ref": "../task/v1.json#/$defs/state"
+                    }
+                  }
+                }
+              },
+              "trust": {
+                "enum": ["trusted", "untrusted"]
+              },
+              "diagnostics": {
+                "$ref": "#/$defs/diagnostics"
               }
             }
           },
-          "trust": {
-            "enum": ["trusted", "untrusted"]
-          },
-          "diagnostics": {
-            "$ref": "#/$defs/diagnostics"
+          {
+            "$ref": "#/$defs/mcpToolError"
           }
-        }
+        ]
       },
       "annotations": {
         "readOnlyHint": true,
@@ -407,7 +455,7 @@
     {
       "name": "foker_task_begin",
       "title": "Empezar tarea",
-      "description": "Crea una tarea con alcance (globs de rutas que podrás modificar) y perfil de validación. Devuelve task_id, que debes pasar a foker_context y foker_task_submit. Las tareas inactivas 4 h pasan a BLOCKED.",
+      "description": "Crea tarea con alcance y perfil; context=true u objeto incluye el código. Conserva task_id si falla el pack. client_token deduplica; inactividad 4 h → BLOCKED.",
       "inputSchema": {
         "title": "FokerTaskBeginInput",
         "type": "object",
@@ -442,49 +490,113 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 64
+          },
+          "context": {
+            "description": "Pack en esta llamada; true usa defaults. Opciones de transporte, no cambian la identidad de la tarea.",
+            "oneOf": [
+              {
+                "const": true
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "budget_tokens": {
+                    "type": "integer",
+                    "minimum": 1000,
+                    "maximum": 20000
+                  },
+                  "anchors": {
+                    "$ref": "../context-pack/v1.json#/$defs/anchors"
+                  },
+                  "intent": {
+                    "$ref": "../context-pack/v1.json#/$defs/intent"
+                  }
+                }
+              }
+            ]
           }
         }
       },
       "outputSchema": {
         "title": "FokerTaskBeginOutput",
         "type": "object",
-        "additionalProperties": false,
-        "required": ["task_id", "state", "attempt", "baseline", "allowed_paths", "protected_paths_in_scope", "checks"],
-        "properties": {
-          "task_id": {
-            "$ref": "../common/v1.json#/$defs/taskId"
-          },
-          "state": {
-            "const": "RUNNING"
-          },
-          "attempt": {
-            "const": 1
-          },
-          "baseline": {
-            "$ref": "#/$defs/mcpBaseline"
-          },
-          "allowed_paths": {
-            "type": "array",
-            "items": {
-              "$ref": "../common/v1.json#/$defs/glob"
+        "anyOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "task_id",
+              "state",
+              "attempt",
+              "baseline",
+              "allowed_paths",
+              "protected_paths_in_scope",
+              "checks"
+            ],
+            "properties": {
+              "task_id": {
+                "$ref": "../common/v1.json#/$defs/taskId"
+              },
+              "state": {
+                "const": "RUNNING"
+              },
+              "attempt": {
+                "const": 1
+              },
+              "baseline": {
+                "$ref": "#/$defs/mcpBaseline"
+              },
+              "allowed_paths": {
+                "type": "array",
+                "items": {
+                  "$ref": "../common/v1.json#/$defs/glob"
+                }
+              },
+              "protected_paths_in_scope": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "checks": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "diagnostics": {
+                "$ref": "#/$defs/diagnostics"
+              },
+              "context": {
+                "$ref": "#/$defs/mcpTaskContext"
+              },
+              "context_error": {
+                "description": "La tarea existe; el pack falló. Recupera contexto con task_id.",
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["code", "message", "recoverable"],
+                "properties": {
+                  "code": {
+                    "$ref": "../common/v1.json#/$defs/errorCode"
+                  },
+                  "message": {
+                    "type": "string"
+                  },
+                  "recoverable": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            },
+            "not": {
+              "required": ["context", "context_error"]
             }
           },
-          "protected_paths_in_scope": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "checks": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "diagnostics": {
-            "$ref": "#/$defs/diagnostics"
+          {
+            "$ref": "#/$defs/mcpToolError"
           }
-        }
+        ]
       },
       "annotations": {
         "readOnlyHint": false,
@@ -497,7 +609,7 @@
     {
       "name": "foker_task_get",
       "title": "Consultar tarea",
-      "description": "Devuelve estado, intentos, últimos hallazgos de validación y siguiente acción de una tarea.",
+      "description": "Lee estado, intentos, hallazgos y siguiente acción de task_id.",
       "inputSchema": {
         "title": "FokerTaskGetInput",
         "type": "object",
@@ -511,7 +623,15 @@
       },
       "outputSchema": {
         "title": "FokerTaskGetOutput",
-        "$ref": "../task/v1.json"
+        "type": "object",
+        "anyOf": [
+          {
+            "$ref": "../task/v1.json"
+          },
+          {
+            "$ref": "#/$defs/mcpToolError"
+          }
+        ]
       },
       "annotations": {
         "readOnlyHint": true,
@@ -523,7 +643,7 @@
     {
       "name": "foker_task_submit",
       "title": "Enviar tarea a validación",
-      "description": "Declara terminado el intento actual y ejecuta los gates deterministas (alcance, política, mapa, checks, skill). Solo Foker decide si la tarea queda COMPLETED. Si el resultado es REJECTED, corrige los hallazgos y vuelve a llamar.",
+      "description": "Ejecuta checks y gates del intento. Solo COMPLETED termina; REJECTED: corrige y reenvía; AWAITING_APPROVAL/BLOCKED: informa al humano. Consume un intento.",
       "inputSchema": {
         "title": "FokerTaskSubmitInput",
         "type": "object",
@@ -542,38 +662,46 @@
       "outputSchema": {
         "title": "FokerTaskSubmitOutput",
         "type": "object",
-        "additionalProperties": false,
-        "required": ["task_id", "state", "attempt", "gates", "evidence", "next_action"],
-        "properties": {
-          "task_id": {
-            "$ref": "../common/v1.json#/$defs/taskId"
-          },
-          "state": {
-            "$ref": "../task/v1.json#/$defs/state"
-          },
-          "attempt": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 5
-          },
-          "gates": {
-            "type": "array",
-            "items": {
-              "$ref": "#/$defs/mcpGateResult"
+        "anyOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["task_id", "state", "attempt", "gates", "evidence", "next_action"],
+            "properties": {
+              "task_id": {
+                "$ref": "../common/v1.json#/$defs/taskId"
+              },
+              "state": {
+                "$ref": "../task/v1.json#/$defs/state"
+              },
+              "attempt": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 5
+              },
+              "gates": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/mcpGateResult"
+                }
+              },
+              "evidence": {
+                "description": "Ruta relativa al root del evidence.json.",
+                "type": "string",
+                "pattern": "^\\.foker/runs/tsk_[0-9A-HJKMNP-TV-Z]{26}/[1-5]/evidence(\\.[0-9]+)?\\.json$"
+              },
+              "next_action": {
+                "enum": ["done", "fix_and_resubmit", "await_human_approval", "blocked_contact_human", "failed"]
+              },
+              "diagnostics": {
+                "$ref": "#/$defs/diagnostics"
+              }
             }
           },
-          "evidence": {
-            "description": "Ruta relativa al root del evidence.json.",
-            "type": "string",
-            "pattern": "^\\.foker/runs/tsk_[0-9A-HJKMNP-TV-Z]{26}/[1-5]/evidence(\\.[0-9]+)?\\.json$"
-          },
-          "next_action": {
-            "enum": ["done", "fix_and_resubmit", "await_human_approval", "blocked_contact_human", "failed"]
-          },
-          "diagnostics": {
-            "$ref": "#/$defs/diagnostics"
+          {
+            "$ref": "#/$defs/mcpToolError"
           }
-        }
+        ]
       },
       "annotations": {
         "readOnlyHint": false,
@@ -675,6 +803,79 @@
           "items": {
             "$ref": "#/$defs/mcpCheckResult"
           }
+        }
+      }
+    },
+    "mcpContextBudget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["used", "limit"],
+      "properties": {
+        "used": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "mcpTaskContext": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pack_hash", "budget", "rendered"],
+      "properties": {
+        "pack_hash": {
+          "$ref": "../common/v1.json#/$defs/hash"
+        },
+        "budget": {
+          "$ref": "#/$defs/mcpContextBudget"
+        },
+        "rendered": {
+          "type": "string"
+        }
+      }
+    },
+    "mcpContextPack": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pack_version", "pack_hash", "budget", "rendered", "diagnostics"],
+      "properties": {
+        "pack_version": {
+          "enum": [1, 2]
+        },
+        "pack_hash": {
+          "$ref": "../common/v1.json#/$defs/hash"
+        },
+        "budget": {
+          "$ref": "#/$defs/mcpContextBudget"
+        },
+        "rendered": {
+          "type": "string"
+        },
+        "diagnostics": {
+          "$ref": "#/$defs/diagnostics"
+        }
+      }
+    },
+    "mcpToolError": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "message", "recoverable"],
+      "properties": {
+        "code": {
+          "$ref": "../common/v1.json#/$defs/errorCode"
+        },
+        "message": {
+          "type": "string"
+        },
+        "recoverable": {
+          "type": "boolean"
+        },
+        "retry_after_ms": {
+          "type": "integer",
+          "minimum": 1
         }
       }
     }

@@ -47,3 +47,16 @@ no se presenta esta comprobación como validación estricta de roles.
 Los tests de paridad consultan `tools/list` al servidor en memoria para cada target y
 prueban igualdad de infraestructura; no certifican calidad idéntica
 entre modelos ni compatibilidad efectiva de un cliente que no se ha ejecutado.
+
+## ADR-031 fase 2
+
+Los tests locales comprueban el flujo corto y la paridad de reglas, skills, roles y catálogo
+MCP entre los cuatro targets. En la próxima prueba por suscripción, registra:
+
+- `foker_task_begin` con `context`: el modelo recibe el código de los objetivos en structured.
+- Ausencia de relecturas de objetivos salvo aviso de omisión; search/check opcionales.
+- `foker_task_submit` ejecuta checks y gates; solo `COMPLETED` termina.
+- Si falla el pack, se conserva `task_id` y se recupera contexto sin duplicar la tarea.
+
+Estos tests y las medidas UTF-8 locales no certifican tokens ni llamadas reales del anfitrión.
+El smoke por suscripción queda pendiente; esta fase se verifica sin red ni recompilar el addon.
