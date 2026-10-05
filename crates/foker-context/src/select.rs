@@ -57,6 +57,26 @@ fn render_candidate(
     file.tokens = estimate_tokens(&text);
     Ok((file, text))
 }
+/// L2 con el contenido completo del archivo (ADR-034); mismo envoltorio y escape que L2.
+fn render_complete_l2(
+    index: &render::RenderIndex<'_>,
+    root: &Path,
+    candidate: &Candidate,
+    explain: bool,
+) -> Result<RenderedFile, ContextError> {
+    let body = render::file_body_indexed(index, root, &candidate.id, RenderLevel::L3)?;
+    let mut file = PackFile {
+        id: candidate.id.clone(),
+        level: RenderLevel::L2,
+        tokens: 0,
+        score: candidate.score,
+        reasons: candidate.reasons.clone(),
+        note: None,
+    };
+    let text = render::file(&file, &body, explain);
+    file.tokens = estimate_tokens(&text);
+    Ok((file, text))
+}
 /// Ancla L3 con vista focal (ADR-033); `None` sin foco o sin reducción.
 fn focal_candidate(
     symbols: &[&foker_map::model::MapSymbol],
@@ -213,6 +233,21 @@ pub fn select(
             &[RenderLevel::L1]
         };
         let mut accepted = false;
+        // ADR-034: un L2 pequeño se entrega completo si cuesta ≤ small_full_max_extra más que
+        // sus firmas; sigue siendo L2 (no es objetivo) y prueba antes que L2/L1.
+        if levels[0] == RenderLevel::L2 && params.small_full_max_extra > 0 {
+            let signatures = render(candidate, RenderLevel::L2, None)?;
+            let complete = render_complete_l2(&index, root, candidate, explain)?;
+            if complete.0.tokens <= signatures.0.tokens + params.small_full_max_extra {
+                related.push(complete);
+                if used + section("related", &related).section.tokens <= capacity {
+                    included.insert(candidate.id.clone());
+                    accepted_count += 1;
+                    continue;
+                }
+                related.pop();
+            }
+        }
         for &level in levels {
             related.push(render(candidate, level, None)?);
             if used + section("related", &related).section.tokens <= capacity {

@@ -44,8 +44,9 @@ Reglas complementarias, también fijadas ahora:
 - Solo L2 de no anclas. Las anclas ya tienen su política (L3, focal de ADR-033 y degradación).
   L1 no se toca: son archivos de menor rango.
 - El nivel sigue siendo **L2**: no se convierten en objetivos para `deriveScopePaths` (que usa
-  L3) ni cambian las métricas que cuentan L1–L3. `files[].note` = «contenido completo», sin datos
-  del repositorio.
+  L3) ni cambian las métricas que cuentan L1–L3. **Implementación**: sin `files[].note`; una
+  nota tras `</foker:file>` rompería la agrupación L2 compartida de ADR-031 1c. El contenido
+  completo se distingue por su cuerpo; ctx-gold lo detecta con `goldFull`.
 - Mismo escape y delimitación que cualquier contenido (`trust="repository-content"`).
 - Parámetro interno `small_full_max_extra` (64; 0 lo desactiva), omitido del JSON cuando vale el
   default; propiedad opcional en el esquema `ContextPack`. Sin cambios en N-API, CLI ni MCP.

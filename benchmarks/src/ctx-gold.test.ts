@@ -1,9 +1,17 @@
-import { mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it, vi } from 'vitest';
-import { evaluateContext, flowPack, type GoldCase, loadCases, renderedBytes, renderedTokens } from './ctx-gold.js';
+import {
+  evaluateContext,
+  flowPack,
+  type GoldCase,
+  goldFull,
+  loadCases,
+  renderedBytes,
+  renderedTokens,
+} from './ctx-gold.js';
 
 it('particiona cada byte del render incluso con cabeceras literales y UTF-8', () => {
   const text =
@@ -147,4 +155,25 @@ describe('flowPack registra los rechazos de begin sin abortar (revisión Codex, 
       ),
     ).rejects.toThrow('bug');
   });
+});
+
+it('goldFull reconoce contenido completo en L3, L2 individual y L2 agrupado (ADR-034)', () => {
+  const root = mkdtempSync(join(tmpdir(), 'foker-gold-full-'));
+  try {
+    mkdirSync(join(root, 'src'));
+    writeFileSync(join(root, 'src/a.ts'), 'export const a = 1;\n\nexport function f() {}\n');
+    writeFileSync(join(root, 'src/b.ts'), 'export const b = 2;\n');
+    const a = 'export const a = 1;\n\nexport function f() {}\n';
+    const l3 = `<foker:file id="src/a.ts" level="L3" trust="repository-content">\n${a}\n</foker:file>\n`;
+    const grouped = `<foker:files level="L2" trust="repository-content">\nsrc/a.ts\n${a
+      .split('\n')
+      .map((l) => `  ${l}`)
+      .join('\n')}\nsrc/b.ts\n  export const b: number\n</foker:files>\n`;
+    expect(goldFull(l3, root, ['src/a.ts'])).toBe(1);
+    expect(goldFull(l3.replace('L3', 'L2'), root, ['src/a.ts'])).toBe(1);
+    expect(goldFull(grouped, root, ['src/a.ts', 'src/b.ts'])).toBe(0.5);
+    expect(goldFull(grouped, root, ['src/nuevo.ts'])).toBe(0);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });

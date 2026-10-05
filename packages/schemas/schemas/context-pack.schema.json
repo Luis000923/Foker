@@ -147,6 +147,12 @@
             "bm25_b"
           ],
           "properties": {
+            "small_full_max_extra": {
+              "description": "Interno: contenido completo de L2 no ancla si cuesta como máximo estos tokens más que sus firmas; 0 lo desactiva (ADR-034). Solo presente si difiere del default.",
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 200000
+            },
             "focal_min_tokens": {
               "description": "Interno: vista focal de anclas con L3 mayor que este número de tokens; 0 la desactiva (ADR-033). Solo presente si difiere del default.",
               "type": "integer",
