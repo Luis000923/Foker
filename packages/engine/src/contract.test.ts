@@ -39,6 +39,10 @@ it('buildContext valida el esquema y conserva packHash al repetir la petición',
     const engine = await openEngine(root, { readOnly: true });
     const request = { task: 'Añade la variante danger al botón', anchors: { files: ['packages/ui/src/button.tsx'] } };
     const pack = await engine.buildContext(request);
+    expect(pack.packVersion).toBe(2);
+    expect(JSON.parse(pack.json).pack_version).toBe(2);
+    expect(pack.rendered).not.toContain('###');
+    expect(new Set(pack.files.map((file) => file.id)).size).toBe(pack.files.length);
     const enriched = await engine.buildContext({
       ...request,
       intent: 'add',

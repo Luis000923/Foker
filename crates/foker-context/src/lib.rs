@@ -20,7 +20,7 @@ use std::path::Path;
 /// Versión en lockstep.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 /// Versión del formato.
-pub const PACK_VERSION: u32 = 1;
+pub const PACK_VERSION: u32 = 2;
 
 /// Construye un pack determinista sin consultar git ni leer configuración TypeScript.
 pub fn build_context(
@@ -52,7 +52,7 @@ pub(crate) fn build_with_seed_counts(
         root,
         &ranked,
         &fixed,
-        normalized.budget_tokens,
+        &normalized,
         if inputs.core_files == ContextInputs::default().core_files {
             params.core_files
         } else {

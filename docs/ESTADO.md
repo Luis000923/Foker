@@ -50,6 +50,13 @@ M0, M2, M3, M4 y E6 completos en local; M1 con todo lo que no gasta API (manifie
 
 ## Trabajo 2026-10-04
 
+- **ADR-031 fase 1 · Pack compacto v2**: implementada y medida sin red ni git de escritura.
+  Recall idéntico por caso en los 60 ctx-gold (total 0,7444; calibration 0,7389;
+  validation 0,7500). Mediana rendered 5552 → 1049 (−81,11 %); no alcanza −85 %.
+  Parámetros elegidos solo con calibration, rejilla de 72 configuraciones en el ADR.
+  Motor, confianza, esquema compatible v1/v2, métricas y snapshots actualizados.
+  Fases 2/3 pendientes. `pnpm verify` verde (125 Rust, 545 TS); `contextSchema` = 2.
+
 - **Sin claves API (ADR-027)**: requisito del usuario. Foker no llama a LLMs; con una sola
   suscripción (Claude Code, Codex/ChatGPT o Antigravity) se usan las mismas reglas, contexto,
   skills, roles y gates. Nuevo target `codex` (`AGENTS.md`, `.agents/skills/`, MCP y roles en

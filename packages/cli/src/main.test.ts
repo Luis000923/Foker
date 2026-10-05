@@ -190,7 +190,9 @@ it('context produce un pack válido con el ancla L3 sin guardar el mapa', async 
     expect(envelope((await run([...args, '--task', 'x', '--json'])).stdout).errors[0].code).toBe('FKR-TSK-001');
     writeFileSync(join(root, 'foker.config.yaml'), 'version: 1\ncontext:\n  core_files: 0\n');
     const noCore = envelope((await run([...args, '--json'])).stdout).data;
-    expect(pack.sections.find((section: { id: string }) => section.id === 'core').tokens).toBeGreaterThan(0);
+    // Pack v2 (ADR-031): cada archivo aparece una sola vez; core no repite archivos de otras secciones.
+    const ids = pack.files.map((file: { id: string }) => file.id);
+    expect(new Set(ids).size).toBe(ids.length);
     expect(noCore.sections.find((section: { id: string }) => section.id === 'core')).toMatchObject({ tokens: 0 });
     expect(noCore.rendered).not.toContain('## core\n');
     mkdirSync(join(root, 'foker'), { recursive: true });

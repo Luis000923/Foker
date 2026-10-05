@@ -27,6 +27,7 @@ const CHECK_ENV_ALLOWLIST = [
   'NODE_ENV',
   'pnpm_config_verify_deps_before_run',
 ] as const;
+
 import type { BenchmarkResult } from '@foker/schemas';
 
 export interface TestGroup {

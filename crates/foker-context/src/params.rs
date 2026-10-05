@@ -14,6 +14,18 @@ pub struct ContextParams {
     /// Corte del ranking opcional relativo al máximo; cero lo desactiva.
     #[serde(skip_serializing_if = "relevancia_predeterminada")]
     pub relevance_fraction: f64,
+    /// Corte de suficiencia relativo al mejor no-ancla (ADR-031).
+    #[serde(skip_serializing_if = "suficiencia_predeterminada")]
+    pub sufficiency_fraction: f64,
+    /// Máximos L2/L1 por fix, test, refactor, add, modify, explain.
+    #[serde(skip_serializing_if = "limites_related_predeterminados")]
+    pub related_limits: [usize; 6],
+    /// Máximos L0 por intención en el mismo orden.
+    #[serde(skip_serializing_if = "limites_outline_predeterminados")]
+    pub outline_limits: [usize; 6],
+    /// Corte relativo del core respecto de su mejor PageRank global.
+    #[serde(skip_serializing_if = "corte_core_predeterminado")]
+    pub core_min_relative: f64,
     /// Parámetro w_anchor (default 1.0).
     pub w_anchor: f64,
     /// Parámetro mention_factor (default 0.8).
@@ -67,6 +79,10 @@ impl Default for ContextParams {
             lexical_expansion: true,
             bm25_min_relative: 0.0,
             relevance_fraction: 0.01,
+            sufficiency_fraction: 0.025,
+            related_limits: [64, 64, 96, 64, 64, 96],
+            outline_limits: [0; 6],
+            core_min_relative: 0.1,
             w_anchor: 1.0,
             mention_factor: 0.8,
             w_lex: 0.6,
@@ -120,6 +136,8 @@ impl ContextParams {
     /// Valida valores antes de calcular scores o presupuestos.
     pub fn validate(&self) -> Result<(), ContextError> {
         let weights = [
+            self.sufficiency_fraction,
+            self.core_min_relative,
             self.bm25_min_relative,
             self.relevance_fraction,
             self.w_anchor,
@@ -146,6 +164,8 @@ impl ContextParams {
             .iter()
             .any(|v| !v.is_finite() || *v < 0.0 || *v > 100.0)
             || [
+                self.sufficiency_fraction,
+                self.core_min_relative,
                 self.bm25_min_relative,
                 self.relevance_fraction,
                 self.anchor_fraction,
@@ -159,11 +179,28 @@ impl ContextParams {
             || self.bm25_k1 == 0.0
             || [self.bm25_top, self.l2_count, self.l0_count, self.core_files]
                 .iter()
+                .chain(self.related_limits.iter())
+                .chain(self.outline_limits.iter())
                 .any(|v| *v > 10000)
         {
             return Err(ContextError::InvalidInput("params fuera de rango".into()));
         }
         Ok(())
+    }
+    /// Límites de suficiencia; las anclas no consumen estos máximos.
+    pub fn limits(&self, intent: Intent) -> (usize, usize) {
+        let index = match intent {
+            Intent::Fix => 0,
+            Intent::Test => 1,
+            Intent::Refactor => 2,
+            Intent::Add => 3,
+            Intent::Modify => 4,
+            Intent::Explain => 5,
+        };
+        (
+            self.related_limits[index],
+            self.outline_limits[index].min(self.l0_count),
+        )
     }
     /// Factor de aristas inversas por intención.
     pub fn reverse(&self, intent: Intent) -> f64 {
@@ -190,6 +227,19 @@ fn relevancia_predeterminada(value: &f64) -> bool {
     *value == ContextParams::default().relevance_fraction
 }
 
+fn suficiencia_predeterminada(value: &f64) -> bool {
+    *value == ContextParams::default().sufficiency_fraction
+}
+fn limites_related_predeterminados(value: &[usize; 6]) -> bool {
+    *value == ContextParams::default().related_limits
+}
+fn limites_outline_predeterminados(value: &[usize; 6]) -> bool {
+    *value == ContextParams::default().outline_limits
+}
+fn corte_core_predeterminado(value: &f64) -> bool {
+    *value == ContextParams::default().core_min_relative
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -202,6 +252,10 @@ mod tests {
             "lexical_expansion",
             "bm25_min_relative",
             "relevance_fraction",
+            "sufficiency_fraction",
+            "related_limits",
+            "outline_limits",
+            "core_min_relative",
         ] {
             assert!(json.get(key).is_none());
         }
@@ -263,6 +317,22 @@ mod tests {
             assert!(params.validate().is_err());
         }
         for params in [
+            ContextParams {
+                sufficiency_fraction: 1.01,
+                ..Default::default()
+            },
+            ContextParams {
+                core_min_relative: f64::NAN,
+                ..Default::default()
+            },
+            ContextParams {
+                related_limits: [10001; 6],
+                ..Default::default()
+            },
+            ContextParams {
+                outline_limits: [10001; 6],
+                ..Default::default()
+            },
             ContextParams {
                 bm25_min_relative: 1.01,
                 ..Default::default()

@@ -19,7 +19,7 @@
     "diagnostics"
   ],
   "properties": {
-    "pack_version": { "const": 1 },
+    "pack_version": { "enum": [1, 2], "description": "v1 histórico; el motor emite v2 compacto (ADR-031 fase 1)." },
     "pack_hash": {
       "description": "BLAKE3 de rendered + files canónicos + params canónicos solo si no son defaults (ADR-021).",
       "$ref": "../common/v1.json#/$defs/hash"
@@ -278,6 +278,40 @@
               "type": "number",
               "minimum": 0,
               "maximum": 1
+            },
+            "sufficiency_fraction": {
+              "description": "Interno Rust: selección compacta ADR-031; solo si difiere del default.",
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "core_min_relative": {
+              "description": "Interno Rust: selección compacta ADR-031; solo si difiere del default.",
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "related_limits": {
+              "description": "Interno Rust: máximos por fix, test, refactor, add, modify, explain (ADR-031).",
+              "type": "array",
+              "minItems": 6,
+              "maxItems": 6,
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 10000
+              }
+            },
+            "outline_limits": {
+              "description": "Interno Rust: máximos por fix, test, refactor, add, modify, explain (ADR-031).",
+              "type": "array",
+              "minItems": 6,
+              "maxItems": 6,
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 10000
+              }
             }
           }
         }
@@ -302,7 +336,11 @@
       "properties": {
         "id": { "$ref": "../common/v1.json#/$defs/fileId" },
         "level": { "$ref": "#/$defs/level" },
-        "tokens": { "type": "integer", "minimum": 0 },
+        "tokens": {
+          "description": "Coste de la entrada; en v2 los envoltorios compartidos L0/L1 se cuentan en sections.",
+          "type": "integer",
+          "minimum": 0
+        },
         "score": { "description": "PPR redondeado a 1e-12.", "type": "number", "minimum": 0 },
         "reasons": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/reason" } },
         "note": { "description": "Aviso, p. ej. contenido completo omitido por presupuesto.", "type": "string" }

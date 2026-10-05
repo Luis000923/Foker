@@ -127,6 +127,7 @@ for (const legacy of [false, true])
       f.advance(1000);
       const context = await f.call('foker_context', { task: 'demo', task_id: id });
       expect(context.isError).toBe(false);
+      expect(context.structuredContent).toMatchObject({ pack_version: 2 });
       expect(context.structuredContent).not.toHaveProperty('rendered');
       expect(await f.call('foker_task_submit', { task_id: id })).toMatchObject({
         isError: false,

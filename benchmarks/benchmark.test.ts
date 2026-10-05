@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { validate } from '@foker/schemas';
 import { afterEach, expect, it } from 'vitest';
 import { fixtureFiles, generate } from './fixtures/fixture-a/generate.mjs';
-import { evaluateContext, type GoldCase, loadCases, score } from './src/ctx-gold.js';
+import { evaluateContext, type GoldCase, loadCases, renderedTokens, score } from './src/ctx-gold.js';
 import { type EvaluationTask, evaluateTask, tree } from './src/evaluate-task.js';
 import { readManifest } from './src/validate-manifest.js';
 import { validateResults } from './src/validate-results.js';
@@ -301,7 +301,11 @@ it('el evaluador conserva defaults y excluye el contorno L0 de precisión', asyn
   const explicit = await evaluateContext([item], repo, 8000, false, { wLex: 0.6, bm25Top: 20, coreFiles: 15 });
   expect(explicit).toEqual(baseline);
   // Fuerza un contorno core amplio: algunos ids solo entran a L0.
-  const outlines = await evaluateContext([item], repo, 8000, false, { coreFiles: 100, coreFraction: 0.8 });
+  const outlines = await evaluateContext([item], repo, 8000, false, {
+    coreFiles: 100,
+    coreFraction: 0.8,
+    relevanceFraction: 1,
+  });
   const row = outlines.rows[0];
   if (!row) throw new Error('Fila ausente');
   const l0 = row.occupants.filter((f) => f.level === 'L0').map((f) => f.id);
@@ -342,4 +346,23 @@ it('los treinta casos nuevos ctx-gold tienen rutas existentes y enunciados sin r
   }
   expect(added.some((c) => c.gold_modified.length === 4)).toBe(true);
   expect(added.some((c) => c.gold_modified.some((p) => p.endsWith('.test.ts')))).toBe(true);
+});
+
+it('ctx-gold mide UTF-8 normalizado y el texto entregado con su presupuesto', async () => {
+  expect(renderedTokens('')).toBe(0);
+  expect(renderedTokens('éé')).toBe(2);
+  expect(renderedTokens('a\r\nb')).toBe(renderedTokens('a\nb'));
+  const cases = loadCases(readFileSync(join(repo, 'benchmarks/ctx-gold/cases.jsonl'), 'utf8'));
+  const subset = [cases.find((c) => c.split === 'calibration'), cases.find((c) => c.split === 'validation')];
+  if (!subset[0] || !subset[1]) throw new Error('Split ausente');
+  const report = await evaluateContext([subset[0], subset[1]], repo);
+  const delivered = report.rows.map((r) => r.rendered_tokens);
+  expect(report.mean_rendered_tokens).toBe(delivered.reduce((sum, value) => sum + value, 0) / delivered.length);
+  expect(report.median_rendered_tokens).toBe(report.mean_rendered_tokens);
+  for (const row of report.rows) {
+    expect(row.tokens).toBeGreaterThanOrEqual(row.rendered_tokens);
+    expect(row.tokens).toBe(row.sections.reduce((sum, section) => sum + section.tokens, 0));
+    expect(report.splits[row.split]?.mean_rendered_tokens).toBe(row.rendered_tokens);
+    expect(report.splits[row.split]?.median_rendered_tokens).toBe(row.rendered_tokens);
+  }
 });

@@ -270,7 +270,10 @@ subject?: string
  * Salida determinista del Context Engine (FOKER-SPEC §9). Las claves usan snake_case en JSON; la API nativa expone camelCase.
  */
 export interface ContextPack {
-pack_version: 1
+/**
+ * v1 histórico; el motor emite v2 compacto (ADR-031 fase 1).
+ */
+pack_version: (1 | 2)
 pack_hash: Hash
 map_hash: Hash
 request: NormalizedContextRequest
@@ -291,7 +294,7 @@ sections: PackSection[]
 files: PackFile[]
 /**
  * Siguientes candidatos descartados (máx. 20), para depuración.
- * 
+ *
  * @maxItems 20
  */
 excluded: []|[ExcludedFile]|[ExcludedFile, ExcludedFile]|[ExcludedFile, ExcludedFile, ExcludedFile]|[ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile]|[ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile]|[ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile]|[ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile]|[ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile]|[ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile]|[ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile]|[ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile]|[ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile]|[ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile]|[ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile]|[ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile]|[ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile]|[ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile]|[ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile]|[ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile]|[ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile]
@@ -361,6 +364,28 @@ core_files: number
 core_fraction: number
 bm25_k1: number
 bm25_b: number
+/**
+ * Interno Rust: selección compacta ADR-031; solo si difiere del default.
+ */
+sufficiency_fraction?: number
+/**
+ * Interno Rust: selección compacta ADR-031; solo si difiere del default.
+ */
+core_min_relative?: number
+/**
+ * Interno Rust: máximos por fix, test, refactor, add, modify, explain (ADR-031).
+ *
+ * @minItems 6
+ * @maxItems 6
+ */
+related_limits?: [number, number, number, number, number, number]
+/**
+ * Interno Rust: máximos por fix, test, refactor, add, modify, explain (ADR-031).
+ *
+ * @minItems 6
+ * @maxItems 6
+ */
+outline_limits?: [number, number, number, number, number, number]
 }
 }
 export interface PackSection {
@@ -373,6 +398,9 @@ hash: Hash
 export interface PackFile {
 id: FileId
 level: RenderLevel
+/**
+ * Coste de la entrada; en v2 los envoltorios compartidos L0/L1 se cuentan en sections.
+ */
 tokens: number
 /**
  * PPR redondeado a 1e-12.
@@ -1062,7 +1090,10 @@ explain?: boolean
  * Salida determinista del Context Engine (FOKER-SPEC §9). Las claves usan snake_case en JSON; la API nativa expone camelCase.
  */
 export interface FokerContextOutput {
-pack_version: 1
+/**
+ * v1 histórico; el motor emite v2 compacto (ADR-031 fase 1).
+ */
+pack_version: (1 | 2)
 pack_hash: Hash
 map_hash: Hash
 request: NormalizedContextRequest
@@ -1083,7 +1114,7 @@ sections: PackSection[]
 files: PackFile[]
 /**
  * Siguientes candidatos descartados (máx. 20), para depuración.
- * 
+ *
  * @maxItems 20
  */
 excluded: []|[ExcludedFile]|[ExcludedFile, ExcludedFile]|[ExcludedFile, ExcludedFile, ExcludedFile]|[ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile]|[ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile]|[ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile]|[ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile]|[ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile]|[ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile]|[ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile]|[ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile]|[ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile]|[ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile]|[ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile]|[ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile]|[ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile]|[ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile]|[ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile]|[ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile]|[ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile, ExcludedFile]

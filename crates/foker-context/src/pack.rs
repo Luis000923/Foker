@@ -1,4 +1,4 @@
-//! Contratos Rust y serialización snake_case del Context Pack v1.
+//! Contratos Rust y serialización snake_case del Context Pack v2.
 use foker_map::error::FokerCode;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -158,7 +158,7 @@ pub struct PackFile {
     pub id: String,
     /// Nivel.
     pub level: RenderLevel,
-    /// Coste incluyendo delimitadores.
+    /// Coste de la entrada; el envoltorio compartido L0/L1 se contabiliza en la sección.
     pub tokens: usize,
     /// PPR final redondeado.
     pub score: f64,
@@ -236,7 +236,7 @@ pub struct NormalizedRequest {
     /// Traza.
     pub explain: bool,
 }
-/// Context Pack v1 determinista.
+/// Context Pack v2 determinista.
 #[derive(Debug, Clone, Serialize)]
 pub struct ContextPack {
     /// Versión del formato.
