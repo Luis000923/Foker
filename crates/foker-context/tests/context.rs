@@ -122,9 +122,11 @@ fn byte_determinism_fifty_executions_with_threads() {
 proptest! {
     #![proptest_config(ProptestConfig { cases: std::env::var("PROPTEST_CASES").ok().and_then(|v| v.parse().ok()).unwrap_or(80), ..ProptestConfig::default() })]
     #[test]
-    fn never_exceeds_random_budget(budget in 1000usize..=20000, anchors in any::<bool>(), task in prop::sample::select(vec!["fix the cart total rounding", "Añade danger al botón", "xyzzy"])) {
+    fn never_exceeds_random_budget(budget in 1000usize..=20000, anchors in any::<bool>(), task in prop::sample::select(vec!["fix the cart total rounding", "Añade danger al botón", "xyzzy"]), related_fraction in prop::sample::select(vec![0.0, 0.1, 0.15, 0.2, 0.25]), focal in any::<bool>(), overflow in any::<bool>(), packages in any::<bool>()) {
         let mut req = if anchors { button() } else { ContextRequest::default() };
         req.task = task.into(); req.budget_tokens = budget;
+        req.params = Some(ContextParams { related_max_fraction: related_fraction, related_focal: focal,
+            anchor_overflow_focal: overflow, package_mentions: packages, ..Default::default() });
         let result = build_context(state(), &root(), &req, &inputs());
         match result {
             Ok(pack) => {
@@ -1423,4 +1425,176 @@ fn small_full_uses_current_size_not_stale_map() {
     )
     .unwrap();
     assert!(pack.rendered.contains("  return 1;"), "{}", pack.rendered);
+}
+
+fn adr036_large_source() -> String {
+    (0..180).map(|i| format!("export function symbol{i}(value: number): number {{\n  const result = value + {i};\n  return result;\n}}\n")).collect()
+}
+
+#[test]
+fn adr036_d1_caps_each_optional_file_and_d2_delivers_marked_l1() {
+    let (dir, map) = temporary_state(&[("src/large.ts", adr036_large_source())]);
+    let request = |focal| ContextRequest {
+        task: "Corrige symbol42".into(),
+        budget_tokens: 2000,
+        params: Some(ContextParams {
+            related_max_fraction: 0.15,
+            related_focal: focal,
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    let off = build_context(&map, dir.path(), &request(false), &ContextInputs::default()).unwrap();
+    assert!(!off.files.iter().any(|f| f.level != RenderLevel::L0));
+    assert!(
+        off.excluded
+            .iter()
+            .any(|f| f.id == "src/large.ts" && f.reason == "BUDGET")
+    );
+    let on = build_context(&map, dir.path(), &request(true), &ContextInputs::default()).unwrap();
+    let file = on.files.iter().find(|f| f.id == "src/large.ts").unwrap();
+    assert_eq!(file.level, RenderLevel::L1);
+    assert!(file.tokens <= 300);
+    assert!(
+        on.rendered
+            .contains("vista focal L1; 179 símbolos omitidos")
+    );
+    assert!(on.rendered.contains("symbol42(value: number)"));
+    assert!(!on.rendered.contains("const result"));
+    assert!(on.budget.used <= 2000);
+    let limited = ContextRequest {
+        task: "Corrige `symbol0` y `symbol1` y `symbol2`".into(),
+        params: Some(ContextParams {
+            related_max_fraction: 0.15,
+            related_focal: true,
+            focal_max_symbols: 2,
+            ..Default::default()
+        }),
+        ..request(true)
+    };
+    let pack = build_context(&map, dir.path(), &limited, &ContextInputs::default()).unwrap();
+    assert!(pack.rendered.contains("178 símbolos omitidos"));
+    assert_eq!(pack.rendered.matches("(value: number)").count(), 2);
+    // Sin foco, D2 no inventa firmas ni recupera un archivo sobre el tope.
+    let no_focus = ContextRequest {
+        task: "xyzzy".into(),
+        ..request(true)
+    };
+    let pack = build_context(&map, dir.path(), &no_focus, &ContextInputs::default()).unwrap();
+    assert!(!pack.files.iter().any(|f| f.level != RenderLevel::L0));
+}
+
+#[test]
+fn adr036_d3_overflow_anchor_focal_l0_and_minimum_error() {
+    let (dir, map) = temporary_state(&[("src/large.ts", adr036_large_source())]);
+    let request = ContextRequest {
+        task: "Corrige symbol42".into(),
+        budget_tokens: 2000,
+        anchors: Anchors {
+            files: vec!["src/large.ts".into()],
+            symbols: vec![],
+        },
+        ..Default::default()
+    };
+    assert!(matches!(
+        build_context(&map, dir.path(), &request, &ContextInputs::default()),
+        Err(ContextError::BudgetExceeded { .. })
+    ));
+    let enabled = ContextRequest {
+        params: Some(ContextParams {
+            anchor_overflow_focal: true,
+            ..Default::default()
+        }),
+        ..request
+    };
+    let pack = build_context(&map, dir.path(), &enabled, &ContextInputs::default()).unwrap();
+    assert_eq!(pack.files[0].level, RenderLevel::L3);
+    assert!(pack.rendered.contains("const result = value + 42;"));
+    assert!(pack.rendered.contains("vista focal"));
+    assert!(pack.budget.used <= 2000);
+    let no_focus = ContextRequest {
+        task: "xyzzy".into(),
+        ..enabled.clone()
+    };
+    let pack = build_context(&map, dir.path(), &no_focus, &ContextInputs::default()).unwrap();
+    assert_eq!(pack.files[0].level, RenderLevel::L0);
+    assert_eq!(
+        pack.files[0].note.as_deref(),
+        Some("contenido omitido por presupuesto; léalo con su herramienta de lectura")
+    );
+    assert!(pack.budget.used <= 2000);
+    // El contexto obligatorio deja sin espacio incluso al L0 de todas las anclas.
+    let input = ContextInputs {
+        rules: Some("obligatorio ".repeat(600)),
+        ..Default::default()
+    };
+    assert!(matches!(
+        build_context(&map, dir.path(), &enabled, &input),
+        Err(ContextError::BudgetExceeded { .. })
+    ));
+}
+
+#[test]
+fn adr036_d4_restricts_repeated_mentions_not_explicit_anchors() {
+    let (dir, _) = temporary_state(&[
+        ("pnpm-workspace.yaml", "packages:\n  - packages/*\n".into()),
+        (
+            "packages/react/package.json",
+            "{\"name\":\"@test/react\"}".into(),
+        ),
+        (
+            "packages/vue/package.json",
+            "{\"name\":\"@test/vue\"}".into(),
+        ),
+        (
+            "packages/other/package.json",
+            "{\"name\":\"@test/other\"}".into(),
+        ),
+        (
+            "packages/react/src/useQuery.ts",
+            "export function useQuery() { return 1; }\n".into(),
+        ),
+        (
+            "packages/vue/src/useQuery.ts",
+            "export function useQuery() { return 2; }\n".into(),
+        ),
+    ]);
+    let map = build(dir.path(), &MapConfig::default(), &mut ParseCache::new()).unwrap();
+    let mentions = |task: &str, enabled: bool| {
+        let input = ContextInputs::default();
+        let req = normalize::request(
+            &ContextRequest {
+                task: task.into(),
+                params: Some(ContextParams {
+                    package_mentions: enabled,
+                    ..Default::default()
+                }),
+                anchors: Anchors {
+                    files: vec!["packages/vue/src/useQuery.ts".into()],
+                    symbols: vec![],
+                },
+                ..Default::default()
+            },
+            &input,
+        )
+        .unwrap();
+        seeds::build(&map.map, &req, &input, &normalize::tokenize(&req.task)).unwrap()
+    };
+    let repeated = "Corrige `useQuery` en useQuery.ts para @test/react";
+    let off = mentions(repeated, false);
+    let on = mentions(repeated, true);
+    for reason in ["PATH_MENTION", "SYMBOL_MENTION"] {
+        assert!(off.reasons["packages/vue/src/useQuery.ts"].contains(reason));
+        assert!(!on.reasons["packages/vue/src/useQuery.ts"].contains(reason));
+        assert!(on.reasons["packages/react/src/useQuery.ts"].contains(reason));
+        // Paquete no nombrado / inexistente / nombre prefijo: conserva todos los candidatos.
+        for task in [
+            "Corrige useQuery.ts y `useQuery`",
+            "@test/other useQuery.ts `useQuery`",
+            "@test/react-extra useQuery.ts `useQuery`",
+        ] {
+            assert!(mentions(task, true).reasons["packages/vue/src/useQuery.ts"].contains(reason));
+        }
+    }
+    assert!(on.anchors.contains("packages/vue/src/useQuery.ts"));
 }

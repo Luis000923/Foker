@@ -47,8 +47,9 @@ const FLOW_TASK_ID: &str = "tsk_00000000000000000000000000";
 const FLOW_CHECKS: [&str; 4] = ["typecheck", "lint", "test", "secrets"];
 
 /// Configuración evaluada: `params: None` es el motor actual sin parámetros.
+#[derive(Deserialize)]
 pub struct Config {
-    pub name: &'static str,
+    pub name: String,
     pub params: Option<ContextParams>,
 }
 
@@ -56,25 +57,25 @@ pub struct Config {
 pub fn configs() -> Vec<Config> {
     vec![
         Config {
-            name: "default",
+            name: "default".into(),
             params: None,
         },
         Config {
-            name: "sin_adr034",
+            name: "sin_adr034".into(),
             params: Some(ContextParams {
                 small_full_max_extra: 0,
                 ..Default::default()
             }),
         },
         Config {
-            name: "sin_adr033",
+            name: "sin_adr033".into(),
             params: Some(ContextParams {
                 focal_min_tokens: 0,
                 ..Default::default()
             }),
         },
         Config {
-            name: "plegado",
+            name: "plegado".into(),
             params: Some(ContextParams {
                 inflection_folding: true,
                 ..Default::default()
@@ -87,11 +88,15 @@ pub fn configs() -> Vec<Config> {
 #[derive(Deserialize)]
 pub struct Case {
     pub id: String,
+    #[serde(default)]
     pub repo: String,
     pub task: String,
     pub split: String,
     pub gold_modified: Vec<String>,
+    #[serde(default)]
     pub gold_symbols: Vec<String>,
+    #[serde(default)]
+    pub anchors: Anchors,
 }
 
 /// Recall sobre gold_modified y precisión sobre el conjunto expuesto (0 si está vacío).
@@ -247,14 +252,27 @@ pub fn directory_scope(file: &str) -> String {
     }
 }
 
-/// Port de `deriveScopePaths`: L3 si hay; si no, tres L2 con señal directa primero.
+/// Port de `deriveScopePaths`: L3 si hay; si no, tres L1/L2 con señal directa y luego L2 del grafo (D5).
 pub fn derive_scope_paths(files: &[PackFile]) -> Vec<String> {
     let targets: Vec<&PackFile> = files.iter().filter(|f| f.level.as_str() == "L3").collect();
     let chosen = if targets.is_empty() {
-        let l2: Vec<&PackFile> = files.iter().filter(|f| f.level.as_str() == "L2").collect();
-        let mut ordered = rank(l2.iter().copied().filter(|f| direct_signal(f)).collect());
+        let candidates: Vec<&PackFile> = files
+            .iter()
+            .filter(|f| matches!(f.level.as_str(), "L1" | "L2"))
+            .collect();
+        let mut ordered = rank(
+            candidates
+                .iter()
+                .copied()
+                .filter(|f| direct_signal(f))
+                .collect(),
+        );
         ordered.extend(rank(
-            l2.iter().copied().filter(|f| !direct_signal(f)).collect(),
+            candidates
+                .iter()
+                .copied()
+                .filter(|f| f.level.as_str() == "L2" && !direct_signal(f))
+                .collect(),
         ));
         ordered.truncate(3);
         ordered
@@ -349,6 +367,32 @@ fn error_code(error: &impl ToString) -> String {
     text.split(':').next().unwrap_or(&text).to_owned()
 }
 
+/// Registro optativo de packs canónicos, sin tiempos; no escribe en los árboles.
+fn dump_pack(pack: &ContextPack) {
+    if let Ok(path) = std::env::var("FOKER_EVAL_PACK_DUMP") {
+        use std::io::Write;
+        let mut file = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(path)
+            .expect("dump de packs");
+        writeln!(file, "{}", pack.to_canonical_json()).expect("escribir dump");
+    }
+}
+
+/// Incluye también los errores íntegros del motor en la comparación byte a byte.
+fn dump_error(error: &impl ToString) {
+    if let Ok(path) = std::env::var("FOKER_EVAL_PACK_DUMP") {
+        use std::io::Write;
+        let mut file = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(path)
+            .expect("dump de errores");
+        writeln!(file, "{}", json!({"error": error.to_string()})).expect("escribir error");
+    }
+}
+
 fn ms(start: Instant) -> f64 {
     (start.elapsed().as_secs_f64() * 1e6).round() / 1e3
 }
@@ -397,8 +441,12 @@ pub fn flow(
     };
     let start = Instant::now();
     match build_context(state, root, request, &inputs) {
-        Err(error) => failed(&error_code(&error), false, scope_coverage),
+        Err(error) => {
+            dump_error(&error);
+            failed(&error_code(&error), false, scope_coverage)
+        }
         Ok(pack) => {
+            dump_pack(&pack);
             let build_ms = ms(start);
             let exposed = exposed(&pack);
             let (recall, precision) = score(&exposed, &case.gold_modified);
@@ -446,6 +494,7 @@ pub fn evaluate_config(
 ) -> Value {
     let request = ContextRequest {
         task: case.task.clone(),
+        anchors: case.anchors.clone(),
         budget_tokens: BUDGET,
         params: config.params.clone(),
         ..Default::default()
@@ -453,6 +502,7 @@ pub fn evaluate_config(
     let start = Instant::now();
     let (pack, flow) = match build_context(state, root, &request, &ContextInputs::default()) {
         Ok(pack) => {
+            dump_pack(&pack);
             let build_ms = ms(start);
             let exposed = exposed(&pack);
             let (recall, precision) = score(&exposed, &case.gold_modified);
@@ -467,6 +517,7 @@ pub fn evaluate_config(
             )
         }
         Err(error) => {
+            dump_error(&error);
             let code = error_code(&error);
             (
                 json!({"error": code, "recall": 0.0, "precision": 0.0, "gold_full": 0.0}),
@@ -485,6 +536,7 @@ pub fn evaluate_config(
     };
     let symbols = match build_context(state, root, &anchored, &ContextInputs::default()) {
         Ok(pack) => {
+            dump_pack(&pack);
             let delivered = texts
                 .iter()
                 .filter(|(file, text)| {
@@ -509,11 +561,14 @@ pub fn evaluate_config(
                 "anchor_tokens": anchor_tokens, "tokens": pack.budget.used,
             })
         }
-        Err(error) => json!({
-            "error": error_code(&error),
-            "symbol_recall": if texts.is_empty() { Value::Null } else { json!(0.0) },
-            "gold_symbols": texts.len(), "delivered": 0,
-        }),
+        Err(error) => {
+            dump_error(&error);
+            json!({
+                "error": error_code(&error),
+                "symbol_recall": if texts.is_empty() { Value::Null } else { json!(0.0) },
+                "gold_symbols": texts.len(), "delivered": 0,
+            })
+        }
     };
     json!({"pack": pack, "flow": flow, "symbols": symbols})
 }
@@ -590,12 +645,41 @@ pub fn summarize(rows: &[&Value]) -> Value {
 
 /// Evalúa todos los casos; cada árbol es `<trees>/<id>` (salida de ctx-gold.mjs).
 pub fn evaluate(cases: &str, trees: &Path) -> Result<Value, Error> {
-    let configs = configs();
+    evaluate_with_configs(cases, trees, &[], None)
+}
+
+/// Configuraciones adicionales y filtro antes de acceder a los árboles; defaults intactos.
+pub fn evaluate_with_configs(
+    cases: &str,
+    trees: &Path,
+    extra: &[Config],
+    split: Option<&str>,
+) -> Result<Value, Error> {
+    let mut configs = configs();
+    let mut names: BTreeSet<String> = configs.iter().map(|c| c.name.clone()).collect();
+    for config in extra {
+        if !names.insert(config.name.clone()) {
+            return Err("configuración duplicada".into());
+        }
+        if let Some(params) = &config.params {
+            params.validate()?;
+        }
+        configs.push(Config {
+            name: config.name.clone(),
+            params: config.params.clone(),
+        });
+    }
     let mut out_cases = Vec::new();
     // Filas planas (caso × configuración) para el resumen.
     let mut flat: Vec<(String, String, Value)> = Vec::new();
     for line in cases.lines().filter(|l| !l.trim().is_empty()) {
         let case: Case = serde_json::from_str(line)?;
+        if split.is_some_and(|split| split != case.split) {
+            continue;
+        }
+        if std::env::var_os("FOKER_EVAL_PROGRESS").is_some() {
+            eprintln!("evaluando {}", case.id);
+        }
         let root = trees.join(&case.id);
         let start = Instant::now();
         let state = build(&root, &MapConfig::default(), &mut ParseCache::new())?;
@@ -605,8 +689,8 @@ pub fn evaluate(cases: &str, trees: &Path) -> Result<Value, Error> {
         let mut results = serde_json::Map::new();
         for config in &configs {
             let result = evaluate_config(&state, &root, &case, config, &texts, &map_files);
-            flat.push((config.name.into(), case.split.clone(), result.clone()));
-            results.insert(config.name.into(), result);
+            flat.push((config.name.clone(), case.split.clone(), result.clone()));
+            results.insert(config.name.clone(), result);
         }
         out_cases.push(json!({
             "id": case.id, "repo": case.repo, "split": case.split,
@@ -620,12 +704,12 @@ pub fn evaluate(cases: &str, trees: &Path) -> Result<Value, Error> {
         for split in ["all", "calibration", "validation"] {
             let rows: Vec<&Value> = flat
                 .iter()
-                .filter(|(c, s, _)| c == config.name && (split == "all" || s == split))
+                .filter(|(c, s, _)| c == &config.name && (split == "all" || s == split))
                 .map(|(_, _, v)| v)
                 .collect();
             per_split.insert(split.into(), summarize(&rows));
         }
-        summary.insert(config.name.into(), Value::Object(per_split));
+        summary.insert(config.name.clone(), Value::Object(per_split));
     }
     let map_ms: Vec<f64> = out_cases
         .iter()
@@ -633,7 +717,7 @@ pub fn evaluate(cases: &str, trees: &Path) -> Result<Value, Error> {
         .collect();
     Ok(json!({
         "budget": BUDGET,
-        "configs": configs.iter().map(|c| c.name).collect::<Vec<_>>(),
+        "configs": configs.iter().map(|c| &c.name).collect::<Vec<_>>(),
         "map": {"trees": map_ms.len(), "median_ms": median(&map_ms), "mean_ms": mean(&map_ms)},
         "summary": summary,
         "cases": out_cases,

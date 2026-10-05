@@ -5,6 +5,18 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct ContextParams {
+    /// Tope por no ancla como fracción de B (ADR-036 D1); 0 lo desactiva.
+    #[serde(skip_serializing_if = "related_max_fraction_predeterminado")]
+    pub related_max_fraction: f64,
+    /// Firmas focales L1 para no anclas grandes (ADR-036 D2).
+    #[serde(skip_serializing_if = "related_focal_predeterminado")]
+    pub related_focal: bool,
+    /// Rescate focal/L0 de anclas cuyo mínimo L1 no cabe (ADR-036 D3).
+    #[serde(skip_serializing_if = "anchor_overflow_focal_predeterminado")]
+    pub anchor_overflow_focal: bool,
+    /// Desambiguación de menciones por paquete nombrado (ADR-036 D4).
+    #[serde(skip_serializing_if = "package_mentions_predeterminado")]
+    pub package_mentions: bool,
     /// Expansión léxica es/en v1, desactivable para medir el baseline.
     #[serde(skip_serializing_if = "expansion_predeterminada")]
     pub lexical_expansion: bool,
@@ -91,6 +103,11 @@ pub struct ContextParams {
 impl Default for ContextParams {
     fn default() -> Self {
         Self {
+            // ADR-036, segundo paso: congelada solo con calibration y barreras A/self.
+            related_max_fraction: 0.25,
+            related_focal: true,
+            anchor_overflow_focal: false,
+            package_mentions: true,
             lexical_expansion: true,
             inflection_folding: false,
             small_full_max_extra: 64,
@@ -156,6 +173,7 @@ impl ContextParams {
     /// Valida valores antes de calcular scores o presupuestos.
     pub fn validate(&self) -> Result<(), ContextError> {
         let weights = [
+            self.related_max_fraction,
             self.sufficiency_fraction,
             self.core_min_relative,
             self.bm25_min_relative,
@@ -185,6 +203,7 @@ impl ContextParams {
             .iter()
             .any(|v| !v.is_finite() || *v < 0.0 || *v > 100.0)
             || [
+                self.related_max_fraction,
                 self.sufficiency_fraction,
                 self.core_min_relative,
                 self.bm25_min_relative,
@@ -285,6 +304,22 @@ fn corte_core_predeterminado(value: &f64) -> bool {
     *value == ContextParams::default().core_min_relative
 }
 
+fn related_max_fraction_predeterminado(value: &f64) -> bool {
+    *value == ContextParams::default().related_max_fraction
+}
+
+fn related_focal_predeterminado(value: &bool) -> bool {
+    *value == ContextParams::default().related_focal
+}
+
+fn anchor_overflow_focal_predeterminado(value: &bool) -> bool {
+    *value == ContextParams::default().anchor_overflow_focal
+}
+
+fn package_mentions_predeterminado(value: &bool) -> bool {
+    *value == ContextParams::default().package_mentions
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -294,6 +329,10 @@ mod tests {
         let defaults = ContextParams::default();
         let json = serde_json::to_value(&defaults).unwrap();
         for key in [
+            "related_max_fraction",
+            "related_focal",
+            "anchor_overflow_focal",
+            "package_mentions",
             "lexical_expansion",
             "bm25_min_relative",
             "relevance_fraction",
@@ -323,6 +362,45 @@ mod tests {
             baseline
         );
     }
+    #[test]
+    fn adr036_overrides_y_limites_son_serializables() {
+        let defaults = ContextParams::default();
+        let overrides = ContextParams {
+            related_max_fraction: if defaults.related_max_fraction == 0.0 {
+                0.25
+            } else {
+                0.0
+            },
+            related_focal: !defaults.related_focal,
+            anchor_overflow_focal: !defaults.anchor_overflow_focal,
+            package_mentions: !defaults.package_mentions,
+            ..defaults
+        };
+        let json = serde_json::to_value(&overrides).unwrap();
+        for key in [
+            "related_max_fraction",
+            "related_focal",
+            "anchor_overflow_focal",
+            "package_mentions",
+        ] {
+            assert!(json.get(key).is_some());
+        }
+        assert_eq!(
+            serde_json::from_value::<ContextParams>(json).unwrap(),
+            overrides
+        );
+        for fraction in [-0.1, 1.01, f64::NAN, f64::INFINITY] {
+            assert!(
+                ContextParams {
+                    related_max_fraction: fraction,
+                    ..Default::default()
+                }
+                .validate()
+                .is_err()
+            );
+        }
+    }
+
     #[test]
     fn limites_enteros_no_truncan_ni_desbordan() {
         let defaults = ContextParams::default();
@@ -362,6 +440,14 @@ mod tests {
             assert!(params.validate().is_err());
         }
         for params in [
+            ContextParams {
+                related_max_fraction: f64::NAN,
+                ..Default::default()
+            },
+            ContextParams {
+                related_max_fraction: 1.01,
+                ..Default::default()
+            },
             ContextParams {
                 sufficiency_fraction: 1.01,
                 ..Default::default()

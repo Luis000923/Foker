@@ -1,6 +1,6 @@
 # Estado de Foker
 
-Última actualización: 2026-10-04 · Rama actual: main · Desarrollo con Claude Code + Codex (encargos en worktrees y revisión independiente)
+Última actualización: 2026-10-05 · Rama actual: main · Desarrollo con Claude Code (orquestador) + Codex, OpenCode y Antigravity (encargos en worktrees y revisión cruzada)
 
 ## Hito actual
 
@@ -35,6 +35,7 @@ M0, M2, M3, M4 y E6 completos en local; M1 con todo lo que no gasta API (manifie
 | FKR-014/015/018 | Fixture B, línea base, benchmark completo | bloqueado | — | PREGUNTA-6 y PREGUNTA-2 |
 | FKR-093 | Criterios reproducibles y candidatos para Fixture B | hecho (documentación) | feat/FKR-093-fixture-b-criterios | [Criterios](bench/fixture-b-criterios.md), [8 candidatos](bench/fixture-b-candidatos.md) y propuesta compatible de manifiesto; SHAs/tamaños/offline pendientes, selección humana PREGUNTA-6 |
 | FKR-095 | Dataset ctx-gold de símbolos del historial foker-self | hecho | feat/FKR-095-ctx-gold-simbolos | [Metodología y resultados](../benchmarks/ctx-gold/foker-self/README.md): 8 casos (2 calibration / 6 validation), 43 descartes; generación reproducible, base 0 verificada; Biome, tsc y 49 tests benchmarks pasan; sin commits |
+| FKR-097 | Presupuesto y archivos grandes en repos reales | hecho | feat/FKR-097-recall-repos-reales | ADR-036 aceptada con excepción: D1 (0,25) + D2 + D4 + D5, D3 desactivada. Fixture B recall pack validation 0,6238 → 0,8635, todos 0,4078 → 0,8307 (TARGET 0,80); flujo validation 0,5746 → 0,9111; 0 errores de alcance. Fixture A pack idéntico; flujo 0,7611 → 0,7444 (a-48), excepción aceptada por la persona. Codex implementa, Claude revisa y mide validation |
 | FKR-080 | Publicación npm | bloqueado | — | PREGUNTA-3 |
 | FKR-040…042 | Config, trust, ejecutor seguro | hecho | feat/FKR-040-config-trust-exec | ADR-022 (shims .cmd en Windows) |
 | FKR-043/044 | Parsers de hallazgos, escáner de secretos | hecho | feat/FKR-043-parsers-secretos | 24 reglas |
@@ -53,6 +54,22 @@ M0, M2, M3, M4 y E6 completos en local; M1 con todo lo que no gasta API (manifie
 | FKR-096 | Contenido completo de L2 pequeños | hecho | feat/FKR-096-cuerpo-pequeno | ADR-034: Δ ≤ 64 tokens (a priori); sin barrels; gold_full 0,167 → 0,436, recall igual, +11,5 % tokens; revisiones Codex ×2 + Claude |
 | FKR-060 | Esqueleto de CLI | hecho | feat/FKR-060-cli | Codex; `docs/cli.md` generado (REQ-DOC-001) |
 | FKR-092 | Medir y clasificar overhead fijo del anfitrión | hecho (local) | feat/FKR-092-overhead-anfitrion | Análisis determinista y 24 runs smoke-3…6; primer turno control ~15,7k, Foker ~17k; Δ smoke-6 1.316 tokens; internos no observables marcados INFERIDOS. Biome/tsc verdes, 40 tests benchmark verdes con addon externo de solo lectura |
+
+## Trabajo 2026-10-05 (tarde)
+
+- **bench-b-smoke-2 · válido** (b-vite-02, b-query-01, b-zod-02; 2 brazos × 1). 6/6 con
+  `api_error_status: null`, coste > 0 y `validate-results` correcto. Coste total 1,30 USD equivalentes
+  (suscripción): Foker 0,89, control 0,42. Éxito Foker 2/3, control 1/3 (n = 1: no es evidencia).
+  Fricciones: b-query-01 Foker, alcance derivado en `query-core` (el gate impidió editar `react-query`;
+  corregido por ADR-036 D5) y check `test` agotado a 600 s; b-vite-02 Foker, G1 rechazó artefactos
+  ignorados por git que generaron los propios checks (FKR-098, ADR-037).
+- **FKR-097 · ADR-036**: diagnóstico de los 69 gold de Fixture B (hubs que ocupan el presupuesto,
+  archivos que no caben ni en L1, nombres repetidos en monorepos, vocabulario). Revalidación en B:
+  ADR-033 confirmada (sin focal, símbolos calibration 0,396 → 0,313); ADR-034 sin efecto en B
+  (`gold_full` 0); plegado flexivo sigue desactivado (pack 0,831 → 0,775).
+- **FKR-070**: checklist ejecutable de los 4 anfitriones (rama feat/FKR-070-checklist-anfitriones,
+  OpenCode). Fallos válidos: Antigravity (`agy` 1.2.17) no lee `.agents/mcp_config.json`;
+  `doctor` busca `antigravity` en vez de `agy`.
 
 ## Trabajo 2026-10-05
 
