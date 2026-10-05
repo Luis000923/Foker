@@ -200,3 +200,42 @@ cargo run --offline -p foker-context --example recall_diagnose -- /tmp/fa [calib
 pnpm build:native && pnpm build
 (cd benchmarks && node run.mjs ctx-gold ../benchmarks/ctx-gold/cases.jsonl 8000 /tmp/ctx-gold-adr032)
 ```
+
+## Resultados smoke-7 (tras ADR-032)
+
+`bench-smoke-7` repite smoke-6 con el **mismo manifiesto archivado** (hash
+`blake3:3ea8e24f…`), las mismas 3 tareas × 2 brazos, 1 repetición, Claude Code 2.1.289,
+`claude-sonnet-5-5` por suscripción, y el mismo orden de ejecución. La imagen `foker-bench:0.0.0`
+se reconstruyó desde `main` (d03fd5e); la de smoke-6 se conserva como `foker-bench:smoke6`.
+Llamadas contadas con `host-overhead` (FKR-092). Tokens de entrada = input + escritura y
+lectura de caché.
+
+| Tarea | Brazo | Tokens smoke-6 → 7 | Llamadas 6 → 7 | Herramientas 6 → 7 | Éxito 6 → 7 |
+|---|---|---:|---:|---|---|
+| a-01 | control | 67.624 → 84.116 | 4 → 5 | 3 → 4 (Bash +1) | sí → sí |
+| a-01 | Foker | 123.551 → 120.147 | 6 → 6 | 7 → 6 (sin Skill) | sí → sí |
+| a-15 | control | 64.210 → 64.210 | 4 → 4 | 3 → 3 | sí → sí |
+| a-15 | Foker | 77.468 → 98.225 | 4 → 5 | 4 → 4 | sí → sí |
+| a-09 | control | 140.787 → 142.251 | 8 → 8 | 8 → 8 (6 Bash) | no → no |
+| a-09 | Foker | **169.395 → 125.037** | **8 → 6** | **11 → 8** | no → no |
+
+Foker/control en smoke-7: a-01 1,43x; a-15 1,53x; **a-09 0,88x** (en smoke-6: 1,83x, 1,21x y 1,20x).
+
+**OBSERVACIÓN (a-09, Foker)**: el pack de begin incluye `skuMatches.ts` (L2) y
+`referenceSearch.ts` (L1). El modelo va directo a `skuMatches.ts`: desaparecen el Bash de
+exploración y `foker_search` de smoke-6 (3 lecturas → 2 `Read`). Aun así abre `skuMatches.ts`
+con `Read` porque L2 solo trae la firma de un archivo de 4 líneas. La tarea sigue fallando en
+ambos brazos (`fail_to_pass`), porque ninguno adapta el consumidor `ui/referenceSearch`. El
+fallo restante no es de recall de contexto.
+
+**OBSERVACIÓN (variabilidad)**: el control de a-01 sube un 24 % y Foker en a-15 un 27 % sin
+cambios que les afecten. Se deben a un turno más del modelo. Con n = 1, diferencias de ±25 %
+son ruido plausible.
+
+**INTERPRETACIÓN**: la corrección de recall elimina la exploración manual en a-09
+(−26 % de tokens y −2 llamadas) y es coherente con ctx-gold (flujo 0,33 → 0,76). No cambia el
+éxito (2/3 por brazo). No demuestra H1 ni no inferioridad.
+
+**HIPÓTESIS (siguiente)**: una lectura de un archivo de 4 líneas cuesta un turno completo
+(~17k tokens releídos de caché). Entregar el cuerpo completo de los archivos L2 pequeños, cuando
+cuesta poco más que su firma, podría ahorrar llamadas. Pendiente de medir con ctx-gold y un smoke.
