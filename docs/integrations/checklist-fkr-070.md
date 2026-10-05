@@ -220,7 +220,7 @@ foker doctor --json
 **Esperado**: `ok` en `node`, `addon`, `git`, `config`, `trust`, `sync`, `rules`, `mcp`,
 `gitignore`; `host:claude-code:session` y `host:codex:session` en `ok`. Advertencias
 esperadas: `host:opencode:session` (PENDIENTE de verificación manual, por diseño),
-`host:antigravity` (ver [fallo 4](#fallo-4)) y `sandbox` (C4, sin sandbox de SO).
+`host:antigravity:session` (PENDIENTE de verificación manual, por diseño) y `sandbox` (C4, sin sandbox de SO).
 
 ---
 
@@ -734,28 +734,13 @@ Código responsable (no corregido):
 (`.agents/plugins/<nombre>/mcp_config.json` + `plugin.json`, **NO VERIFICADO**), y corregir
 el adaptador. Requiere decisión de contrato → ADR.
 
-### Fallo 4 — `foker doctor` busca un binario `antigravity` que no existe
+### Fallo 4 — `foker doctor` sondea `agy` para Antigravity (corregido en FKR-099)
 
-**Severidad**: media; ruido permanente en `doctor` que oculta avisos reales.
-
-`agy` es el binario real de Antigravity, pero `doctor` deriva el nombre del comando del id
-del target salvo para Claude Code:
-
-```console
-$ which antigravity
-antigravity not found
-$ foker doctor | grep antigravity
-! host:antigravity: antigravity no disponible — Instala antigravity y abre una sesión
-```
-
-Código responsable (no corregido): `packages/cli/src/commands/doctor.ts:44`.
-
-```ts
-const command = target === 'claude-code' ? 'claude' : target;
-```
-
-Falta el caso `antigravity -> agy`. Mientras tanto, la fila `host:antigravity` de `doctor`
-es una falsa negativa y no debe leerse como "Antigravity no está instalado".
+El diagnóstico usa un mapa explícito de target a binario: `claude-code` → `claude`,
+`codex` → `codex`, `opencode` → `opencode`, `antigravity` → `agy`.
+Para Antigravity ejecuta `agy --version` y conserva el id `host:antigravity`.
+Si el binario está disponible, ese check devuelve `ok`; la sesión sigue siendo
+PENDIENTE de verificación manual porque `agy` no tiene subcomando `auth` ni `login`.
 
 ### Fallo 5 — Codex necesita confianza de proyecto explícita para leer `.codex/config.toml`
 
@@ -892,7 +877,7 @@ de 120 como referencia, tablas Markdown bien cerradas).
 | 1 · `npx --no-install foker` | VÁLIDO | Se resuelve con la instalación desde tarball local (fase 4, paso 9) |
 | 2 · `sync --target X` borra otros targets | NO VÁLIDO como bug | FOKER-SPEC §14 («cambiar de agente = `foker sync --target <nuevo>`») define `--target` como el conjunto deseado. Para varios anfitriones: `--target claude-code,codex,opencode,antigravity`. Hay que documentarlo en `docs/cli.md` |
 | 3 · Antigravity no lee `.agents/mcp_config.json` | VÁLIDO | Reproducido con `HOME` aislado y `agy` 1.2.17: `No MCP servers configured`. Cambiar la ruta exige ADR (contrato de §14.2); issue nueva |
-| 4 · `doctor` busca `antigravity` | VÁLIDO | `packages/cli/src/commands/doctor.ts:44` solo traduce `claude-code`; issue nueva |
+| 4 · `doctor` busca `antigravity` | CORREGIDO (FKR-099) | Mapa explícito de binarios; Antigravity se sondea con `agy --version` y conserva `host:antigravity` |
 | 5 · Codex exige confianza de proyecto | VÁLIDO (documentación) | Paso manual en el checklist |
 | 6 · `--strict-config` no valida bloques anidados | VÁLIDO (limitación del anfitrión) | No depende de Foker |
 | 7 · OpenCode `bash: ask` del rol frente a `deny` | PLAUSIBLE, sin reproducir | Afecta a seguridad (`git push`); se verifica con sesión real en el paso manual de OpenCode antes de firmar |
