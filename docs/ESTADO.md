@@ -47,8 +47,21 @@ M0, M2, M3, M4 y E6 completos en local; M1 con todo lo que no gasta API (manifie
 | FKR-070 | Verificación manual de anfitriones | pendiente (humano) | — | Checklist en docs/integrations/verification.md |
 | FKR-081/082 | Nightly, SECURITY.md | hecho | feat/FKR-081-082-nightly-security | |
 | FKR-060 | Esqueleto de CLI | hecho | feat/FKR-060-cli | Codex; `docs/cli.md` generado (REQ-DOC-001) |
+| FKR-092 | Medir y clasificar overhead fijo del anfitrión | hecho (local) | feat/FKR-092-overhead-anfitrion | Análisis determinista y 24 runs smoke-3…6; primer turno control ~15,7k, Foker ~17k; Δ smoke-6 1.316 tokens; internos no observables marcados INFERIDOS. Biome/tsc verdes, 40 tests benchmark verdes con addon externo de solo lectura |
 
 ## Trabajo 2026-10-04
+
+- **FKR-092 · Overhead del anfitrión**: script `host-overhead` deduplica por `message.id`
+  y separa entrada/caché/salida, base inicial y crecimiento. [Informe](bench/overhead-anfitrion.md)
+  de 24 ejecuciones: smoke-6 control 15.703–15.718 tokens iniciales, Foker 17.019–17.034,
+  diferencial pareado 1.316; ~11.914 es un bloque cacheado, no toda la entrada inicial.
+  Lectura cacheada 96,54 % control / 91,44 % Foker; escritura TTL 1h explica la diferencia
+  entre coste reportado y manifiesto (1,5 USD/M escritos). a-09: 8 llamadas por brazo.
+  Archivos generados medidos en bytes; system/tools internos sin desglose observable.
+  Biome y tipos verdes; 40 tests benchmark pasan tras build TS y preload temporal de addon
+  existente de solo lectura (faltaba en el worktree); sin cambios de Rust/anfitrión/dataset.
+  `pnpm verify` no ejecutado por restricción offline del issue. Commits pendientes:
+  Git no puede crear `index.lock` en el gitdir compartido, de solo lectura en el sandbox.
 
 - **ADR-031 fases 1b/1c/2/2b**: pack sin pérdida (rangos de hermanos, L2 compartido, firma inline;
   diccionario de macros rechazado por riesgo de calidad). ctx-gold: mediana rendered 5552 → 903

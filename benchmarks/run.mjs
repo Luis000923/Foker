@@ -3,6 +3,7 @@ import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const commands = new Set([
+  'host-overhead',
   'bench-run',
   'bench-report',
   'diagnose',
@@ -15,7 +16,10 @@ const commands = new Set([
 const command = process.argv[2];
 if (!commands.has(command)) throw new Error('Comando de benchmark desconocido');
 // Node 26 ya no transforma TypeScript (solo elimina tipos): se ejecuta el código compilado.
-const compiled = new URL(`./dist/${command}.js`, import.meta.url);
+const compiled = new URL(
+  `./dist/${command === 'host-overhead' ? 'analysis/host-overhead' : command}.js`,
+  import.meta.url,
+);
 if (!existsSync(fileURLToPath(compiled))) {
   throw new Error('Falta benchmarks/dist: ejecuta pnpm build (o pnpm --filter @foker/benchmarks run build)');
 }
