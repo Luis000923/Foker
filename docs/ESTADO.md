@@ -79,10 +79,13 @@ M0, M2, M3, M4 y E6 completos en local; M1 con todo lo que no gasta API (manifie
   con el motor congelado: recall pack 0,408 / flujo 0,396 / símbolos 0,370 (Fixture A: 0,744 / 0,761);
   12/45 anclas fallan con FKR-CTX-001 (10 en Zod); `gold_full` 0; plegado empeora. Pendiente:
   arnés por repo para FKR-015 y autorización del benchmark pagado.
-  **Corrección (2026-10-05)**: la selección v1 quedó invalidada por la revisión Codex (ADR-035) y la
-  reverificación v2 se interrumpió. Con aval v2 hay **31/45** (Vite 12, Query 10, Zod 9); las 14
-  restantes (b-vite-13…15, b-query-11…15, b-zod-10…15) son v1 y no deben usarse hasta completar v2.
-  Auditoría de las 31 con los logs guardados: 0 skips nuevos por archivo, 0 veredictos de otra huella.
+  **Corrección (2026-10-05)**: la reverificación v2 se había interrumpido con 31/45 avaladas. Se
+  completó: las **45 tareas tienen aval v2** (huella `5cc8a340ce5b`, 3 repeticiones estables, sin
+  skips nuevos por archivo) y el conjunto coincide con v1. Dos bajas intermedias (b-vite-13,
+  b-zod-10) eran `verifier_error` por cerrojos huérfanos de la interrupción, apartados como
+  `*.lock.huerfano-0530`.
+- **bench-b-smoke-1 · inválido**: 6/6 `API Error 400` en el primer turno por un token OAuth mal
+  guardado (caracteres de control del pegado). Coste 0; no se usa como evidencia.
 - **FKR-096 · Contenido completo de L2 pequeños (ADR-034)**. Umbral fijado antes de implementar:
   Δ = completo − firmas ≤ 64 tokens, nunca en barrels. ctx-gold: recall igual, `gold_full`
   0,167 → 0,436 (flujo 0,394), +11,5 % de tokens del pack. Límite del anfitrión declarado: Claude

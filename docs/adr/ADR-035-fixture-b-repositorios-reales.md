@@ -209,6 +209,9 @@ orden de semilla y con las mismas reglas; la evidencia v1 se conserva aparte (`v
   con su versión de C, build, F2P, P2P (suite sin los archivos F2P) y calidad.
 - Validado sin API con agentes simulados (gold → éxito; noop → F2P falso y P2P verdadero) en
   Vite, Query y Zod, y en el brazo Foker.
+- Limitaciones: `verify_task.py` no distingue un cerrojo huérfano (proceso interrumpido) de uno
+  activo; el lote lo registra como `verifier_error`. Procedimiento: sin procesos vivos, apartar los
+  `run<n>.lock` y relanzar el lote (no se corrige en el script para no cambiar su huella).
 - Limitaciones: P2P excluye por nombre de archivo (vitest 4) y podría excluir un test homónimo
   del mismo paquete. `task_type` del esquema v1: perf → refactor, otro → fix. `retries` y
   `ccr_relevante` no se instrumentan (null).
