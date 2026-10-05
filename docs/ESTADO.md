@@ -48,6 +48,7 @@ M0, M2, M3, M4 y E6 completos en local; M1 con todo lo que no gasta API (manifie
 | FKR-081/082 | Nightly, SECURITY.md | hecho | feat/FKR-081-082-nightly-security | |
 | FKR-091 | Recall en el flujo `foker_task_begin` | hecho | feat/FKR-091-recall | ADR-032: recall del flujo 0,3319 → 0,7611 (pack 0,7444 sin cambios); plegado flexivo medido y desactivado; revisión Codex 3/3 válidos corregidos |
 | FKR-060 | Esqueleto de CLI | hecho | feat/FKR-060-cli | Codex; `docs/cli.md` generado (REQ-DOC-001) |
+| FKR-092 | Medir y clasificar overhead fijo del anfitrión | hecho (local) | feat/FKR-092-overhead-anfitrion | Análisis determinista y 24 runs smoke-3…6; primer turno control ~15,7k, Foker ~17k; Δ smoke-6 1.316 tokens; internos no observables marcados INFERIDOS. Biome/tsc verdes, 40 tests benchmark verdes con addon externo de solo lectura |
 
 ## Trabajo 2026-10-04
 
@@ -62,6 +63,16 @@ M0, M2, M3, M4 y E6 completos en local; M1 con todo lo que no gasta API (manifie
   plegado flexivo es/en sube el recall de calibration a 0,806, pero regresa a-49: queda
   desactivado. El recall del pack (REQ-CTX-003) sigue en 0,7444: el TARGET 0,80 está
   pendiente y los fallos restantes son de vocabulario o sinonimia y de archivos nuevos.
+- **FKR-092 · Overhead del anfitrión**: script `host-overhead` deduplica por `message.id`
+  y separa entrada/caché/salida, base inicial y crecimiento. [Informe](bench/overhead-anfitrion.md)
+  de 24 ejecuciones: smoke-6 control 15.703–15.718 tokens iniciales, Foker 17.019–17.034,
+  diferencial pareado 1.316; ~11.914 es un bloque cacheado, no toda la entrada inicial.
+  Lectura cacheada 96,54 % control / 91,44 % Foker; escritura TTL 1h explica la diferencia
+  entre coste reportado y manifiesto (1,5 USD/M escritos). a-09: 8 llamadas por brazo.
+  Archivos generados medidos en bytes; system/tools internos sin desglose observable.
+  Biome y tipos verdes; 40 tests benchmark pasan tras build TS y preload temporal de addon
+  existente de solo lectura (faltaba en el worktree); sin cambios de Rust/anfitrión/dataset.
+  Implementado por Codex en worktree; commit, revisión y `pnpm verify` tras el merge por Claude.
 
 - **ADR-031 fases 1b/1c/2/2b**: pack sin pérdida (rangos de hermanos, L2 compartido, firma inline;
   diccionario de macros rechazado por riesgo de calidad). ctx-gold: mediana rendered 5552 → 903
