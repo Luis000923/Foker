@@ -109,6 +109,48 @@ fn focal_candidate(
     file.tokens = estimate_tokens(&text);
     Ok(Some((file, text)))
 }
+/// D2: firmas del foco léxico; la omisión pertenece al contenido no confiable.
+fn related_focal_candidate(
+    state: &MapState,
+    candidate: &Candidate,
+    request: &crate::NormalizedRequest,
+    params: &crate::ContextParams,
+) -> Option<RenderedFile> {
+    let symbols: Vec<_> = state
+        .map
+        .symbols
+        .iter()
+        .filter(|s| s.file() == candidate.id)
+        .collect();
+    let mut focal = crate::focal::focal_symbols(&symbols, &request.task, &[], params);
+    focal.truncate(params.focal_max_symbols);
+    if focal.is_empty() {
+        return None;
+    }
+    let selected: Vec<_> = symbols.iter().filter(|s| focal.contains(&s.id)).collect();
+    let body = format!(
+        "// foker: vista focal L1; {} símbolos omitidos\n{}",
+        symbols.len() - selected.len(),
+        selected
+            .iter()
+            .map(|s| s.signature.as_str())
+            .collect::<Vec<_>>()
+            .join("\n")
+    );
+    let mut file = PackFile {
+        id: candidate.id.clone(),
+        level: RenderLevel::L1,
+        tokens: 0,
+        score: candidate.score,
+        reasons: candidate.reasons.clone(),
+        note: None,
+    };
+    let text = render::file(&file, &body, request.explain);
+    file.tokens = estimate_tokens(&text);
+    Some((file, text))
+}
+const OVERFLOW_OMITTED: &str =
+    "contenido omitido por presupuesto; léalo con su herramienta de lectura";
 const OMITTED: &str =
     "contenido completo omitido por presupuesto; léalo con su herramienta de lectura";
 fn section(id: &str, files: &[RenderedFile]) -> SectionText {
@@ -157,7 +199,18 @@ pub fn select(
         breakdown.push((candidate.id.clone(), pair.0.tokens));
         targets.push(pair);
     }
-    let minimum = fixed_cost + section("targets", &targets).section.tokens;
+    let mut minimum = fixed_cost + section("targets", &targets).section.tokens;
+    // D3: el mínimo de error es L0 para todas las anclas, con omisión explícita.
+    if params.anchor_overflow_focal && minimum > budget {
+        targets = ranked
+            .iter()
+            .filter(|c| c.anchor)
+            .map(|c| render(c, RenderLevel::L0, Some(OVERFLOW_OMITTED.into())))
+            .collect::<Result<_, _>>()?;
+        minimum = fixed_cost + section("targets", &targets).section.tokens;
+        breakdown.truncate(fixed.iter().filter(|s| s.section.tokens > 0).count());
+        breakdown.extend(targets.iter().map(|p| (p.0.id.clone(), p.0.tokens)));
+    }
     if minimum > budget {
         return Err(ContextError::BudgetExceeded {
             limit: budget,
@@ -169,7 +222,12 @@ pub fn select(
     for (position, candidate) in ranked.iter().filter(|c| c.anchor).enumerate() {
         let minimum_pair = targets[position].clone();
         let full = render(candidate, RenderLevel::L3, None)?;
-        let fraction = (budget as f64 * params.anchor_fraction).floor() as usize;
+        let overflow = minimum_pair.0.level == RenderLevel::L0;
+        let fraction = if overflow {
+            budget
+        } else {
+            (budget as f64 * params.anchor_fraction).floor() as usize
+        };
         let fits = |targets: &[RenderedFile]| {
             fixed_cost + section("targets", targets).section.tokens <= capacity
         };
@@ -181,7 +239,7 @@ pub fn select(
         }
         // ADR-033: la vista focal solo sustituye a la degradación (el L3 completo supera
         // anchor_fraction o no cabe en la capacidad restante); nunca a un L3 completo que cabe.
-        if params.focal_min_tokens > 0 && full.0.tokens > params.focal_min_tokens {
+        if overflow || (params.focal_min_tokens > 0 && full.0.tokens > params.focal_min_tokens) {
             let symbols = symbols_by_file
                 .get_or_insert_with(|| {
                     let mut by_file: BTreeMap<&str, Vec<&foker_map::model::MapSymbol>> =
@@ -221,6 +279,11 @@ pub fn select(
         !below_relevance(c.score, maximum, params.relevance_fraction)
             && !below_relevance(c.score, best_optional, params.sufficiency_fraction)
     };
+    let per_file_limit = if params.related_max_fraction > 0.0 {
+        (budget as f64 * params.related_max_fraction).floor() as usize
+    } else {
+        usize::MAX
+    };
     let mut accepted_count = 0;
     for candidate in ranked.iter().filter(|c| !c.anchor) {
         if !sufficient(candidate) || accepted_count >= related_limit {
@@ -254,6 +317,7 @@ pub fn select(
             if lower <= limit
                 && let Ok(complete) = render_complete_l2(&index, root, candidate, explain)
                 && complete.0.tokens <= limit
+                && complete.0.tokens <= per_file_limit
             {
                 related.push(complete);
                 if used + section("related", &related).section.tokens <= capacity {
@@ -269,6 +333,22 @@ pub fn select(
             let pair = match (level, signatures.take()) {
                 (RenderLevel::L2, Some(pair)) => pair,
                 _ => render(candidate, level, None)?,
+            };
+            let pair = if pair.0.tokens > per_file_limit {
+                if level == RenderLevel::L1 && params.related_focal {
+                    let Some(focal) = related_focal_candidate(state, candidate, request, params)
+                    else {
+                        continue;
+                    };
+                    if focal.0.tokens > per_file_limit {
+                        continue;
+                    }
+                    focal
+                } else {
+                    continue;
+                }
+            } else {
+                pair
             };
             related.push(pair);
             if used + section("related", &related).section.tokens <= capacity {

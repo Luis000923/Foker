@@ -25,6 +25,18 @@ struct Case {
 mod delivery;
 use delivery::delivered_in_file;
 
+fn dump_pack(pack: &foker_context::ContextPack) {
+    if let Ok(path) = std::env::var("FOKER_EVAL_PACK_DUMP") {
+        use std::io::Write;
+        let mut file = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(path)
+            .expect("dump de packs");
+        writeln!(file, "{}", pack.to_canonical_json()).expect("escribir dump");
+    }
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<_> = std::env::args().collect();
     let usage = "uso: focal_eval <cases.jsonl> <trees> <salida.json> [umbral...]";
@@ -39,6 +51,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     } else {
         vec![0, 500, 1000, 2000]
     };
+    // Override interno para barreras ADR-036; sin variable conserva la salida de ADR-033.
+    let params: ContextParams = std::env::var("FOKER_EVAL_PARAMS")
+        .ok()
+        .map(|path| {
+            Ok::<_, Box<dyn std::error::Error>>(serde_json::from_str(&std::fs::read_to_string(
+                path,
+            )?)?)
+        })
+        .transpose()?
+        .unwrap_or_default();
+    params.validate()?;
     let mut rows = Vec::new();
     let mut states = BTreeMap::new();
     for line in cases.lines() {
@@ -70,10 +93,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Informativo: recall de archivos sin anclas (repositorio real, sin vista focal posible).
         let open = ContextRequest {
             task: case.task.clone(),
+            params: std::env::var("FOKER_EVAL_PARAMS")
+                .ok()
+                .map(|_| params.clone()),
             budget_tokens: 8000,
             ..Default::default()
         };
         if let Ok(pack) = build_context(state, &root, &open, &ContextInputs::default()) {
+            dump_pack(&pack);
             let exposed = pack
                 .files
                 .iter()
@@ -96,12 +123,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 budget_tokens: 8000,
                 params: Some(ContextParams {
                     focal_min_tokens: threshold,
-                    ..Default::default()
+                    ..params.clone()
                 }),
                 ..Default::default()
             };
             let row = match build_context(state, &root, &request, &ContextInputs::default()) {
                 Ok(pack) => {
+                    dump_pack(&pack);
                     // Solo cuenta si el texto completo está en el bloque de su propio archivo.
                     let delivered = gold_text
                         .values()

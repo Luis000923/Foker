@@ -147,6 +147,10 @@
             "bm25_b"
           ],
           "properties": {
+            "related_max_fraction": { "type": "number", "minimum": 0, "maximum": 1 },
+            "related_focal": { "type": "boolean" },
+            "anchor_overflow_focal": { "type": "boolean" },
+            "package_mentions": { "type": "boolean" },
             "small_full_max_extra": {
               "description": "Interno: contenido completo de L2 no ancla si cuesta como máximo estos tokens más que sus firmas; 0 lo desactiva (ADR-034). Solo presente si difiere del default.",
               "type": "integer",

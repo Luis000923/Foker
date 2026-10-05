@@ -462,6 +462,11 @@ Entrada `ContextRequest` y salida `ContextPack`: esquema normativo `schemas/cont
 Si `intent` viene en la petición, se usa. Si no, tabla de palabras clave versionada (p. ej. `fix`: arregla, bug, error, falla, fix, broken; `test`: test, prueba, spec, coverage; `refactor`: refactor, renombra, extrae, mueve; `add`: añade, crea, nuevo, implement, add; `explain`: explica, cómo funciona, why). Gana la intención con más coincidencias; empate → orden fijo `fix > test > refactor > add > modify > explain`; sin coincidencias → `modify`. La intención solo ajusta parámetros (§9.6), nunca filtra.
 
 ### 9.5 Paso 4 · Identificación del área afectada (semillas)
+
+**PROPUESTA ADR-036 (FKR-097, pendiente de validation de Fixture B):** el parámetro interno
+`package_mentions` restringe las menciones ambiguas de ruta/símbolo a los paquetes del workspace
+nombrados en la tarea cuando contienen candidatos; sin coincidencias conserva las semillas actuales.
+No cambia las anclas explícitas. Esta propuesta no se declara aceptada.
 Vector de personalización `p` sobre nodos-archivo:
 
 | Fuente | Peso base | Regla |
@@ -487,6 +492,14 @@ Si `p` es todo ceros (tarea sin señal): `p` = distribución del PageRank global
 5. Exclusiones duras: `kind: generated`, `parse_status: skipped`, archivos fuera de `include`, y cualquier archivo que case con globs de secretos (nunca están en el mapa).
 
 ### 9.7 Pasos 9–11 · Selección, poda y presupuesto
+
+**PROPUESTA ADR-036 (FKR-097, pendiente de validation de Fixture B):** D1 limita cada no ancla
+L2/L1 a `related_max_fraction × B`; D2 (`related_focal`) permite L1 con las firmas del foco léxico,
+como máximo `focal_max_symbols`, y el número de símbolos omitidos dentro de `rendered`. D3
+(`anchor_overflow_focal`) rescata anclas cuyo mínimo L1 no cabe con L3 focal o L0 y nota explícita
+«contenido omitido por presupuesto; léalo con su herramienta de lectura»; solo falla si ni los
+L0 de todas las anclas caben con el contexto obligatorio. Parámetros internos, desactivables
+con 0/false, sujetos al protocolo y umbrales fijados en ADR-036. Esta propuesta no se declara aceptada.
 
 **Modificado por ADR-031 (fase 1): Context Pack v2 compacto.**
 Niveles de renderizado por archivo:

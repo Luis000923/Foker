@@ -425,6 +425,10 @@ explain: boolean
  * Interno: parámetros efectivos no predeterminados de calibración (ADR-021/FKR-037).
  */
 params?: {
+related_max_fraction?: number
+related_focal?: boolean
+anchor_overflow_focal?: boolean
+package_mentions?: boolean
 /**
  * Interno: contenido completo de L2 no ancla si cuesta como máximo estos tokens más que sus firmas; 0 lo desactiva (ADR-034). Solo presente si difiere del default.
  */

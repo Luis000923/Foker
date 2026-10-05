@@ -127,3 +127,147 @@ cifras, como ADR-024. Ningún umbral se mueve después de ver `validation`.
 - El CLI y `fixture_b_eval` difieren en 3 de 45 casos (b-query-03, b-query-13, b-zod-03). Hay que
   explicar la diferencia (¿configuración del mapa?) antes de comparar cifras del CLI con las del
   evaluador.
+
+## Resultados de calibración
+
+**OBSERVACIÓN (FKR-097, 2026-10-05):** implementación Rust, presupuesto 8000, exclusivamente
+los **24 casos calibration** de Fixture B. No se ha medido validation de Fixture B. El ADR
+sigue en estado **Propuesta**; sus umbrales y el orden de selección permanecen sin cambios.
+Los árboles se leen directamente y `ParseCache` vive en memoria; no se crea `.foker/`.
+La base reproduce la evaluación congelada en `e749daa` en calibration. No se comparan aquí
+las cifras con el diagnóstico del CLI; la discrepancia de tres casos de «Pendiente» sigue abierta.
+
+| Configuración candidata | Recall pack | Recall flujo | Recall símbolos | Errores símbolos | Tokens medianos pack |
+|---|---:|---:|---:|---:|---:|
+| Todos desactivados (base) | 0,218750 | 0,239583 | 0,395833 | 7 | 7590,5 |
+| D1 · f = 0,10 | 0,395833 | 0,395833 | 0,395833 | 7 | 7535,0 |
+| D1 · f = 0,15 | 0,395833 | 0,395833 | 0,395833 | 7 | 7552,5 |
+| D1 · f = 0,20 | 0,416667 | 0,416667 | 0,395833 | 7 | 7580,0 |
+| D1 · f = 0,25 | 0,458333 | 0,458333 | 0,395833 | 7 | 7582,0 |
+| D1 (0,25) + D2 | 0,718750 | 0,541667 | 0,395833 | 7 | 7588,0 |
+| D1 (0,25) + D2 + D3 | 0,718750 | 0,541667 | 0,437500 | 0 | 7588,0 |
+| D1 (0,25) + D2 + D4 (D3 descartada) | **0,802083** | **0,625000** | 0,395833 | 7 | 7589,5 |
+
+Selección acumulativa según el criterio principal de calibration:
+
+1. D1 conserva **f = 0,25**, por mayor recall pack; no hubo empate para el máximo.
+2. D2 se conserva: aumenta el recall pack y pasa las barreras.
+3. D3 se descarta de la configuración elegida: mejora símbolos y elimina todos sus errores,
+   pero **no aumenta recall pack**. Su implementación queda disponible para ablación, desactivada.
+4. D4 se prueba sobre la cadena conservada (D1+D2, sin D3) y se conserva: aumenta recall pack
+   y pasa las barreras. No se reincorpora D3 para evaluar D4.
+
+**Barreras:** todas las candidatas de esta tabla conservan Fixture A pack **0,744444** y flujo
+**0,761111**, con **cero casos que pierdan algún archivo gold** frente al motor desactivado
+(comparación de conjuntos, 60 casos completos). No se usó Fixture A para ajustar parámetros.
+Foker-self validation conserva **0,441667 (0,442 a la precisión del ADR-033)** y es idéntico
+por caso en los seis casos, para todas las candidatas. La barrera de errores de B se comprueba
+solo en calibration (7 → 7, o 0 con D3); el total de B y sus barreras validation quedan pendientes.
+El property test de presupuesto cubre ahora combinaciones de los cuatro parámetros.
+
+**Configuración congelada, activada como default únicamente en el segundo paso:**
+
+```json
+{
+  "related_max_fraction": 0.25,
+  "related_focal": true,
+  "anchor_overflow_focal": false,
+  "package_mentions": true
+}
+```
+
+[Parámetros congelados](../../benchmarks/fixture-b/results/adr036-frozen-params.json) e
+[informe con métricas, casos y barreras](../../benchmarks/fixture-b/results/adr036-calibration-2026-10-05.json).
+La selección no implica aceptación del ADR: se mantiene el criterio validation ≥ 0,724 y
+las demás barreras fijadas arriba. Validation B corresponde al siguiente paso humano, una sola vez.
+
+### Reproducción del evaluador
+
+`fixture_b_eval <cases> <trees> <salida> [configs.json] [split]` mantiene las cuatro
+configuraciones históricas y acepta un array adicional de `{name, params}`. El filtro de split
+se aplica **antes** de construir el mapa o consultar símbolos gold. Nombres repetidos de
+configuración son error. Para replicar esta fase deben pasarse overrides explícitos que incluyan
+los cuatro valores desactivados de la base, porque el default final ya es el congelado.
+`fixture_a_barrier <fixture-a generada> <configs.json> <salida>` evalúa los 60 casos, pack/flujo
+y pérdidas de archivos gold. `focal_eval` admite el archivo de overrides por
+`FOKER_EVAL_PARAMS`, conservando su salida original sin la variable; usar umbral `500`.
+Ver [instrucciones y modos internos](../context-engine.md#propuesta-para-repositorios-reales--adr-036-fkr-097).
+
+### Identidad previa a congelar defaults
+
+Con los cuatro parámetros en 0/false se exportó `main` (`e749daa`) a `/tmp` con `git archive`.
+Solo se copiaron los evaluadores instrumentados para emitir packs canónicos; no se modificó el
+motor de main. Se compiló con `cargo --offline`, el mismo `CARGO_TARGET_DIR` y
+`--target x86_64-unknown-linux-gnu` para aislar los artefactos del worktree. Una prueba negativa
+confirmó que ese binario de main rechaza los campos nuevos de ADR-036. Esta separación evita
+la reutilización de artefactos observada en el primer intento de comparación, que se descartó.
+
+Se compararon con `cmp` los JSON canónicos íntegros (incluyen `rendered`, hashes, presupuesto,
+metadatos y descartes) y los errores completos del motor, sin tiempos ni normalización de sus
+bytes. Fixture A: 60 casos × cuatro configuraciones históricas más defaults explícitos × tres
+modos = **900** packs. Fixture B: **solo calibration**, 24 × cinco configuraciones × tres modos
+= **360** resultados (325 packs y 35 errores completos). Foker-self: ocho casos, sin anclas y
+con anclas a umbral 500 = **16** packs. **1276 resultados idénticos byte a byte**. Los SHA-256
+figuran en el informe. Solo tras cerrar esta prueba se activaron los defaults congelados.
+
+### Comprobaciones locales tras congelar
+
+`cargo fmt --check` y `cargo clippy -p foker-context -p foker-map --all-targets --offline --
+-D warnings` pasan. `cargo nextest run -p foker-context -p foker-map --offline`: **155 tests
+pasan, 2 omitidos** (los benchmarks de rendimiento ignorados existentes). Incluye los casos D1/D2,
+D3 focal/L0/error mínimo, D4 con candidatos repetidos y fallback de paquete, el filtro de split
+y el property test de presupuesto. Generación de esquemas `--check` y Biome pasan. Vitest de
+esquemas: 55 tests pasan; el test que usa `spawnSync` queda bloqueado por `EPERM` del sandbox,
+y su comprobación de generación se ejecuta por separado y pasa. Sin red ni commits.
+
+REQ-CTX-004 se ejecutó también por separado en release, pese a estar ignorado en la suite
+habitual: `cargo test --release -p foker-context --test perf_large --offline -- --ignored
+--nocapture`. Large-10k, 20 muestras: **p95 256,76 ms**, mediana 245,92 ms (TARGET < 300 ms);
+1 test pasa. No se modifica su TARGET.
+
+## Resultado de validation (medido una vez, 2026-10-05)
+
+Medido por Claude con la configuración congelada (defaults del motor), los 45 casos de B y
+`fixture_b_eval`; [resultados](../../benchmarks/fixture-b/results/adr036-validation-2026-10-05.json).
+
+| Split | Recall pack | Recall flujo | Recall símbolos | Errores símbolos | Cobertura de alcance | Errores de alcance |
+|---|---|---|---|---|---|---|
+| calibration | 0,8021 (base 0,2188) | 0,6250 (0,2396) | 0,3958 | 7 | 0,250 (**0,479**) | **4** (0) |
+| validation | **0,8635** (base 0,6238) | 0,8159 (0,5746) | 0,3413 | 5 | 0,476 (**0,619**) | **1** (0) |
+| todos | 0,8307 (base 0,4078) | 0,7141 (0,3959) | 0,3704 | 12 | 0,356 (**0,544**) | **5** (0) |
+
+Criterio principal (≥ 0,724): **cumplido**. Barreras fijadas: todas cumplidas (Fixture A y
+foker-self idénticos, flujo validation 0,8159 ≥ 0,5746, errores de símbolos 12 ≤ 12, presupuesto).
+Caso a caso: 23 casos mejoran el recall del pack y **ninguno empeora**. El recall del flujo
+empeora en b-query-10 (1 → 0) y b-zod-04 (0,25 → 0). Quedan con recall 0: b-vite-04, b-vite-06,
+b-vite-10, b-zod-14 (vocabulario: el gold no está en el ranking).
+
+### Hallazgo no cubierto por las barreras: alcance derivado (OBSERVACIÓN)
+
+La **cobertura de alcance** del flujo `begin` sin `scope` cae (0,544 → 0,356) y aparecen **5
+errores de alcance** (`FKR-INP-001`, alcance vacío) donde antes había 0. Causa: `deriveScopePaths`
+(ADR-031 2b/ADR-032) usa los L3 o, si no hay, **tres L2**. Con D1+D2 los archivos relevantes y
+grandes pasan a **L1** (completo o focal) y dejan de contar. El alcance se forma con L2 marginales
+(`playground/**`, `zod/src/v3/benchmarks/**`) o queda vacío. En uso real eso acota la tarea a
+directorios equivocados: es lo que hizo fallar b-query-01 (brazo Foker) en `bench-b-smoke-2`,
+donde el gate de alcance impidió editar `react-query`. No es una barrera fijada, pero **no se
+integra en `main` con esta regresión**.
+
+### D5 · Alcance derivado con L1 (criterio fijado antes de implementar)
+
+`deriveScopePaths` (TS en `@foker/engine` y su port en `examples/support/fixture_b.rs`): sin L3,
+toma los tres primeros archivos de **L2 o L1** con señal directa, por puntuación descendente e
+id ascendente, y luego los de L2 sin señal directa (como hoy). L0 no cuenta. Sin parámetro nuevo:
+es una función del flujo, no del motor.
+
+Barreras de D5 (más estrictas; no relajan nada de lo anterior):
+
+| Métrica | Exigido |
+|---|---|
+| Errores de alcance B (todos) | 0 |
+| Cobertura de alcance B, calibration y validation | ≥ base de `main` (0,479 y 0,619) |
+| Recall del flujo B, calibration y validation | ≥ valores de la tabla anterior (0,6250 y 0,8159) |
+| Fixture A ctx-gold, cobertura de alcance y recall del flujo | ≥ base (0,8319 y 0,7611) |
+| Recall del pack | sin cambios (D5 no toca el motor) |
+
+Si D5 no cumple, el ADR no se integra y se reabre la decisión.

@@ -1,6 +1,6 @@
 # Estado de Foker
 
-Última actualización: 2026-10-04 · Rama actual: main · Desarrollo con Claude Code + Codex (encargos en worktrees y revisión independiente)
+Última actualización: 2026-10-05 · Rama actual: feat/FKR-097-recall-repos-reales · Desarrollo con Claude Code + Codex (encargos en worktrees y revisión independiente)
 
 ## Hito actual
 
@@ -35,6 +35,7 @@ M0, M2, M3, M4 y E6 completos en local; M1 con todo lo que no gasta API (manifie
 | FKR-014/015/018 | Fixture B, línea base, benchmark completo | bloqueado | — | PREGUNTA-6 y PREGUNTA-2 |
 | FKR-093 | Criterios reproducibles y candidatos para Fixture B | hecho (documentación) | feat/FKR-093-fixture-b-criterios | [Criterios](bench/fixture-b-criterios.md), [8 candidatos](bench/fixture-b-candidatos.md) y propuesta compatible de manifiesto; SHAs/tamaños/offline pendientes, selección humana PREGUNTA-6 |
 | FKR-095 | Dataset ctx-gold de símbolos del historial foker-self | hecho | feat/FKR-095-ctx-gold-simbolos | [Metodología y resultados](../benchmarks/ctx-gold/foker-self/README.md): 8 casos (2 calibration / 6 validation), 43 descartes; generación reproducible, base 0 verificada; Biome, tsc y 49 tests benchmarks pasan; sin commits |
+| FKR-097 | Presupuesto y archivos grandes en repos reales | implementación y calibration completas; validation B pendiente | feat/FKR-097-recall-repos-reales | ADR-036 Propuesta; configuración congelada D1=0,25 + D2 + D4, D3 desactivada por no subir recall pack; calibration pack 0,802083 / flujo 0,625000; barreras A y foker-self idénticas; fmt/clippy verdes, 155 tests pasan (2 omitidos), identidad con main en 1276 resultados; REQ-CTX-004 release p95 256,76 ms; sin commits |
 | FKR-080 | Publicación npm | bloqueado | — | PREGUNTA-3 |
 | FKR-040…042 | Config, trust, ejecutor seguro | hecho | feat/FKR-040-config-trust-exec | ADR-022 (shims .cmd en Windows) |
 | FKR-043/044 | Parsers de hallazgos, escáner de secretos | hecho | feat/FKR-043-parsers-secretos | 24 reglas |

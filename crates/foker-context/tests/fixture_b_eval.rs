@@ -146,3 +146,38 @@ fn cuerpos_de_archivo_como_ctx_gold_ts() {
         (1.0, 0.5)
     );
 }
+
+#[test]
+fn configuraciones_adicionales_y_filtro_previo_de_split() {
+    let trees = tempfile::tempdir().unwrap();
+    let root = trees.path().join("cal-1");
+    write(
+        &root,
+        "src/a.ts",
+        "export function target() { return 1; }\n",
+    );
+    let cases = [
+        json!({"id":"cal-1", "task":"fix target", "split":"calibration", "gold_modified":["src/a.ts"], "gold_symbols":[]}),
+        // No existe su árbol ni su gold: filtrar antes de construir mapas y de validar símbolos.
+        json!({"id":"do-not-read", "task":"fix absent", "split":"validation", "gold_modified":["absent.ts"], "gold_symbols":["absent.ts#missing"]}),
+    ].iter().map(ToString::to_string).collect::<Vec<_>>().join("\n");
+    let configs: Vec<fixture_b::Config> = serde_json::from_value(json!([
+        {"name":"adr036", "params":{"related_max_fraction":0.25,"related_focal":true,"anchor_overflow_focal":true,"package_mentions":true}}
+    ])).unwrap();
+    let report =
+        fixture_b::evaluate_with_configs(&cases, trees.path(), &configs, Some("calibration"))
+            .unwrap();
+    assert_eq!(report["cases"].as_array().unwrap().len(), 1);
+    assert_eq!(
+        report["configs"],
+        json!(["default", "sin_adr034", "sin_adr033", "plegado", "adr036"])
+    );
+    assert!(!root.join(".foker").exists());
+    assert_eq!(report["summary"]["adr036"]["validation"]["cases"], 0);
+    let duplicates: Vec<fixture_b::Config> =
+        serde_json::from_value(json!([{"name":"default", "params":null}])).unwrap();
+    assert!(
+        fixture_b::evaluate_with_configs(&cases, trees.path(), &duplicates, Some("calibration"))
+            .is_err()
+    );
+}

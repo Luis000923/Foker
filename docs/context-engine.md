@@ -302,3 +302,57 @@ calibration, tanto en recall como en tokens y rendered_tokens.
 - Foco: anclas de símbolo, identificadores citados y BM25 dentro del archivo. Sin foco, archivo completo.
 - Evaluación: `cargo run --release --offline -p foker-context --example focal_eval -- <cases> <trees> <out>`
   sobre `benchmarks/ctx-gold/foker-self` (FKR-095). Resultados y criterio en el ADR.
+
+## Propuesta para repositorios reales · ADR-036 (FKR-097)
+
+D1 limita el coste individual de no anclas L2/L1 (`related_max_fraction`); D2 permite las firmas
+L1 del foco léxico con una marca del número de símbolos omitidos (`related_focal`). D3 rescata
+anclas cuyo mínimo L1 no cabe con L3 focal o L0 y una nota explícita (`anchor_overflow_focal`).
+D4 restringe menciones ambiguas a los paquetes nombrados del workspace (`package_mentions`),
+sin restringir anclas ni semillas BM25. Los nombres npm y la asociación archivo/paquete ya están
+en el mapa; no se modifica `foker-map`, N-API, CLI ni MCP.
+
+La configuración congelada tras **calibration solamente** es `0.25 / true / false / true` en
+ese orden. El ADR sigue siendo **Propuesta**: validation de Fixture B y la revisión cruzada
+están pendientes. D3 reduce los errores de símbolos a cero en calibration, pero queda desactivada
+porque no aumenta el recall pack (criterio fijado en el ADR). Tabla y resultados por caso:
+[ADR-036](adr/ADR-036-presupuesto-y-archivos-grandes-en-repos-reales.md) y
+[medición](../benchmarks/fixture-b/results/adr036-calibration-2026-10-05.json).
+
+El evaluador B acepta opcionalmente un JSON con configuraciones adicionales, por ejemplo:
+
+```json
+[{"name":"candidata","params":{"related_max_fraction":0.25,"related_focal":true,"anchor_overflow_focal":false,"package_mentions":true}}]
+```
+
+```sh
+export CARGO_TARGET_DIR=/home/luis/Documentos/Foker-097/target
+cargo run --release --offline -p foker-context --example fixture_b_eval -- \
+  benchmarks/fixture-b/ctx-gold/cases.jsonl /home/luis/Documentos/foker-fixture-b/trees \
+  /tmp/b-calibration.json /tmp/configs.json calibration
+cargo run --release --offline -p foker-context --example fixture_a_barrier -- \
+  /tmp/fixture-a /tmp/configs.json /tmp/a-barrier.json
+FOKER_EVAL_PARAMS=benchmarks/fixture-b/results/adr036-frozen-params.json \
+  cargo run --release --offline -p foker-context --example focal_eval -- \
+  benchmarks/ctx-gold/foker-self/cases.jsonl /tmp/self-trees /tmp/self-barrier.json 500
+```
+
+Los cuatro modos históricos de `fixture_b_eval` mantienen sus definiciones. El split se filtra
+antes de abrir los árboles; los mapas usan `ParseCache` en memoria y no generan `.foker/`.
+`fixture_a_barrier` informa de los ids de casos que pierden algún archivo gold frente al default,
+además de recall pack/flujo. Fixture A solo se usa como barrera, no para elegir umbrales.
+`focal_eval` conserva su salida sin `FOKER_EVAL_PARAMS`; la variable permite pasar parámetros
+internos al evaluador, sin añadir opciones públicas.
+
+`FOKER_EVAL_PACK_DUMP=/tmp/packs.jsonl` registra optativamente los packs canónicos completos
+(incluido `rendered`) y los errores completos del motor en el evaluador B, sin tiempos. En
+`focal_eval` registra los packs. El registro añade filas al archivo; usar una ruta nueva por
+medición. `FOKER_EVAL_PROGRESS=1` informa por stderr del caso B/A que se está evaluando.
+
+Tras congelar defaults, para reproducir las ablaciones de calibration hay que especificar los
+cuatro valores en cada configuración: omitirlos hereda el default nuevo. El informe incluye
+`reproduction_configs` con los ocho candidatos efectivos, incluida `base_desactivada`:
+
+```sh
+node --input-type=module -e 'import fs from "node:fs"; const r=JSON.parse(fs.readFileSync("benchmarks/fixture-b/results/adr036-calibration-2026-10-05.json","utf8")); fs.writeFileSync("/tmp/configs.json",JSON.stringify(r.reproduction_configs));'
+```
