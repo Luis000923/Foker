@@ -71,11 +71,15 @@ async function affected(engine: Engine, paths: string[]) {
 async function refreshAffected(engine: Engine, paths: string[], deleted: string[]) {
   const previousFiles = deleted.filter((path) => engine.fileInfo(path) !== null);
   const previous = previousFiles.length ? await affected(engine, previousFiles) : [];
+  const previousMap = previous.length ? (JSON.parse(await engine.exportMapJson()) as ProjectMap) : undefined;
+  const rootPreviouslyAffected = previousMap?.project.packages.some(
+    (pkg) => pkg.path === '.' && previous.includes(pkg.name),
+  );
   const report = await engine.refresh();
+  const map = JSON.parse(await engine.exportMapJson()) as ProjectMap;
   const packages = new Set([...previous, ...(await affected(engine, paths))]);
   const missing = deleted.filter((path) => !previousFiles.includes(path));
   if (missing.length) {
-    const map = JSON.parse(await engine.exportMapJson()) as ProjectMap;
     const queue = missing.flatMap((path) => {
       const containing = map.project.packages
         .filter((pkg) => pkg.path === '.' || path === pkg.path || path.startsWith(`${pkg.path}/`))
@@ -94,7 +98,10 @@ async function refreshAffected(engine: Engine, paths: string[], deleted: string[
       );
     }
   }
-  return { report, packages: [...packages].sort() };
+  // FKR-105: la raíz afecta al workspace completo; policy solo expande nombres, sin consultar el mapa.
+  const allPackages =
+    rootPreviouslyAffected || map.project.packages.some((pkg) => pkg.path === '.' && packages.has(pkg.name));
+  return { report, packages: allPackages ? [] : [...packages].sort() };
 }
 async function execute(
   root: string,
