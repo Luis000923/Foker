@@ -58,7 +58,7 @@ M0, M2, M3, M4 y E6 completos en local; M1 con todo lo que no gasta API (manifie
 ## Limpieza 2026-10-05
 
 - En `/home/luis/Documentos` solo queda `Foker/`. Worktrees retirados; las ramas se conservan:
-  `feat/FKR-100-instalacion-local` (WIP de Codex sin revisar, `edea1ac`) y `chore/sistema-agentes`
+  `chore/sistema-agentes`
   (WIP de otra sesión). Los worktrees nuevos van en `~/.cache/foker-wt/`.
 - **Fixture B** se movió a `~/.local/share/foker-bench/fixture-b` (FKR-101: ruta por defecto del
   arnés y de los scripts). Se borraron las ejecuciones (`runs/`, 150 GB); se conserva `evidence/`
@@ -66,6 +66,21 @@ M0, M2, M3, M4 y E6 completos en local; M1 con todo lo que no gasta API (manifie
   cambiar la huella del verificador (`5cc8a340ce5b`, 342 veredictos): usa `FIXTURE_B_ROOT`.
 
 ## Trabajo 2026-10-05 (tarde)
+
+- **FKR-098 · Gates y archivos ignorados por git (ADR-037)**: G1 ya no rechaza artefactos que
+  generan los checks (`dist/`, `.eslintcache`, `.next/`). Primera versión (OpenCode, pathspecs)
+  rechazada por la revisión de Codex: 7 vías de evasión válidas (secretos anidados,
+  `.git/info/exclude`, globs `{a,b}`, `--config`, fallo de git entre begin y submit, `\` en POSIX,
+  symlinks). Reimplementada por Codex y revisada por Claude: solo `.gitignore` del árbol, sensibles
+  con `matchGlobs`, modo y exclusiones autenticados en el baseline, symlinks registrados. 616 tests;
+  `treeSnapshot` sobre 10.000 + 5.000 ignorados: 14.314 → 675 ms. OpenCode se colgó dos veces sin
+  salida (modo servicio y `--standalone`).
+- **FKR-100 · Instalación local sin npm** (Codex; revisión y prueba con red de Claude):
+  `pnpm pack:local` genera 8 tarballs (sin `workspace:`), `install-local.json` con 7 overrides y
+  README. Instalación limpia en una carpeta nueva: `npm install <foker.tgz>` con los overrides;
+  `foker --version` 0.0.0 y `foker doctor` detecta Node, addon y git. Fricción corregida: un
+  override de `foker` sobre sí mismo daba `EOVERRIDE`. `native-pack.mjs` comparte la lógica con
+  `smoke-native.mjs`. `pnpm verify` verde (156 Rust, 599 TS).
 
 - **bench-b-smoke-2 · válido** (b-vite-02, b-query-01, b-zod-02; 2 brazos × 1). 6/6 con
   `api_error_status: null`, coste > 0 y `validate-results` correcto. Coste total 1,30 USD equivalentes

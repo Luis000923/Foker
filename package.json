@@ -19,6 +19,7 @@
     "coverage:rs": "cargo llvm-cov -p foker-map --offline --summary-only --fail-under-lines 80 && cargo llvm-cov -p foker-context --offline --summary-only --ignore-filename-regex foker-map/ --fail-under-lines 80",
     "coverage:ts": "vitest run packages/policy packages/engine packages/cli --coverage",
     "clean": "node scripts/clean.mjs",
+    "pack:local": "node scripts/pack-local.mjs",
     "check:deps": "node scripts/check-deps.mjs",
     "build:native": "pnpm --filter @foker/core run build:native",
     "verify": "cargo fmt --all --check && cargo clippy --workspace --all-targets -q -- -D warnings && pnpm lint && pnpm typecheck && pnpm check:deps && pnpm --filter @foker/schemas run generate:check && pnpm test",
