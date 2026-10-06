@@ -10,10 +10,38 @@ export async function gitRead(root: string, args: string[]): Promise<string | nu
     return null;
   }
 }
+/** Exclusiones procedentes exclusivamente de los .gitignore del árbol. */
+export interface GitIgnored {
+  files: Set<string>;
+  directories: Set<string>;
+}
+const separators = (value: string) => (process.platform === 'win32' ? value.replaceAll('\\', '/') : value);
+export async function gitIgnoredPaths(root: string): Promise<GitIgnored | null> {
+  const output = await gitRead(root, [
+    'ls-files',
+    '--others',
+    '--ignored',
+    '--exclude-per-directory=.gitignore',
+    '--directory',
+    '-z',
+    '--',
+    '.',
+  ]);
+  if (output === null) return null;
+  const files = new Set<string>();
+  const directories = new Set<string>();
+  for (const value of output.split('\0').filter(Boolean)) {
+    const path = posix.normalize(separators(value));
+    if (path.endsWith('/')) directories.add(path.slice(0, -1));
+    else files.add(path);
+  }
+  return { files, directories };
+}
+
 export async function gitDirtyFiles(root: string, includeRenameSource = false): Promise<string[]> {
   const prefixOut = await gitRead(root, ['rev-parse', '--show-prefix']);
   if (prefixOut === null) return [];
-  const prefix = prefixOut.trim().replaceAll('\\', '/');
+  const prefix = separators(prefixOut.trim());
   const entries =
     (await gitRead(root, ['status', '--porcelain', '-z', '--untracked-files=all', '--', '.']))?.split('\0') ?? [];
   const files: string[] = [];
@@ -26,7 +54,7 @@ export async function gitDirtyFiles(root: string, includeRenameSource = false): 
       if (includeRenameSource) paths.push(source);
     }
     for (const value of paths) {
-      const path = posix.normalize(value.replaceAll('\\', '/'));
+      const path = posix.normalize(separators(value));
       if (path.startsWith(prefix)) files.push(path.slice(prefix.length));
     }
   }

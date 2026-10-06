@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process';
-import { mkdtemp, readFile, rm, unlink, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, unlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
@@ -230,6 +230,88 @@ for (const git of [false, true]) {
     ]);
   });
 }
+describe('ADR-037 · archivos ignorados por git', () => {
+  /** Repositorio git con `.gitignore` y un archivo ignorado creado de antemano. */
+  async function gitFixture(ignore = 'dist/\n.eslintcache\n') {
+    const { root, store } = await fixture();
+    await writeFile(join(root, '.gitignore'), ignore);
+    await exec('git', ['init', '-q'], { cwd: root });
+    await writeFile(join(root, 'inside.txt'), 'original');
+    await mkdir(join(root, 'dist'), { recursive: true });
+    await writeFile(join(root, 'dist/old.js'), 'stale');
+    await writeFile(join(root, '.eslintcache'), 'cache');
+    await exec('git', ['add', '.'], { cwd: root });
+    await exec('git', ['-c', 'user.name=Test', '-c', 'user.email=test@example.invalid', 'commit', '-qm', 'base'], {
+      cwd: root,
+    });
+    return { root, store };
+  }
+  it('los ignorados no forman parte del conjunto de cambios', async () => {
+    const { root, store } = await gitFixture();
+    const task = await store.begin(input);
+    expect(task.baseline.git_head).not.toBeNull();
+    await writeFile(join(root, 'inside.txt'), 'changed');
+    // Un check del primer intento dejó estos artefactos: ninguno es cambio del agente.
+    await writeFile(join(root, 'dist/x.js'), 'built');
+    await writeFile(join(root, '.eslintcache'), 'cache2');
+    expect(await store.diffSinceBaseline(task)).toEqual([{ path: 'inside.txt', change: 'modified' }]);
+  });
+  it('un ignorado que casa con rutas protegidas o secretos sigue contando', async () => {
+    const { root, store } = await gitFixture('dist/\n.env\nsecrets/\n');
+    await mkdir(join(root, 'secrets'), { recursive: true });
+    await writeFile(join(root, '.env'), 'TOKEN=1');
+    await writeFile(join(root, 'secrets/key.pem'), 'cert');
+    const task = await store.begin(input);
+    await writeFile(join(root, '.env'), 'TOKEN=2');
+    await writeFile(join(root, 'secrets/key.pem'), 'cert2');
+    expect(await store.diffSinceBaseline(task)).toEqual([
+      { path: '.env', change: 'modified' },
+      { path: 'secrets/key.pem', change: 'modified' },
+    ]);
+  });
+  it('un ignorado que casa con rutas protegidas o secretos cuenta también como añadido', async () => {
+    const { root, store } = await gitFixture('dist/\n.env\n');
+    const task = await store.begin(input);
+    await writeFile(join(root, '.env'), 'TOKEN=1');
+    expect(await store.diffSinceBaseline(task)).toEqual([{ path: '.env', change: 'added' }]);
+  });
+  it('un archivo ignorado y versionado con `git add -f` cuenta como cualquier otro', async () => {
+    const { root, store } = await gitFixture();
+    await writeFile(join(root, 'dist/tracked.js'), 'forced');
+    await exec('git', ['add', '-f', 'dist/tracked.js'], { cwd: root });
+    await exec('git', ['-c', 'user.name=Test', '-c', 'user.email=test@example.invalid', 'commit', '-qm', 'forced'], {
+      cwd: root,
+    });
+    const task = await store.begin(input);
+    await writeFile(join(root, 'dist/tracked.js'), 'forced edited');
+    expect(await store.diffSinceBaseline(task)).toEqual([{ path: 'dist/tracked.js', change: 'modified' }]);
+  });
+  it('sin git el conjunto de cambios no se reduce', async () => {
+    const { root, store } = await fixture();
+    await writeFile(join(root, '.gitignore'), 'dist/\n');
+    await mkdir(join(root, 'dist'), { recursive: true });
+    await writeFile(join(root, 'dist/x.js'), 'built');
+    const task = await store.begin(input);
+    expect(task.baseline.git_head).toBeNull();
+    await writeFile(join(root, 'dist/x.js'), 'built2');
+    expect(await store.diffSinceBaseline(task)).toEqual([{ path: 'dist/x.js', change: 'modified' }]);
+  });
+  it('un cambio en .gitignore es un cambio sujeto a G1 y no oculta los previos', async () => {
+    const { root, store } = await gitFixture();
+    const task = await store.begin(input);
+    await writeFile(join(root, '.gitignore'), 'dist/\n.eslintcache\nsecreto.txt\n');
+    await writeFile(join(root, 'secreto.txt'), 'nuevo');
+    expect(await store.diffSinceBaseline(task)).toEqual([{ path: '.gitignore', change: 'modified' }]);
+  });
+  it('el límite de 50.000 archivos cuenta solo los no ignorados', async () => {
+    const { root, store } = await gitFixture('dist/\n');
+    for (let i = 0; i < 300; i++) await writeFile(join(root, 'dist', `f${i}.js`), 'x');
+    const task = await store.begin({ description: 'límite', scope: { paths: ['*.txt'] } });
+    const tree = JSON.parse(await readFile(join(root, `.foker/tasks/${task.task_id}.baseline.json`), 'utf8'));
+    expect(Object.keys(tree.tree)).not.toContain('dist/f0.js');
+  });
+});
+
 it('infraestructura no ejecutable conserva intento y razón al desbloquear', async () => {
   const { store } = await fixture();
   let task = await store.begin(input);

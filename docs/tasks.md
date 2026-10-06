@@ -34,17 +34,36 @@ Decisiones de implementación que la especificación no fija:
   sin cambios al contrato TaskRecord. No es una firma: editar coordinadamente todos los
   artefactos locales sigue siendo posible (T13/T17); CI debe repetir los gates.
 - `<id>.baseline.json` contiene `snapshot` (alcance más archivos sucios) y `tree` (todos los
-  archivos descubiertos). `snapshot_hash` autentica `{snapshot, tree}` completo. Un baseline alterado o ilegible
+  archivos descubiertos, incluidos los ignorados sensibles). `snapshot_hash` autentica
+  el documento completo (incluido modo y exclusiones). Un baseline alterado o ilegible
   lanza `BaselineTamperedError`; submit lo convierte en BLOCKED con gate de política y
   razón `baseline_tampered`. Guardar
   también `tree` con git permite distinguir archivos inicialmente sucios de cambios posteriores
   fuera del alcance, incluso si dejan de aparecer en git status. Los cambios se ordenan por path.
 - Se reutiliza un helper de git con execFile, timeout de 5 s y sin shell. Baseline consulta
   status y diff de HEAD, pero la comparación de hashes del árbol decide el cambio real.
-  Sin HEAD (incluido un repo git vacío) `git_head` es null. Un fallo de git usa el recorrido TS.
-- El recorrido TS excluye node_modules, .git y .foker; no sigue enlaces simbólicos. Incluye archivos ignorados por .gitignore:
-  no se expone listFiles ni se reimplementa el lenguaje de gitignore. Límite de 50.000 archivos
-  (FKR-MAP-003); los hashes binarios delegan en `@foker/core.hashBytes` → Rust BLAKE3.
+  Sin HEAD (incluido un repo git vacío) `git_head` es null. Un fallo de git en begin usa
+  el recorrido completo; en submit se conserva el modo del baseline.
+- El recorrido TS excluye node_modules, .git y .foker; no sigue enlaces simbólicos. Límite de
+  50.000 archivos (FKR-MAP-003); los hashes binarios delegan en `@foker/core.hashBytes` → Rust
+  BLAKE3.
+- ADR-037: Git enumera ignorados exclusivamente mediante `git ls-files --others --ignored
+  --exclude-per-directory=.gitignore --directory -z`, sin shell. No consulta `.git/info/exclude`
+  ni `core.excludesFile`. Todo archivo llamado `.gitignore` se hashea, incluso si se ignora.
+- Los directorios ignorados se recorren con `readdir`, sin hashear sus archivos ordinarios.
+  `matchGlobs` de `@foker/core` decide las excepciones de `protected_paths` y `secret_globs`
+  con la misma política y `configPath` que los gates. Los archivos versionados forzadamente
+  siguen contando. Los separadores se normalizan solo en Windows.
+- El caso POSIX de ADR-037 conserva los nombres con barra invertida en las exclusiones,
+  evitando confundirlos con otro archivo versionado que use `/`. Los esquemas existentes
+  rechazan barras invertidas en rutas de tareas/evidencias; publicar cambios de un archivo
+  con ese nombre literal requiere revisar ese contrato.
+- Los enlaces simbólicos se registran con hash del destino de `readlink`, prefijado con
+  `symlink:` para distinguirlos de archivos regulares, sin seguirlos.
+- El baseline almacena y autentica también `mode` (`git`/`none`) y `exclusions` (archivos y
+  directorios). Si Git falla en submit, se reutilizan las exclusiones guardadas; un begin sin
+  Git conserva `none` aunque Git se recupere. Los baselines antiguos sin modo se leen como
+  `none` y conservan la comprobación de hash de `{snapshot, tree}`.
 - Las escrituras de evento, registro y ancla son secuenciales bajo lock, no una transacción
   multiartefacto. Una interrupción entre ellas produce inconsistencia detectable por verifyLedger.
   Un ULID duplicado falla sin sobrescribir la tarea existente.
@@ -98,4 +117,17 @@ La suite E2E usa un agente simulado, checks portables con process.execPath, repo
 git temporales y un TrustStore aislado. Comprueba reintento, scope, secretos, dependencias,
 aprobación TTY/CI, rutas protegidas, trust, binario inexistente, baseline alterada, skills,
 impacto, timeout, evidencia conforme al esquema y verifyLedger. El estado nativo de parseo
-failed se simula: un error de sintaxis ordinario es partial, según el núcleo.
+failed se simula: un error de sintaxis ordinario es partial, según el núcleo. Los casos de
+ADR-037 usan un `.gitignore` versionado y un check que deja `dist/x.js` y `.eslintcache`: el
+segundo submit pasa G1, un `.env` ignorado y protegido editado bloquea en G2 e ignorar un
+archivo fuera de alcance rompe G1 por el propio cambio en `.gitignore`.
+
+Medición FKR-098 (2026-10-05, Node 22.23.2, Linux): repositorio temporal sintético con
+10.000 archivos en `src/`, 5.000 en `dist/` y `.gitignore` con `dist/`. No hay HEAD y todos
+los archivos son inicialmente no versionados; alcance `src/**`. Se mide `captureBaseline`
+completo (incluye consultas Git, recorrido, hashes y escritura), con un par de calentamiento
+y siete pares alternando orden. Comparación con main `9d754bb2f5206e6819ba4f2da8051ec4088215e9`:
+mediana main **15.246,50 ms**, reimplementación **815,51 ms** (−94,65 %). El árbol pasa de
+15.001 a 10.001 entradas. Se cumple el límite de +10 % para este escenario; el fixture
+`fixtures/large-10k` no está presente en este checkout, por lo que esta medición usa el árbol
+sintético descrito, sin certificar el fixture ausente.

@@ -26,6 +26,7 @@ function checked(ref: 'task' | 'task#/$defs/event' | 'task#/$defs/evidence', val
   if (!result.ok) throw new FokerError('FKR-INP-001', JSON.stringify(result.issues));
 }
 export interface TaskStoreOptions {
+  configPath?: string;
   clock?: () => number;
   random?: (size: number) => Uint8Array;
   actor?: string;
@@ -202,7 +203,7 @@ export class TaskStore {
       } catch (error) {
         if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
       }
-      task.baseline = await captureBaseline(this.root, id, task.scope.paths);
+      task.baseline = await captureBaseline(this.root, id, task.scope.paths, this.options.configPath);
       await this.record(task, null, this.actor, 'begin');
       return task;
     });
@@ -228,7 +229,7 @@ export class TaskStore {
       await this.move(task, 'VALIDATING', this.actor, 'submit');
       if (!deferBaselineCheck) {
         try {
-          await diffSinceBaseline(this.root, task);
+          await diffSinceBaseline(this.root, task, this.options.configPath);
         } catch (error) {
           if (!(error instanceof BaselineTamperedError)) throw error;
           task.last_gates = [{ gate: 'policy', status: 'blocked', findings: [] }];
@@ -329,7 +330,7 @@ export class TaskStore {
     return this.human(id, 'unblock', actor, reason, scope);
   }
   diffSinceBaseline(task: TaskRecord) {
-    return diffSinceBaseline(this.root, task);
+    return diffSinceBaseline(this.root, task, this.options.configPath);
   }
   async verifyLedger(id: string): Promise<boolean> {
     return withLock(this.path(id, '.lock'), async () => {

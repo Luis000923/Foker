@@ -101,6 +101,7 @@ export const taskCommands: Command[] = [
       data = await new TaskStore(ctx.cwd, {
         actor: `cli:${userInfo().username}`,
         maxActive: loaded.policy.tasks.max_active ?? 5,
+        ...options(ctx),
       }).begin({
         description: id as string,
         scope: { paths: scope },
