@@ -59,7 +59,7 @@ M0, M2, M3, M4 y E6 completos en local; M1 con todo lo que no gasta API (manifie
 
 - En `/home/luis/Documentos` solo queda `Foker/`. Worktrees retirados; las ramas se conservan:
   `feat/FKR-098-gate-ignorados` (solo ADR-037, implementación pendiente),
-  `feat/FKR-100-instalacion-local` (WIP de Codex sin revisar, `edea1ac`) y `chore/sistema-agentes`
+  `chore/sistema-agentes`
   (WIP de otra sesión). Los worktrees nuevos van en `~/.cache/foker-wt/`.
 - **Fixture B** se movió a `~/.local/share/foker-bench/fixture-b` (FKR-101: ruta por defecto del
   arnés y de los scripts). Se borraron las ejecuciones (`runs/`, 150 GB); se conserva `evidence/`
@@ -67,6 +67,13 @@ M0, M2, M3, M4 y E6 completos en local; M1 con todo lo que no gasta API (manifie
   cambiar la huella del verificador (`5cc8a340ce5b`, 342 veredictos): usa `FIXTURE_B_ROOT`.
 
 ## Trabajo 2026-10-05 (tarde)
+
+- **FKR-100 · Instalación local sin npm** (Codex; revisión y prueba con red de Claude):
+  `pnpm pack:local` genera 8 tarballs (sin `workspace:`), `install-local.json` con 7 overrides y
+  README. Instalación limpia en una carpeta nueva: `npm install <foker.tgz>` con los overrides;
+  `foker --version` 0.0.0 y `foker doctor` detecta Node, addon y git. Fricción corregida: un
+  override de `foker` sobre sí mismo daba `EOVERRIDE`. `native-pack.mjs` comparte la lógica con
+  `smoke-native.mjs`. `pnpm verify` verde (156 Rust, 599 TS).
 
 - **bench-b-smoke-2 · válido** (b-vite-02, b-query-01, b-zod-02; 2 brazos × 1). 6/6 con
   `api_error_status: null`, coste > 0 y `validate-results` correcto. Coste total 1,30 USD equivalentes

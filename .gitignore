@@ -43,3 +43,5 @@ lcov.info
 
 # Fixture B: cachés de Python
 __pycache__/
+
+/dist-local/
