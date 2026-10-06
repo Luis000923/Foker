@@ -7,9 +7,9 @@ No requiere red ni dependencias nuevas. Ejecutar desde la raíz de Foker, con No
 utilizando clones completos de solo lectura:
 
 ```sh
-node benchmarks/fixture-b/mine.mjs --repo vite --path /home/luis/Documentos/foker-fixture-b/full/vite --identity cf5c0288d526824aead1b24e977400f13c527927
-node benchmarks/fixture-b/mine.mjs --repo query --path /home/luis/Documentos/foker-fixture-b/full/query --identity b90d8cee92c931773df73a39c9aa6cfc30afe5a1
-node benchmarks/fixture-b/mine.mjs --repo zod --path /home/luis/Documentos/foker-fixture-b/full/zod --identity 004d800c9e3cd4c79930f55aa4ad080225b22efd
+node benchmarks/fixture-b/mine.mjs --repo vite --path /home/luis/.local/share/foker-bench/fixture-b/full/vite --identity cf5c0288d526824aead1b24e977400f13c527927
+node benchmarks/fixture-b/mine.mjs --repo query --path /home/luis/.local/share/foker-bench/fixture-b/full/query --identity b90d8cee92c931773df73a39c9aa6cfc30afe5a1
+node benchmarks/fixture-b/mine.mjs --repo zod --path /home/luis/.local/share/foker-bench/fixture-b/full/zod --identity 004d800c9e3cd4c79930f55aa4ad080225b22efd
 ```
 
 El programa sobrescribe únicamente `candidates/<repo>.jsonl` y `candidates/<repo>.rejected.jsonl`,

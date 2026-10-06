@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Tres preparaciones limpias por repo (E4/E8, ADR-035): install+build con red, evaluación sin red.
-B=${FIXTURE_B_ROOT:-/home/luis/Documentos/foker-fixture-b}
+B=${FIXTURE_B_ROOT:-/home/luis/.local/share/foker-bench/fixture-b}
 COR='export COREPACK_HOME=$HOME/corepack PATH=$HOME/bin:$PATH && mkdir -p $HOME/bin && corepack enable --install-directory $HOME/bin'
 NUB='export PATH=$HOME/.nub/bin:$PATH; command -v nub >/dev/null || bash $HOME/nub-install.sh 0.8.3'
 for run in 1 2 3; do

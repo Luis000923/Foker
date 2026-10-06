@@ -6,7 +6,7 @@ LOC con cloc 1.96 (paquete npm cloc@2.11.0), sin comentarios ni líneas vacías.
 """
 import json, os, re, subprocess, sys, tempfile, pathlib, collections
 
-CLOC = os.environ.get('FIXTURE_B_ROOT', '/home/luis/Documentos/foker-fixture-b') + '/tools/node_modules/.bin/cloc'
+CLOC = os.environ.get('FIXTURE_B_ROOT', '/home/luis/.local/share/foker-bench/fixture-b') + '/tools/node_modules/.bin/cloc'
 TS = ('.ts', '.tsx', '.mts', '.cts')
 JS = ('.js', '.jsx', '.mjs', '.cjs')
 EXCLUDE = re.compile(

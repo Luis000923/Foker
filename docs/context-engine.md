@@ -329,7 +329,7 @@ El evaluador B acepta opcionalmente un JSON con configuraciones adicionales, por
 ```sh
 export CARGO_TARGET_DIR=/home/luis/Documentos/Foker-097/target
 cargo run --release --offline -p foker-context --example fixture_b_eval -- \
-  benchmarks/fixture-b/ctx-gold/cases.jsonl /home/luis/Documentos/foker-fixture-b/trees \
+  benchmarks/fixture-b/ctx-gold/cases.jsonl /home/luis/.local/share/foker-bench/fixture-b/trees \
   /tmp/b-calibration.json /tmp/configs.json calibration
 cargo run --release --offline -p foker-context --example fixture_a_barrier -- \
   /tmp/fixture-a /tmp/configs.json /tmp/a-barrier.json
