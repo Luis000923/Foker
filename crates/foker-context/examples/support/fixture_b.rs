@@ -253,7 +253,12 @@ pub fn directory_scope(file: &str) -> String {
 }
 
 /// Port de `deriveScopePaths`: L3 si hay; si no, tres L1/L2 con señal directa y luego L2 del grafo (D5).
-pub fn derive_scope_paths(files: &[PackFile]) -> Vec<String> {
+/// Añade hasta dos paquetes no raíz nombrados en la descripción (ADR-038 D6).
+pub fn derive_scope_paths(
+    files: &[PackFile],
+    task: &str,
+    packages: &[foker_map::model::MapPackage],
+) -> Vec<String> {
     let targets: Vec<&PackFile> = files.iter().filter(|f| f.level.as_str() == "L3").collect();
     let chosen = if targets.is_empty() {
         let candidates: Vec<&PackFile> = files
@@ -279,12 +284,26 @@ pub fn derive_scope_paths(files: &[PackFile]) -> Vec<String> {
     } else {
         targets
     };
-    chosen
+    let mut paths: BTreeSet<_> = chosen.iter().map(|f| directory_scope(&f.id)).collect();
+    let named: Vec<_> = packages
         .iter()
-        .map(|f| directory_scope(&f.id))
-        .collect::<BTreeSet<_>>()
-        .into_iter()
-        .collect()
+        .filter(|p| {
+            let package_char = |c: char| c.is_ascii_alphanumeric() || "@/._-".contains(c);
+            p.path != "."
+                && !p.name.is_empty()
+                && task.match_indices(&p.name).any(|(start, _)| {
+                    !task[..start].chars().next_back().is_some_and(package_char)
+                        && !task[start + p.name.len()..]
+                            .chars()
+                            .next()
+                            .is_some_and(package_char)
+                })
+        })
+        .collect();
+    if named.len() <= 2 {
+        paths.extend(named.iter().map(|p| format!("{}/**", p.path)));
+    }
+    paths.into_iter().collect()
 }
 
 fn literal_prefix(glob: &str) -> &str {
@@ -407,7 +426,7 @@ pub fn flow(
     case: &Case,
     map_files: &[String],
 ) -> Value {
-    let scope = derive_scope_paths(&preliminary.files);
+    let scope = derive_scope_paths(&preliminary.files, &request.task, &state.map.packages);
     let failed = |error: &str, scope_error: bool, scope_coverage: f64| {
         json!({
             "scope": scope, "scope_error": scope_error, "error": error,

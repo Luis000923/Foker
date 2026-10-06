@@ -275,7 +275,7 @@ function serverFactory(options: FokerServerOptions) {
             } catch {
               return invalidScope('No se pudo construir el pack para derivar el alcance.', null);
             }
-            const paths = deriveScopePaths(preliminary);
+            const paths = deriveScopePaths(preliminary, input.description, project.project.packages);
             const [first, ...rest] = paths;
             if (first === undefined)
               return invalidScope('El pack no contiene objetivos L3 ni archivos L2.', preliminary);

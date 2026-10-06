@@ -1,7 +1,7 @@
 import { readdir } from 'node:fs/promises';
 import { join, posix } from 'node:path';
 import { FokerError, matchGlobs, normalizePath } from '@foker/core';
-import type { ContextPack } from '@foker/schemas';
+import type { ContextPack, ProjectMap } from '@foker/schemas';
 
 const literalPrefix = (glob: string) => glob.split(/[?*{[]/, 1)[0] ?? '';
 const representative = (glob: string) =>
@@ -85,8 +85,13 @@ const directSignal = (file: ContextPack['files'][number]) => file.reasons.some((
 /**
  * Alcance derivado del pack preliminar (ADR-031 fase 2b); usa niveles, nunca texto renderizado.
  * Sin L3, toma tres L1/L2 con señal directa y luego L2 del grafo (ADR-036 D5).
+ * Añade hasta dos paquetes no raíz nombrados en la descripción (ADR-038 D6).
  */
-export function deriveScopePaths(pack: Pick<ContextPack, 'files'>): string[] {
+export function deriveScopePaths(
+  pack: Pick<ContextPack, 'files'>,
+  description = '',
+  packages: Pick<ProjectMap['project']['packages'][number], 'name' | 'path'>[] = [],
+): string[] {
   const targets = pack.files.filter((file) => file.level === 'L3');
   const candidates = pack.files.filter((file) => file.level === 'L2' || file.level === 'L1');
   const files = targets.length
@@ -95,5 +100,19 @@ export function deriveScopePaths(pack: Pick<ContextPack, 'files'>): string[] {
         ...rankPackFiles(candidates.filter(directSignal)),
         ...rankPackFiles(candidates.filter((file) => file.level === 'L2' && !directSignal(file))),
       ].slice(0, 3);
-  return [...new Set(files.map((file) => directoryScope(file.id)))].sort(compare);
+  // Límites npm idénticos a mentions_package (D4); excluir raíz antes del límite D6.
+  const packageChar = (char: string) => /[A-Za-z0-9@/._-]/.test(char);
+  const named = packages.filter(({ name, path }) => {
+    if (!name || path === '.') return false;
+    let start = description.indexOf(name);
+    while (start !== -1) {
+      if (!packageChar(description[start - 1] ?? '') && !packageChar(description[start + name.length] ?? ''))
+        return true;
+      start = description.indexOf(name, start + name.length);
+    }
+    return false;
+  });
+  const paths = files.map((file) => directoryScope(file.id));
+  if (named.length <= 2) paths.push(...named.map(({ path }) => `${path}/**`));
+  return [...new Set(paths)].sort(compare);
 }
