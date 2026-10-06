@@ -1,5 +1,5 @@
 // FKR-100: distribución local de los artefactos ya compilados, sin publicar ni usar red.
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -44,20 +44,17 @@ export function packLocal(out = join(root, 'dist-local')) {
       }
       writeFileSync(join(stage, 'package.json'), `${JSON.stringify(pkg, null, 2)}\n`);
     }
-    // También hay manifiestos de proyectos en las plantillas distribuidas.
-    // Resuelve sus enlaces con las versiones declaradas en esas mismas copias.
-    const stagedFiles = readdirSync(work, { recursive: true, withFileTypes: true })
-      .filter((entry) => entry.isFile() && entry.name === 'package.json')
-      .map((entry) => join(entry.parentPath, entry.name));
-    const staged = stagedFiles.map((file) => ({ file, pkg: JSON.parse(readFileSync(file, 'utf8')) }));
-    const stagedVersions = { ...versions, ...Object.fromEntries(staged.map(({ pkg }) => [pkg.name, pkg.version])) };
-    for (const { file, pkg } of staged) {
+    // Solo los manifiestos raíz pertenecen a los paquetes publicados.
+    // Los manifiestos anidados (incluidas las plantillas) conservan sus bytes originales.
+    for (const dir of packages) {
+      const file = join(work, dir, 'package.json');
+      const pkg = JSON.parse(readFileSync(file, 'utf8'));
       for (const section of ['dependencies', 'devDependencies', 'optionalDependencies', 'peerDependencies']) {
         for (const [name, version] of Object.entries(pkg[section] ?? {})) {
           if (typeof version !== 'string' || !version.startsWith('workspace:')) continue;
-          if (version !== 'workspace:*' || !stagedVersions[name])
+          if (version !== 'workspace:*' || !versions[name])
             throw new Error(`dependencia workspace no resoluble: ${name}@${version}`);
-          pkg[section][name] = stagedVersions[name];
+          pkg[section][name] = versions[name];
         }
       }
       writeFileSync(file, `${JSON.stringify(pkg, null, 2)}\n`);
@@ -85,7 +82,7 @@ export function packLocal(out = join(root, 'dist-local')) {
     );
     writeFileSync(
       join(out, 'README.md'),
-      `# Instalación local de Foker\n\nNode >= 22.14; lote para ${platform}.\n\nEn un proyecto limpio ejecuta \`npm init -y\` y copia el bloque \`overrides\` de\n\`install-local.json\` al package.json del proyecto (siete dependencias; sin entrada para Foker).\nEl campo \`foker\` contiene la ruta del tarball que se instala directamente:\n\n\`npm install "${join(out, cliTarball)}"\`\n\nDespués: \`npx foker --version\` y \`npx foker doctor\`. Las dependencias externas pueden requerir\nregistro o caché de npm. Los tarballs de Foker no requieren publicación. Si mueves\nel lote, actualiza las rutas absolutas de \`foker\` y de los overrides.\n`,
+      `# Instalación local de Foker\n\nNode >= 22.14; lote para ${platform}.\n\nInstala en otro proyecto, nunca dentro del repositorio de Foker. npm puede fallar\ncon "Cannot read properties of null (reading 'edgesOut')" sobre su node_modules de pnpm.\n\nEn un proyecto limpio ejecuta \`npm init -y\` y copia el bloque \`overrides\` de\n\`install-local.json\` al package.json del proyecto (siete dependencias; sin entrada para Foker).\nEl campo \`foker\` contiene la ruta del tarball que se instala directamente:\n\n\`npm install "${join(out, cliTarball)}"\`\n\nPara proyectos pnpm (como los creados con nextjs-turbo), añade los siete\noverrides de \`install-local.json\` como un mapa \`overrides\` en \`pnpm-workspace.yaml\`\n(conserva la configuración existente). Instala desde la raíz del proyecto:\n\n\`pnpm add -D -w "file:${join(out, cliTarball)}"\`\n\nComprueba con \`pnpm exec foker --version\` y \`pnpm exec foker doctor\`.\n\nPara npm, después: \`npx foker --version\` y \`npx foker doctor\`. Las dependencias externas pueden requerir\nregistro o caché de npm. Los tarballs de Foker no requieren publicación. Si mueves\nel lote, actualiza las rutas absolutas de \`foker\` y de los overrides.\n`,
     );
     return out;
   } finally {

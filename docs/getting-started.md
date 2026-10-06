@@ -19,11 +19,16 @@ node scripts/pack-local.mjs
 
 Genera ocho tarballs en `dist-local/` (ignorado por git): la CLI, sus seis paquetes
 `@foker/*` y el paquete nativo del host actual. El empaquetado es offline y no modifica
-los manifiestos originales; las dependencias del workspace quedan con versiones exactas.
-La conversión también se aplica a los manifiestos de las plantillas incluidas en la CLI.
+los manifiestos originales; solo las dependencias workspace de los manifiestos raíz de los
+paquetes quedan con versiones exactas. Los manifiestos anidados, incluidas las plantillas
+de la CLI, se conservan byte a byte con sus referencias `workspace:*`.
 El lote es específico del sistema, arquitectura y libc del host; Linux musl no está soportado.
 
-En un proyecto limpio:
+Instala en otro proyecto, nunca dentro del repositorio de Foker. npm puede fallar con
+`Cannot read properties of null (reading 'edgesOut')` sobre el `node_modules` de pnpm
+del repositorio de Foker.
+
+En un proyecto limpio con npm:
 
 1. Ejecuta `npm init -y`.
 2. Copia el bloque `overrides` de `dist-local/install-local.json` al `package.json`
@@ -37,6 +42,25 @@ En un proyecto limpio:
    npx foker --version
    npx foker doctor
    ```
+
+Para proyectos pnpm, como los creados con `nextjs-turbo`, añade los siete overrides de
+`install-local.json` a un mapa `overrides` en el `pnpm-workspace.yaml` de la raíz del
+proyecto. Conserva sus campos existentes (incluidos `packages` y los controles de instalación).
+Usa las rutas reales del lote para todas las entradas; por ejemplo:
+
+```yaml
+overrides:
+  '@foker/core': 'file:/ruta/al/lote/foker-core-0.0.0.tgz'
+  # Añade también las otras seis entradas de install-local.json.
+```
+
+Desde la raíz de ese proyecto instala Foker como dependencia de desarrollo del workspace:
+
+```sh
+pnpm add -D -w file:/ruta/al/lote/foker-0.0.0.tgz
+pnpm exec foker --version
+pnpm exec foker doctor
+```
 
 Si mueves el lote, actualiza las rutas de `foker` y de `overrides`.
 El README del lote incluye el comando con su ruta y versión reales. No se publica nada;

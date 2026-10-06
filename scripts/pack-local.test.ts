@@ -74,20 +74,31 @@ describe('FKR-100: empaquetado local real', () => {
     );
   });
 
-  it('elimina workspace: de todos los manifiestos y fija las versiones internas', () => {
+  it('elimina workspace: solo de los ocho manifiestos raíz y fija las versiones internas', () => {
     for (const [tarball, pkg] of manifests) {
-      const entries = run('tar', ['-tzf', join(out, tarball)], root)
-        .trim()
-        .split('\n');
-      for (const entry of entries.filter((file) => file.endsWith('/package.json'))) {
-        expect(run('tar', ['-xOf', join(out, tarball), entry], root)).not.toContain('workspace:');
-      }
+      expect(run('tar', ['-xOf', join(out, tarball), 'package/package.json'], root)).not.toContain('workspace:');
       for (const section of ['dependencies', 'devDependencies', 'optionalDependencies', 'peerDependencies']) {
         for (const [name, version] of Object.entries((pkg[section] ?? {}) as Record<string, string>)) {
           if (versions[name]) expect(version).toBe(versions[name]);
         }
       }
     }
+  });
+
+  it('FKR-103: conserva byte a byte los manifiestos de nextjs-turbo y sus workspace:*', () => {
+    const source = join(root, 'templates', 'nextjs-turbo');
+    const files = readdirSync(source, { recursive: true, withFileTypes: true })
+      .filter((entry) => entry.isFile() && entry.name === 'package.json')
+      .map((entry) => join(entry.parentPath, entry.name));
+    expect(files.length).toBeGreaterThan(0);
+    let workspaceCount = 0;
+    for (const file of files) {
+      const original = readFileSync(file);
+      const entry = `package/templates/nextjs-turbo/${file.slice(source.length + 1)}`;
+      expect(Buffer.from(run('tar', ['-xOf', foker, entry], root))).toEqual(original);
+      if (original.includes('workspace:*')) workspaceCount++;
+    }
+    expect(workspaceCount).toBeGreaterThan(0);
   });
 
   it('incluye el addon compilado en el tarball de plataforma', () => {
@@ -119,6 +130,15 @@ describe('FKR-100: empaquetado local real', () => {
     const readme = readFileSync(join(out, 'README.md'), 'utf8');
     for (const command of ['npm init -y', 'overrides', 'npm install', 'npx foker --version', 'npx foker doctor']) {
       expect(readme).toContain(command);
+    }
+    for (const instruction of [
+      'nunca dentro del repositorio de Foker',
+      "Cannot read properties of null (reading 'edgesOut')",
+      'pnpm-workspace.yaml',
+      `pnpm add -D -w "file:${foker}"`,
+      'pnpm exec foker doctor',
+    ]) {
+      expect(readme).toContain(instruction);
     }
     expect(readme).toContain(`npm install "${foker}"`);
   });
