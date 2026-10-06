@@ -13,7 +13,7 @@ Desde la raíz de Foker, con Node ≥ 22.14, Git, el addon nativo y `packages/co
 ```sh
 node benchmarks/fixture-b/ctx-gold.mjs \
   --tasks <tasks.jsonl> \
-  --repos /home/luis/Documentos/foker-fixture-b/full \
+  --repos /home/luis/.local/share/foker-bench/fixture-b/full \
   --trees <dir de árboles>
 
 CARGO_TARGET_DIR=$PWD/target cargo run --release -p foker-context --example fixture_b_eval --offline -- \

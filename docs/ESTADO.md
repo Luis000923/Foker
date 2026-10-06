@@ -55,6 +55,17 @@ M0, M2, M3, M4 y E6 completos en local; M1 con todo lo que no gasta API (manifie
 | FKR-060 | Esqueleto de CLI | hecho | feat/FKR-060-cli | Codex; `docs/cli.md` generado (REQ-DOC-001) |
 | FKR-092 | Medir y clasificar overhead fijo del anfitrión | hecho (local) | feat/FKR-092-overhead-anfitrion | Análisis determinista y 24 runs smoke-3…6; primer turno control ~15,7k, Foker ~17k; Δ smoke-6 1.316 tokens; internos no observables marcados INFERIDOS. Biome/tsc verdes, 40 tests benchmark verdes con addon externo de solo lectura |
 
+## Limpieza 2026-10-05
+
+- En `/home/luis/Documentos` solo queda `Foker/`. Worktrees retirados; las ramas se conservan:
+  `feat/FKR-098-gate-ignorados` (solo ADR-037, implementación pendiente),
+  `feat/FKR-100-instalacion-local` (WIP de Codex sin revisar, `edea1ac`) y `chore/sistema-agentes`
+  (WIP de otra sesión). Los worktrees nuevos van en `~/.cache/foker-wt/`.
+- **Fixture B** se movió a `~/.local/share/foker-bench/fixture-b` (FKR-101: ruta por defecto del
+  arnés y de los scripts). Se borraron las ejecuciones (`runs/`, 150 GB); se conserva `evidence/`
+  de cada una. `verify_task.py` y `verify_batch.py` mantienen la ruta antigua por defecto para no
+  cambiar la huella del verificador (`5cc8a340ce5b`, 342 veredictos): usa `FIXTURE_B_ROOT`.
+
 ## Trabajo 2026-10-05 (tarde)
 
 - **bench-b-smoke-2 · válido** (b-vite-02, b-query-01, b-zod-02; 2 brazos × 1). 6/6 con
@@ -233,7 +244,7 @@ Sesión 2026-10-03 (usuario luis):
 - Restos de un test en la raíz del repo (`.claude/agents`, `.claude/skills`, `.claude/settings.json`,
   `.mcp.json`, `foker.config.yaml`, `foker/`): el permiso de borrado me fue denegado; los debe borrar la
   persona. Mientras tanto, los commits añaden rutas explícitas (no `git add -A`).
-- Otra sesión trabaja en el worktree `../Foker-agentes` (rama `chore/sistema-agentes`).
+- El sistema de agentes de otra sesión está guardado sin integrar en la rama `chore/sistema-agentes` (commit WIP `20c661a`); para integrarlo hay que hacer rebase sobre `main` y renumerar su ADR (ADR-022 ya está ocupado).
 - El sandbox de Codex no tiene red: no puede ejecutar `pnpm` (descarga la versión fijada); se le
   pide usar `./node_modules/.bin/*` y yo ejecuto `pnpm verify` antes de cada merge.
 - Decidido: solo local, sin remoto ni push. `foker-vault/` y los `.txt` de la raíz quedan fuera del repo.
