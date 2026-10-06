@@ -106,7 +106,11 @@ Decisiones adicionales que la especificación no fija:
   limpia no la requieren. Los archivos de secretos también participan mediante hashes.
 - Se repite impact dependents en lotes de 20 hasta cubrir dependientes transitivos.
   Los nombres npm se pasan como --filter, sin prefijo pkg:. Un workspace single no
-  recibe filtros.
+  recibe filtros. Si los afectados incluyen el paquete raíz (`path: '.'`), solo o junto
+  con otros paquetes, el engine entrega una lista vacía: `${affected_packages}` se elimina
+  y el check se ejecuta sin filtros para todo el workspace (FKR-105). Esto también aplica
+  al combinar afectados del mapa previo por borrados con los del mapa refrescado;
+  policy no interpreta el mapa.
 - approve/reject/unblock piden confirmación por TTY; --yes no evita esta confirmación.
   La excepción no interactiva exige simultáneamente --ci explícito y CI=true. Un rechazo
   de confirmación sale con 6 y no modifica el ledger. unblock --scope registra el nuevo

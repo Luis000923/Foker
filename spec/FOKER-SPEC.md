@@ -1115,7 +1115,7 @@ integrations:
   targets: [claude-code, opencode, antigravity]
 ```
 
-`${affected_packages}` se expande a `--filter=<pkg>` por cada paquete que contiene un archivo modificado más sus dependientes (calculado con el mapa); si no hay paquetes (repo de paquete único) se elimina. Es el único marcador permitido.
+`${affected_packages}` se expande a `--filter=<pkg>` por cada paquete que contiene un archivo modificado más sus dependientes (calculado con el mapa); si no hay paquetes (repo de paquete único) se elimina. Si los afectados incluyen el paquete raíz (`path: '.'`), solo o mezclado con otros paquetes, el engine entrega una lista vacía y el marcador se elimina: el check se ejecuta sin filtros, para todos los paquetes. La regla también se aplica a la unión de afectados anteriores por borrados y actuales tras refrescar el mapa; `foker-policy` solo expande los nombres recibidos y no interpreta el mapa. **Modificado por FKR-105**. Es el único marcador permitido.
 
 ### 15.3 `foker/` y `.foker/`
 | | `foker/` | `.foker/` |
