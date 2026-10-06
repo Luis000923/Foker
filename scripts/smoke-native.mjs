@@ -9,61 +9,28 @@
 //
 // Requiere `pnpm build` previo (dist/ de @foker/core). Sale con código 1 si algo falla.
 
-import { execFileSync } from 'node:child_process';
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-/** Target Rust → sufijo de plataforma de napi-rs (`<binaryName>.<sufijo>.node`). */
-export const PLATFORMS = {
-  'x86_64-unknown-linux-gnu': 'linux-x64-gnu',
-  'aarch64-unknown-linux-gnu': 'linux-arm64-gnu',
-  'x86_64-apple-darwin': 'darwin-x64',
-  'aarch64-apple-darwin': 'darwin-arm64',
-  'x86_64-pc-windows-msvc': 'win32-x64-msvc',
-  'aarch64-pc-windows-msvc': 'win32-arm64-msvc',
-};
+import { corePkgDir, PLATFORMS, pack, prepareNative, run } from './native-pack.mjs';
 
-const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
-const corePkgDir = join(root, 'packages', 'core');
-const isWindows = process.platform === 'win32';
-
-/**
- * Ejecuta un comando sin shell y devuelve su stdout.
- * En Windows, npm/pnpm son scripts `.cmd` y requieren shell; los argumentos son constantes o rutas propias.
- * @param {string} command
- * @param {string[]} args
- * @param {string} cwd
- */
-function run(command, args, cwd) {
-  return execFileSync(command, args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'], shell: isWindows });
-}
+export { PLATFORMS } from './native-pack.mjs';
 
 /** @param {string} target @param {string} binariesDir */
 function smoke(target, binariesDir) {
   const platform = PLATFORMS[/** @type {keyof typeof PLATFORMS} */ (target)];
   if (!platform) throw new Error(`target desconocido: ${target}. Válidos: ${Object.keys(PLATFORMS).join(', ')}`);
 
-  const corePkg = JSON.parse(readFileSync(join(corePkgDir, 'package.json'), 'utf8'));
-  const binaryName = corePkg.napi.binaryName;
-  const binary = join(binariesDir, `${binaryName}.${platform}.node`);
-  if (!existsSync(binary)) throw new Error(`no existe el binario ${binary}`);
   if (!existsSync(join(corePkgDir, 'dist', 'index.js')))
     throw new Error('falta packages/core/dist: ejecuta pnpm build');
-
-  run('pnpm', ['exec', 'napi', 'create-npm-dirs'], corePkgDir);
-  const platformDir = join(corePkgDir, 'npm', platform);
-  copyFileSync(binary, join(platformDir, `${binaryName}.${platform}.node`));
+  const platformDir = prepareNative(corePkgDir, platform, binariesDir);
 
   const work = mkdtempSync(join(tmpdir(), 'foker-smoke-'));
   try {
-    const coreTgz = run('npm', ['pack', '--silent', '--pack-destination', work], corePkgDir).trim().split('\n').pop();
-    const platformTgz = run('npm', ['pack', '--silent', '--pack-destination', work], platformDir)
-      .trim()
-      .split('\n')
-      .pop();
-    if (!coreTgz || !platformTgz) throw new Error('npm pack no devolvió el nombre del tarball');
+    const coreTgz = pack(corePkgDir, work);
+    const platformTgz = pack(platformDir, work);
 
     const app = join(work, 'app');
     mkdirSync(app);

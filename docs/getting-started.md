@@ -7,6 +7,37 @@ de tu suscripción del anfitrión (Claude Code, Codex/ChatGPT o Antigravity). Fo
 guía usan ese paquete local. Hoy, para desarrollar Foker, sigue [development.md](development.md)
 y compila TS y el addon; la CLI compilada está en `packages/cli/dist/bin.js`.
 
+## Instalación local (sin npm)
+
+Sin publicar Foker en el registro npm, con las dependencias instaladas y TypeScript y
+el addon nativo ya compilados, ejecuta desde la raíz de este repositorio:
+
+```sh
+node scripts/pack-local.mjs
+# Otra salida: node scripts/pack-local.mjs --out /ruta/al/lote
+```
+
+Genera ocho tarballs en `dist-local/` (ignorado por git): la CLI, sus seis paquetes
+`@foker/*` y el paquete nativo del host actual. El empaquetado es offline y no modifica
+los manifiestos originales; las dependencias del workspace quedan con versiones exactas.
+El lote es específico del sistema, arquitectura y libc del host; Linux musl no está soportado.
+
+En un proyecto limpio:
+
+1. Ejecuta `npm init -y`.
+2. Copia el bloque `overrides` de `dist-local/install-local.json` al `package.json`
+   del proyecto. Sus rutas absolutas apuntan a los tarballs locales; actualízalas si mueves el lote.
+3. Instala la CLI (sustituye la ruta y la versión por las generadas):
+
+   ```sh
+   npm install /ruta/al/lote/foker-0.0.0.tgz
+   npx --no-install foker doctor
+   ```
+
+El README del lote incluye el comando con su ruta y versión reales. No se publica nada;
+la instalación puede requerir red o caché para dependencias externas como YAML, Ajv y
+el SDK MCP. El empaquetador no las descarga ni prueba la instalación contra el registro.
+
 ## Inicializar
 
 En un repositorio existente, con el paquete disponible:
