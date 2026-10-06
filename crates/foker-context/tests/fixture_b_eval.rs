@@ -146,3 +146,93 @@ fn cuerpos_de_archivo_como_ctx_gold_ts() {
         (1.0, 0.5)
     );
 }
+
+#[test]
+fn configuraciones_adicionales_y_filtro_previo_de_split() {
+    let trees = tempfile::tempdir().unwrap();
+    let root = trees.path().join("cal-1");
+    write(
+        &root,
+        "src/a.ts",
+        "export function target() { return 1; }\n",
+    );
+    let cases = [
+        json!({"id":"cal-1", "task":"fix target", "split":"calibration", "gold_modified":["src/a.ts"], "gold_symbols":[]}),
+        // No existe su árbol ni su gold: filtrar antes de construir mapas y de validar símbolos.
+        json!({"id":"do-not-read", "task":"fix absent", "split":"validation", "gold_modified":["absent.ts"], "gold_symbols":["absent.ts#missing"]}),
+    ].iter().map(ToString::to_string).collect::<Vec<_>>().join("\n");
+    let configs: Vec<fixture_b::Config> = serde_json::from_value(json!([
+        {"name":"adr036", "params":{"related_max_fraction":0.25,"related_focal":true,"anchor_overflow_focal":true,"package_mentions":true}}
+    ])).unwrap();
+    let report =
+        fixture_b::evaluate_with_configs(&cases, trees.path(), &configs, Some("calibration"))
+            .unwrap();
+    assert_eq!(report["cases"].as_array().unwrap().len(), 1);
+    assert_eq!(
+        report["configs"],
+        json!(["default", "sin_adr034", "sin_adr033", "plegado", "adr036"])
+    );
+    assert!(!root.join(".foker").exists());
+    assert_eq!(report["summary"]["adr036"]["validation"]["cases"], 0);
+    let duplicates: Vec<fixture_b::Config> =
+        serde_json::from_value(json!([{"name":"default", "params":null}])).unwrap();
+    assert!(
+        fixture_b::evaluate_with_configs(&cases, trees.path(), &duplicates, Some("calibration"))
+            .is_err()
+    );
+}
+
+#[test]
+fn alcance_d5_niveles_senales_orden_y_fallback() {
+    use foker_context::pack::{PackFile, RenderLevel::*};
+    let file = |id: &str, level, score, reason: &str| PackFile {
+        id: id.into(),
+        level,
+        score,
+        tokens: 1,
+        reasons: vec![reason.into()],
+        note: None,
+    };
+    let mut files = vec![
+        file("z/a.ts", L1, 2.0, "PATH_MENTION"),
+        file("b/a.ts", L2, 2.0, "SYMBOL_MENTION"),
+        file("a/a.ts", L1, 2.0, "LEXICAL:a"),
+        file("c/a.ts", L1, 3.0, "ANCHOR"),
+        file("root.ts", L0, 99.0, "ANCHOR"),
+        file("hub/a.ts", L2, 99.0, "CORE"),
+    ];
+    assert_eq!(
+        fixture_b::derive_scope_paths(&files),
+        ["a/**", "b/**", "c/**"]
+    );
+    files.reverse();
+    assert_eq!(
+        fixture_b::derive_scope_paths(&files),
+        ["a/**", "b/**", "c/**"]
+    );
+    assert!(fixture_b::derive_scope_paths(&[file("root.ts", L0, 99.0, "ANCHOR")]).is_empty());
+    let mut fallback = vec![
+        file("z/a.ts", L2, 1.0, "CORE"),
+        file("a/b.ts", L2, 2.0, "DEPENDENCY_OF:x"),
+        file("b/a.ts", L2, 1.0, "CORE"),
+        file("a/a.ts", L2, 2.0, "CORE"),
+        file("c/a.ts", L1, 99.0, "CORE"),
+    ];
+    assert_eq!(fixture_b::derive_scope_paths(&fallback), ["a/**", "b/**"]);
+    fallback.reverse();
+    assert_eq!(fixture_b::derive_scope_paths(&fallback), ["a/**", "b/**"]);
+    fallback.push(file("direct/a.ts", L1, 0.1, "LEXICAL:a"));
+    assert_eq!(
+        fixture_b::derive_scope_paths(&fallback),
+        ["a/**", "direct/**"]
+    );
+    fallback.extend([
+        file("target/a.ts", L3, 0.0, "CORE"),
+        file("target/b.ts", L3, 0.0, "CORE"),
+        file("config.ts", L3, 0.0, "CORE"),
+    ]);
+    assert_eq!(
+        fixture_b::derive_scope_paths(&fallback),
+        ["config.ts", "target/**"]
+    );
+}

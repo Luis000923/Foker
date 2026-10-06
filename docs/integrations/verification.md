@@ -15,6 +15,9 @@ Checklist por release (FKR-070). Proyecto de prueba: copia de `fixtures/monorepo
 
 Registra versión del anfitrión, versión de Foker, fecha y resultado en las notas de la release.
 
+Checklist ejecutable por anfitrión, con comandos, resultados esperados y casillas de firma:
+[checklist-fkr-070.md](checklist-fkr-070.md).
+
 ## Evidencia local de Codex y pendientes (FKR-070)
 
 Fecha: 2026-10-04. Codex CLI 0.159.3, sin red. Se ejecutaron `codex --help`,

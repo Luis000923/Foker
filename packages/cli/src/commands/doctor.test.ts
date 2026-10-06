@@ -120,7 +120,8 @@ it('doctor comprueba cada CLI y la sesión sin exponer salida ni exigir secretos
       calls.push([command, args]);
     });
     expect(checks[0]?.status).toBe('ok');
-    expect(calls[0]).toEqual([target === 'claude-code' ? 'claude' : target, ['--version']]);
+    const command = target === 'claude-code' ? 'claude' : target === 'antigravity' ? 'agy' : target;
+    expect(calls[0]).toEqual([command, ['--version']]);
     expect(checks[1]?.status).toBe(target === 'codex' || target === 'claude-code' ? 'ok' : 'warn');
     if (target === 'codex') expect(calls[1]).toEqual(['codex', ['login', 'status']]);
     expect(JSON.stringify(checks)).not.toContain('API_KEY');
@@ -135,4 +136,15 @@ it('doctor comprueba cada CLI y la sesión sin exponer salida ni exigir secretos
   });
   expect(loggedOut[1]?.status).toBe('warn');
   expect(JSON.stringify(loggedOut)).not.toContain('secreto');
+});
+
+it('sondea agy --version para Antigravity y conserva el id del target', async () => {
+  const calls: [string, string[]][] = [];
+  const checks = await checkHost('antigravity', root, {}, async (command, args) => {
+    calls.push([command, args]);
+  });
+  expect(calls).toEqual([['agy', ['--version']]]);
+  expect(checks[0]).toEqual({ id: 'host:antigravity', status: 'ok', message: 'agy disponible' });
+  expect(checks[1]?.id).toBe('host:antigravity:session');
+  expect(checks[1]?.status).toBe('warn');
 });

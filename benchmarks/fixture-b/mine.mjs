@@ -8,7 +8,7 @@ import { promisify } from 'node:util';
 const exec = promisify(execFile);
 
 // Copia literal de los patrones raw de EXCLUDE y TEST de:
-// /home/luis/Documentos/foker-fixture-b/tools/eligibility.py (E2/E3).
+// /home/luis/.local/share/foker-bench/fixture-b/tools/eligibility.py (E2/E3).
 // Un solo escape, igual que el original (r'…\.github…' en Python).
 export const EXCLUDE =
   /(^|\/)(node_modules|dist|build|coverage|vendor|vendored|generated|__generated__|fixtures?|__fixtures__|examples?|playground|docs?|benchmarks?|bench|scripts|\.github|\.changeset)(\/|$)/;

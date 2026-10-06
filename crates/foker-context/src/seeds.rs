@@ -77,6 +77,19 @@ impl Seeds {
         }
     }
 }
+/// Límites npm: una mención de @scope/name-extra no nombra @scope/name.
+fn mentions_package(task: &str, name: &str) -> bool {
+    let package_char = |c: char| c.is_ascii_alphanumeric() || "@/._-".contains(c);
+    !name.is_empty()
+        && task.match_indices(name).any(|(start, _)| {
+            !task[..start].chars().next_back().is_some_and(package_char)
+                && !task[start + name.len()..]
+                    .chars()
+                    .next()
+                    .is_some_and(package_char)
+        })
+}
+
 /// Reúne las seis fuentes y required_context como anclas débiles.
 pub fn build(
     map: &ProjectMap,
@@ -99,30 +112,74 @@ pub fn build(
     for name in &req.anchors.symbols {
         seeds.symbol(map, name, params.w_anchor, "ANCHOR");
     }
+    let named_packages: BTreeSet<&str> = if params.package_mentions {
+        map.packages
+            .iter()
+            .filter(|p| mentions_package(&req.task, &p.name))
+            .map(|p| p.id.as_str())
+            .collect()
+    } else {
+        BTreeSet::new()
+    };
+    fn restrict<'a>(
+        map: &ProjectMap,
+        named_packages: &BTreeSet<&str>,
+        ids: Vec<&'a str>,
+    ) -> Vec<&'a str> {
+        if named_packages.is_empty() {
+            return ids;
+        }
+        let packages: BTreeSet<_> = ids
+            .iter()
+            .filter_map(|id| map.files.iter().find(|f| f.id == *id))
+            .filter_map(|f| f.package.as_deref())
+            .collect();
+        if packages.len() > 1 && packages.iter().any(|p| named_packages.contains(p)) {
+            ids.into_iter()
+                .filter(|id| {
+                    map.files.iter().any(|f| {
+                        f.id == *id
+                            && f.package
+                                .as_deref()
+                                .is_some_and(|p| named_packages.contains(p))
+                    })
+                })
+                .collect()
+        } else {
+            ids
+        }
+    }
     for candidate in &tokens.paths {
         let normalized = foker_map::path::normalize_lexical(candidate).ok();
-        for file in &map.files {
-            if normalized.as_deref() == Some(&file.id)
-                || file.id.rsplit('/').next() == Some(candidate.as_str())
-            {
-                seeds.add(
-                    map,
-                    &file.id,
-                    params.mention_factor * params.w_anchor,
-                    "PATH_MENTION",
-                );
-            }
+        let ids = map
+            .files
+            .iter()
+            .filter(|file| {
+                normalized.as_deref() == Some(&file.id)
+                    || file.id.rsplit('/').next() == Some(candidate.as_str())
+            })
+            .map(|f| f.id.as_str())
+            .collect();
+        for id in restrict(map, &named_packages, ids) {
+            seeds.add(
+                map,
+                id,
+                params.mention_factor * params.w_anchor,
+                "PATH_MENTION",
+            );
         }
     }
     for candidate in &tokens.identifiers {
-        for symbol in map
+        let ids = map
             .symbols
             .iter()
             .filter(|s| s.name == *candidate && s.exported != Exported::None)
-        {
+            .map(|s| s.file())
+            .collect();
+        for id in restrict(map, &named_packages, ids) {
             seeds.add(
                 map,
-                symbol.file(),
+                id,
                 params.mention_factor * params.w_anchor,
                 "SYMBOL_MENTION",
             );

@@ -462,6 +462,11 @@ Entrada `ContextRequest` y salida `ContextPack`: esquema normativo `schemas/cont
 Si `intent` viene en la petición, se usa. Si no, tabla de palabras clave versionada (p. ej. `fix`: arregla, bug, error, falla, fix, broken; `test`: test, prueba, spec, coverage; `refactor`: refactor, renombra, extrae, mueve; `add`: añade, crea, nuevo, implement, add; `explain`: explica, cómo funciona, why). Gana la intención con más coincidencias; empate → orden fijo `fix > test > refactor > add > modify > explain`; sin coincidencias → `modify`. La intención solo ajusta parámetros (§9.6), nunca filtra.
 
 ### 9.5 Paso 4 · Identificación del área afectada (semillas)
+
+**Modificado por ADR-036 (FKR-097):** el parámetro interno
+`package_mentions` restringe las menciones ambiguas de ruta/símbolo a los paquetes del workspace
+nombrados en la tarea cuando contienen candidatos; sin coincidencias conserva las semillas actuales.
+No cambia las anclas explícitas. Esta propuesta no se declara aceptada.
 Vector de personalización `p` sobre nodos-archivo:
 
 | Fuente | Peso base | Regla |
@@ -487,6 +492,14 @@ Si `p` es todo ceros (tarea sin señal): `p` = distribución del PageRank global
 5. Exclusiones duras: `kind: generated`, `parse_status: skipped`, archivos fuera de `include`, y cualquier archivo que case con globs de secretos (nunca están en el mapa).
 
 ### 9.7 Pasos 9–11 · Selección, poda y presupuesto
+
+**Modificado por ADR-036 (FKR-097):** D1 limita cada no ancla
+L2/L1 a `related_max_fraction × B`; D2 (`related_focal`) permite L1 con las firmas del foco léxico,
+como máximo `focal_max_symbols`, y el número de símbolos omitidos dentro de `rendered`. D3
+(`anchor_overflow_focal`) rescata anclas cuyo mínimo L1 no cabe con L3 focal o L0 y nota explícita
+«contenido omitido por presupuesto; léalo con su herramienta de lectura»; solo falla si ni los
+L0 de todas las anclas caben con el contexto obligatorio. Parámetros internos, desactivables
+con 0/false, sujetos al protocolo y umbrales fijados en ADR-036. Esta propuesta no se declara aceptada.
 
 **Modificado por ADR-031 (fase 1): Context Pack v2 compacto.**
 Niveles de renderizado por archivo:
@@ -687,7 +700,7 @@ Esquemas completos: `schemas/mcp-tools.json`. Errores: §18. **Modificado por AD
 | Propósito | Crear una tarea, fijar alcance/perfil y baseline, pasarla a `RUNNING` y opcionalmente entregar su pack en la misma llamada. **Modificado por ADR-031** |
 | Input | `{ description: string(1..2000), scope?: { paths: string[1..50] (globs relativos) }, profile?: string = "default", skill?: string, max_attempts?: 1..5 = 3, client_token?: string(≤64), context?: true \| {budget_tokens?: 1000..20000, anchors?: {files?, symbols?}, intent?: "fix"\|"add"\|"modify"\|"refactor"\|"test"\|"explain"} }` (**modificado por ADR-031**) |
 | Output | `{ task_id, state: "RUNNING", attempt: 1, baseline: { git_head?, dirty_files: string[], snapshot_hash }, allowed_paths, protected_paths_in_scope: string[], checks: string[], context?: {pack_hash, budget: {used, limit}, rendered}, context_error?: {code, message, recoverable}, scope_derived?: boolean }` (**modificado por ADR-031**) |
-| Alcance | `scope` es obligatorio salvo con `context`. Cada patrón explícito debe coincidir con un archivo del mapa o un directorio existente (también el directorio padre para archivos nuevos); se comprueba antes del baseline y ledger. Sin `scope`, se construye un pack preliminar sin `task_id`: directorio + `/**` de todos los L3; si no hay L3, de los tres primeros L2 por puntuación descendente e id ascendente en empates. Directorios deduplicados y ordenados por ruta. Se aplica `assertUnprotectedScope`; el alcance queda en la tarea y en `allowed_paths`, con `scope_derived: true`. **Modificado por ADR-031 (fase 2b)** |
+| Alcance | `scope` es obligatorio salvo con `context`. Cada patrón explícito debe coincidir con un archivo del mapa o un directorio existente (también el directorio padre para archivos nuevos); se comprueba antes del baseline y ledger. Sin `scope`, se construye un pack preliminar sin `task_id`: directorio + `/**` de todos los L3; si no hay L3, de los tres primeros archivos L1 o L2 con señal directa (`ANCHOR`, `PATH_MENTION`, `SYMBOL_MENTION`, `LEXICAL:`) y después L2 sin señal directa, cada grupo por puntuación descendente e id ascendente en empates (**modificado por ADR-036, D5**). Directorios deduplicados y ordenados por ruta. Se aplica `assertUnprotectedScope`; el alcance queda en la tarea y en `allowed_paths`, con `scope_derived: true`. **Modificado por ADR-031 (fase 2b)** |
 | Permisos | escritura en `.foker/tasks/` |
 | Side effects | Crea ledger y evento; captura baseline (hashes de archivos en alcance + `git status`) |
 | Errores | `FKR-INP-001` recuperable (alcance inexistente o imposible de derivar: mensaje con hasta cinco alcances sugeridos desde el ranking del pack o raíces de paquetes; no crea tarea ni ledger), `FKR-POL-002` (alcance incluye rutas prohibidas: se devuelve la lista), `FKR-TSK-005` (demasiadas tareas activas: máx. 5) |

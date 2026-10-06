@@ -1,0 +1,6 @@
+{
+  "related_max_fraction": 0.25,
+  "related_focal": true,
+  "anchor_overflow_focal": false,
+  "package_mentions": true
+}
