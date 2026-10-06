@@ -14,7 +14,9 @@ function arg(args: string[], name: string): string | undefined {
 }
 
 export async function main(args: string[]): Promise<void> {
-  const root = resolve(arg(args, '--root') ?? process.env['FIXTURE_B_ROOT'] ?? '/home/luis/Documentos/foker-fixture-b');
+  const root = resolve(
+    arg(args, '--root') ?? process.env['FIXTURE_B_ROOT'] ?? '/home/luis/.local/share/foker-bench/fixture-b',
+  );
   const manifest = JSON.parse(readFileSync(resolve(arg(args, '--manifest') ?? ''), 'utf8')) as BenchmarkManifest;
   const all = JSON.parse(readFileSync(join(root, 'harness-tasks.json'), 'utf8')) as FixtureBTask[];
   const ids = (arg(args, '--tasks') ?? '').split(',').filter(Boolean);

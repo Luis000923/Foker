@@ -285,7 +285,7 @@ directa, después L2 sin señal, corte a tres archivos antes de deduplicar direc
 
 Fixture B: `CARGO_TARGET_DIR=/home/luis/Documentos/Foker-097/target cargo run --release --offline
 -p foker-context --example fixture_b_eval -- benchmarks/fixture-b/ctx-gold/cases.jsonl
-/home/luis/Documentos/foker-fixture-b/trees benchmarks/fixture-b/results/adr036-d5-2026-10-05.json`.
+/home/luis/.local/share/foker-bench/fixture-b/trees benchmarks/fixture-b/results/adr036-d5-2026-10-05.json`.
 Los árboles se leen sin modificarlos; no se crea `.foker/`. No se ajustan parámetros del motor.
 
 Cada celda sigue el orden **main / validation D1–D4 / D5**:
