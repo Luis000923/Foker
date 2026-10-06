@@ -5,7 +5,7 @@ pnpm + Turborepo con Next App Router, health GET, Button tipado, configuraciones
 compartidas TypeScript strict y ESLint, CI sin deploy, reglas y especificación de ejemplo.
 La versión inicial registrada en `foker.config.yaml` es 0.1.0.
 
-El destino debe estar vacío o no existir. `--force` escribe únicamente los archivos de
+El destino debe estar vacío, contener únicamente `.git` (por ejemplo, tras `git init`) o no existir. `--force` escribe únicamente los archivos de
 la plantilla y avisa de los sobrescritos; conserva archivos ajenos. `--dry-run` lista
 archivos de plantilla e integraciones sin escribir. Init ejecuta sync con los targets
 seleccionados, pero no instala dependencias. `--from-spec` lee un foker.md del destino;
@@ -14,6 +14,11 @@ para usarlo en un directorio ocupado se necesita `--force`.
 Después ejecuta `pnpm install`, revisa y versiona el lockfile generado y ejecuta los
 cuatro scripts raíz. CI exige ese lockfile. No se incluye uno sin resolver dependencias.
 El build de la CLI empaqueta `templates/`; en desarrollo se usa el directorio del repo.
+`scripts/copy-data.mjs` convierte cada archivo `.gitignore` a `_gitignore` en la copia
+para distribución, también en subdirectorios y en cualquier plantilla, porque npm pack
+excluye los `.gitignore`. Init restaura el nombre `.gitignore` al materializar esos archivos.
+`_gitignore` es un nombre reservado: no debe coexistir con `.gitignore` en el mismo directorio.
+El `.gitignore` raíz resultante siempre ignora `.foker/`, sin añadir una regla duplicada.
 
 Incluye CSP, HSTS, nosniff, Referrer-Policy, helper same-origin probado con Vitest,
 entorno Zod validado al arrancar, prohibición de child_process y react/no-danger,

@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { isAbsolute, join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { root, run } from './native-pack.mjs';
-import { hostPlatform, packLocal } from './pack-local.mjs';
+import { hostPlatform } from './pack-local.mjs';
 
 const packages = ['cli', 'core', 'engine', 'integrations', 'mcp', 'policy', 'schemas'];
 const originals = packages.map((dir) => join(root, 'packages', dir, 'package.json'));
@@ -29,7 +29,7 @@ let foker: string;
 const manifests = new Map<string, { name: string; version: string; [key: string]: unknown }>();
 
 beforeAll(() => {
-  packLocal(out);
+  run(process.execPath, ['scripts/pack-local.mjs', '--out', out], root);
   tarballs = readdirSync(out).filter((file) => file.endsWith('.tgz'));
   ({ foker, overrides } = JSON.parse(readFileSync(join(out, 'install-local.json'), 'utf8')));
   for (const tarball of tarballs) {
@@ -46,6 +46,32 @@ describe('FKR-100: empaquetado local real', () => {
       [...Object.keys(versions), `@foker/core-${hostPlatform()}`].sort(),
     );
     expect(readdirSync(out).sort()).toEqual([...tarballs, 'README.md', 'install-local.json'].sort());
+  });
+
+  it('FKR-102: distribuye todos los archivos de nextjs-turbo con gitignore empaquetable', () => {
+    const source = join(root, 'templates', 'nextjs-turbo');
+    const expected = readdirSync(source, { recursive: true, withFileTypes: true })
+      .filter((entry) => entry.isFile())
+      .map((entry) =>
+        join(entry.parentPath, entry.name)
+          .slice(source.length + 1)
+          .split('/')
+          .map((part) => (part === '.gitignore' ? '_gitignore' : part))
+          .join('/'),
+      )
+      .sort();
+    const prefix = 'package/templates/nextjs-turbo/';
+    const actual = run('tar', ['-tzf', foker], root)
+      .trim()
+      .split('\n')
+      .filter((entry) => entry.startsWith(prefix) && !entry.endsWith('/'))
+      .map((entry) => entry.slice(prefix.length))
+      .sort();
+    expect(actual).toHaveLength(expected.length);
+    expect(actual).toEqual(expected);
+    expect(run('tar', ['-xOf', foker, `${prefix}_gitignore`], root)).toBe(
+      readFileSync(join(source, '.gitignore'), 'utf8'),
+    );
   });
 
   it('elimina workspace: de todos los manifiestos y fija las versiones internas', () => {

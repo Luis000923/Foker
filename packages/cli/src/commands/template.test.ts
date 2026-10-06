@@ -4,10 +4,28 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { loadConfig } from '@foker/engine';
 import { validate } from '@foker/schemas';
-import { afterEach, beforeEach, expect, it } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { parse } from 'yaml';
 import { main } from '../main.js';
-import { readSpec } from './init.js';
+import { readSpec, templateDestination } from './init.js';
+
+const ignoreFixture = vi.hoisted(() => ({ omitFoker: false }));
+vi.mock('node:fs/promises', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:fs/promises')>();
+  return {
+    ...actual,
+    readFile: async (...args: Parameters<typeof actual.readFile>) => {
+      const content = await actual.readFile(...args);
+      if (
+        ignoreFixture.omitFoker &&
+        typeof content === 'string' &&
+        /templates.*[\\/]_?\.?gitignore$/.test(String(args[0]))
+      )
+        return content.replace(/^\.foker\/\r?\n/gm, '');
+      return content;
+    },
+  };
+});
 
 let parent: string;
 let root: string;
@@ -161,4 +179,50 @@ it('preflight rechaza enlaces y colisiones antes de escribir', async () => {
   await writeFile(join(root, 'apps'), 'colisión');
   expect((await run(...init, '--force')).exit).toBe(2);
   expect(await readdir(root)).toEqual(['apps']);
+});
+
+it('restaura gitignore empaquetados en cualquier nivel', () => {
+  expect(templateDestination('_gitignore')).toBe('.gitignore');
+  expect(templateDestination('apps/web/_gitignore')).toBe('apps/web/.gitignore');
+  expect(templateDestination('otra/plantilla/packages/ui/_gitignore')).toBe('otra/plantilla/packages/ui/.gitignore');
+  expect(templateDestination('_gitignore/package.json')).toBe('_gitignore/package.json');
+});
+
+it('acepta un destino con solo .git y conserva sus archivos', async () => {
+  await mkdir(join(root, '.git'), { recursive: true });
+  await writeFile(join(root, '.git/HEAD'), 'ref: refs/heads/main\n');
+  expect((await run(...init)).exit).toBe(0);
+  expect(await readFile(join(root, '.git/HEAD'), 'utf8')).toBe('ref: refs/heads/main\n');
+  expect(
+    (await readFile(join(root, '.gitignore'), 'utf8')).split('\n').filter((line) => line === '.foker/'),
+  ).toHaveLength(1);
+  expect((await run(...init, '--force')).exit).toBe(0);
+  expect(
+    (await readFile(join(root, '.gitignore'), 'utf8')).split('\n').filter((line) => line === '.foker/'),
+  ).toHaveLength(1);
+});
+
+it('rechaza .git acompañado de cualquier otro contenido sin force', async () => {
+  await mkdir(join(root, '.git'), { recursive: true });
+  await writeFile(join(root, '.otro'), 'conservar');
+  const before = await contents(root);
+  expect((await run(...init)).exit).toBe(2);
+  expect(await contents(root)).toEqual(before);
+});
+
+it('añade .foker/ cuando el gitignore de la plantilla no lo incluye', async () => {
+  ignoreFixture.omitFoker = true;
+  try {
+    const preview = await run('--dry-run', ...init);
+    expect(preview.exit).toBe(0);
+    expect(existsSync(root)).toBe(false);
+    const real = await run(...init);
+    expect(real.exit).toBe(0);
+    expect(real.output.data.files).toEqual(preview.output.data.files);
+    const ignore = await readFile(join(root, '.gitignore'), 'utf8');
+    expect(ignore).toContain('node_modules/');
+    expect(ignore.split('\n').filter((line) => line === '.foker/')).toHaveLength(1);
+  } finally {
+    ignoreFixture.omitFoker = false;
+  }
 });
