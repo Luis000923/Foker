@@ -85,12 +85,17 @@ export const RULES_TEMPLATE = `# Reglas del proyecto
 - No añadas dependencias sin justificarlo en la descripción de la tarea.
 `;
 
+/** Restaura el nombre reservado por copy-data en cualquier nivel de la plantilla. */
+export function templateDestination(path: string): string {
+  return path.replace(/(^|\/)_gitignore$/, '$1.gitignore');
+}
+
 /** Resuelve datos publicados o del checkout como roles/skills. Preflight antes de escribir. */
 async function prepareTemplate(root: string, name: string, force: boolean, spec?: FokerMdFrontmatter) {
   const packaged = fileURLToPath(new URL('../../templates/nextjs-turbo/', import.meta.url));
   const development = fileURLToPath(new URL('../../../../templates/nextjs-turbo/', import.meta.url));
   const source = existsSync(packaged) ? packaged : development;
-  if (existsSync(root) && !force && (await readdir(root)).length) {
+  if (existsSync(root) && !force && (await readdir(root)).some((entry) => entry !== '.git')) {
     throw new FokerError(
       'FKR-INP-001',
       'La plantilla requiere un directorio vacío; usa --force para sobrescribir solo sus archivos.',
@@ -99,7 +104,7 @@ async function prepareTemplate(root: string, name: string, force: boolean, spec?
   const files: { path: string; content: string; overwrite: boolean }[] = [];
   async function walk(prefix = '') {
     for (const entry of (await readdir(join(source, prefix), { withFileTypes: true })).sort((a, b) =>
-      a.name.localeCompare(b.name),
+      templateDestination(a.name).localeCompare(templateDestination(b.name)),
     )) {
       const path = prefix ? `${prefix}/${entry.name}` : entry.name;
       if (entry.isDirectory()) await walk(path);
@@ -123,7 +128,8 @@ async function prepareTemplate(root: string, name: string, force: boolean, spec?
             .replace(/^---\n[\s\S]*?\n---/, `---\n${stringify(frontmatter)}---`)
             .replaceAll('foker-project', name);
         }
-        files.push({ path, content, overwrite: existsSync(join(root, path)) });
+        const destination = templateDestination(path);
+        files.push({ path: destination, content, overwrite: existsSync(join(root, destination)) });
       }
     }
   }
@@ -227,7 +233,9 @@ export const initCommand: Command = {
     if (!result.ok) throw new FokerError('FKR-CFG-001', formatIssues(result.issues));
     const configText = `# Generado por foker init. Referencia: FOKER-SPEC §15.2.\n${stringify(config)}`;
     const gitignorePath = join(root, '.gitignore');
-    const gitignore = existsSync(gitignorePath) ? readFileSync(gitignorePath, 'utf8') : '';
+    const gitignore =
+      templateFiles.find((file) => file.path === '.gitignore')?.content ??
+      (existsSync(gitignorePath) ? readFileSync(gitignorePath, 'utf8') : '');
     const needsIgnore = !gitignore
       .split(/\r?\n/)
       .some((l) => ['.foker', '.foker/', '/.foker', '/.foker/'].includes(l.trim()));
@@ -235,7 +243,7 @@ export const initCommand: Command = {
     const writeRules = force || !existsSync(rulesPath);
 
     const files = template
-      ? templateFiles.map((file) => file.path)
+      ? [...new Set([...templateFiles.map((file) => file.path), ...(needsIgnore ? ['.gitignore'] : [])])]
       : ['foker.config.yaml', ...(writeRules ? ['foker/rules.md'] : []), ...(needsIgnore ? ['.gitignore'] : [])];
     if (!dryRun) {
       for (const file of templateFiles) {
@@ -247,7 +255,7 @@ export const initCommand: Command = {
         await mkdir(join(root, 'foker'), { recursive: true });
         await writeFile(rulesPath, RULES_TEMPLATE, 'utf8');
       }
-      if (needsIgnore && !template)
+      if (needsIgnore)
         await writeFile(gitignorePath, `${gitignore}${gitignore && !gitignore.endsWith('\n') ? '\n' : ''}.foker/\n`);
     }
     const warnings = templateFiles
