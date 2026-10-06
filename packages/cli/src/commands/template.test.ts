@@ -101,8 +101,13 @@ it('genera estructura, configuración y especificación válidas; versiones exac
   ]) {
     expect(files['apps/web/next.config.ts']).toContain(header);
   }
-  expect(files['apps/web/next.config.ts']).toContain("default-src 'self'");
-  expect(files['apps/web/next.config.ts']).toContain("frame-ancestors 'none'");
+  expect(files['apps/web/next.config.ts']).toContain('buildCsp(env.NODE_ENV)');
+  expect(files['.gitignore']?.split('\n')).toContain('*.tsbuildinfo');
+  expect(files['apps/web/lib/security/csp.ts']).toContain("default-src 'self'");
+  expect(files['apps/web/lib/security/csp.ts']).toContain("frame-ancestors 'none'");
+  // 'unsafe-eval' solo en desarrollo (FKR-104); la lógica se prueba en csp.test.ts del proyecto generado.
+  expect(files['apps/web/lib/security/csp.ts']).toContain("nodeEnv === 'development' ? \" 'unsafe-eval'\" : ''");
+  expect(files['apps/web/lib/security/csp.test.ts']).toContain("'unsafe-eval'");
   expect(parse(files['pnpm-workspace.yaml'] ?? '')).toMatchObject({ minimumReleaseAge: 1440, allowBuilds: {} });
   expect(JSON.parse(files['turbo.json'] ?? '{}')).not.toHaveProperty('remoteCache');
   const mapped = await run('--cwd', root, 'map', '--export', 'map.json');

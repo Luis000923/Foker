@@ -16,4 +16,6 @@ Copia `apps/web/.env.example` a `.env.local` en esa carpeta; no contiene secreto
 
 Consulta `docs/security/asvs-matrix.md`. HSTS necesita HTTPS en producción.
 La CSP permite scripts/estilos inline para el arranque de Next; aún requiere endurecer
-scripts con nonces y probar CSP en producción. No se incluye autenticación, BD ni rate limiting.
+scripts con nonces y probar CSP en producción. Solo con `NODE_ENV=development` añade
+`'unsafe-eval'` a `script-src` para React en desarrollo; producción y test no lo permiten.
+No se incluye autenticación, BD ni rate limiting.

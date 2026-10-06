@@ -67,6 +67,7 @@ M0, M2, M3, M4 y E6 completos en local; M1 con todo lo que no gasta API (manifie
 
 ## Trabajo 2026-10-05 (tarde)
 
+- **FKR-104 · Plantilla**: la CSP añade `'unsafe-eval'` solo con `NODE_ENV=development` (React lo usa en `next dev`; la CSP de producción no cambia, comprobado sin errores con `next start` en la web piloto). `*.tsbuildinfo` en el `.gitignore` de la plantilla. Revisión Claude: un test importaba la plantilla desde fuera del paquete (REQ-REPO-001), corregido.
 - **Web piloto · fricciones** (`~/Documentos/foker-web-piloto`, Foker instalado desde `dist-local`):
   FKR-102 corrige dos. (1) `npm pack` descartaba `templates/nextjs-turbo/.gitignore` (tarball 35/36
   archivos): el proyecto nacía sin `.gitignore`. Ahora se empaqueta como `_gitignore` y se restaura;
