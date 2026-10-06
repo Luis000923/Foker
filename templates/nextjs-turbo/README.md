@@ -4,6 +4,12 @@ Requiere Node 22.20 o superior y pnpm 11.9.0. Ejecuta `pnpm install`, revisa y v
 `pnpm-lock.yaml` (no se incluye un lockfile inventado). CI requiere ese lockfile.
 Después: `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build`.
 Desarrollo: `pnpm --filter @repo/web dev`.
+La plantilla incluye `apps/web/AGENTS.md` y `apps/web/CLAUDE.md` porque Next.js 16
+los genera y vuelve a crearlos al ejecutar `next dev`. Versionarlos evita cambios
+fuera de alcance en el gate G1 de Foker y mantiene limpio el árbol de trabajo.
+El bloque `nextjs-agent-rules` pertenece a Next.js; los bloques gestionados por
+`foker sync` están en los archivos de la raíz. `foker init` copia estos dos archivos
+desde la plantilla sin modificarlos con sus integraciones.
 E2E separado: `pnpm --filter @repo/web exec playwright install chromium` y
 `pnpm --filter @repo/web test:e2e`. No lo ejecuta el CI de Foker ni el CI inicial del proyecto.
 

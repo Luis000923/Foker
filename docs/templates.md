@@ -11,6 +11,13 @@ archivos de plantilla e integraciones sin escribir. Init ejecuta sync con los ta
 seleccionados, pero no instala dependencias. `--from-spec` lee un foker.md del destino;
 para usarlo en un directorio ocupado se necesita `--force`.
 
+Incluye `apps/web/AGENTS.md` con el bloque `nextjs-agent-rules` y
+`apps/web/CLAUDE.md` con `@AGENTS.md`: Next.js 16 los genera y vuelve a crearlos
+al ejecutar `next dev`. Versionarlos desde la plantilla mantiene limpio el árbol
+y evita que el gate G1 los marque como cambios fuera de alcance. `foker init`
+los copia sin modificarlos con sus integraciones; `foker sync` gestiona los bloques
+de Foker en los archivos de la raíz y no toca estos archivos de Next.js.
+
 Después ejecuta `pnpm install`, revisa y versiona el lockfile generado y ejecuta los
 cuatro scripts raíz. CI exige ese lockfile. No se incluye uno sin resolver dependencias.
 El build de la CLI empaqueta `templates/`; en desarrollo se usa el directorio del repo.

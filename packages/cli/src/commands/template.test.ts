@@ -62,6 +62,33 @@ async function contents(dir: string, prefix = ''): Promise<Record<string, string
 }
 const init = ['init', 'mi-proyecto', '--template', 'nextjs-turbo', '--targets', 'claude-code'];
 
+it('conserva las instrucciones de Next.js separadas de las integraciones raíz de Foker', async () => {
+  const result = await run(...init);
+  expect(result.exit).toBe(0);
+  const paths = ['apps/web/AGENTS.md', 'apps/web/CLAUDE.md'];
+  const originals = await Promise.all(
+    paths.map((path) => readFile(new URL(`../../../../templates/nextjs-turbo/${path}`, import.meta.url))),
+  );
+  expect(originals[0]?.toString()).toContain('<!-- BEGIN:nextjs-agent-rules -->');
+  expect(originals[0]?.toString()).toContain('<!-- END:nextjs-agent-rules -->');
+  expect(originals[1]?.toString()).toBe('@AGENTS.md\n');
+  expect(result.output.data.synced).toContain('AGENTS.md');
+  expect(result.output.data.synced).toContain('CLAUDE.md');
+  async function expectNextFilesUnchanged() {
+    const manifest = JSON.parse(await readFile(join(root, 'foker/sync-manifest.json'), 'utf8'));
+    for (const [index, path] of paths.entries()) {
+      expect(await readFile(join(root, path))).toEqual(originals[index]);
+      expect(manifest.files).not.toHaveProperty(path);
+      expect(result.output.data.synced).not.toContain(path);
+    }
+  }
+  await expectNextFilesUnchanged();
+  expect((await run('--cwd', root, 'sync', '--target', 'claude-code,opencode,antigravity,codex')).exit).toBe(0);
+  await expectNextFilesUnchanged();
+  expect((await run('--cwd', root, 'init', '--force', '--targets', 'claude-code')).exit).toBe(0);
+  await expectNextFilesUnchanged();
+});
+
 it('genera estructura, configuración y especificación válidas; versiones exactas y mapa sin instalar', async () => {
   const result = await run(...init);
   expect(result.exit).toBe(0);
