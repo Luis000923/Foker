@@ -48,3 +48,21 @@ Sin git, el comportamiento no cambia (no hay fuente fiable de ignorados).
 - Test: archivo versionado y forzado (`git add -f`) que casa con `.gitignore` → cuenta.
 - REQ-TSK-001 (cinco escenarios del agente simulado) y la suite `tests/security` siguen verdes.
 - Rendimiento: el baseline de `fixtures/large-10k` no empeora más de un 10 %.
+
+## Revisión cruzada (Codex, 2026-10-05) y diseño corregido
+
+La primera implementación (OpenCode) traducía los globs sensibles a pathspecs de git. Codex
+encontró siete vías de evasión; todas **VÁLIDAS**:
+
+| # | Hallazgo | Corrección obligatoria |
+|---|---|---|
+| 1 | Secreto anidado en un directorio colapsado (`dist/nested/.env`) no reabre `dist` | Desaparece con el punto 3 |
+| 2 | `.git/info/exclude`, `core.excludesFile` o un `.gitignore` nuevo que se ignora a sí mismo ocultan archivos | Solo cuentan los `.gitignore` del árbol (`--exclude-per-directory=.gitignore`, nunca `--exclude-standard`); todo archivo llamado `.gitignore` se hashea siempre |
+| 3 | Pathspecs pierden `{a,b}` y la semántica de `./` y profundidad de Foker | La sensibilidad se decide **en Foker** con `matchGlobs`: los directorios ignorados no se hashean, pero se recorren con `readdir` y se hashean los archivos que casan con rutas protegidas o secretos |
+| 4 | El snapshot carga `foker.config.yaml` aunque `submit` use `--config` | La política del snapshot es la misma que evalúan los gates (`configPath` hasta `treeSnapshot`) |
+| 5 | Git falla solo en `begin` o solo en `submit` y fabrica cambios | El baseline guarda el modo (`git`/`none`) y la lista de exclusiones; si git falla en `submit`, se usan las exclusiones guardadas; si `begin` fue `none`, `submit` también |
+| 6 | `\` se convierte en `/` en POSIX | Normalizar separadores solo en Windows |
+| 7 | Symlinks invisibles (preexistente) | El árbol registra los enlaces como entrada con hash de su destino (`readlink`), sin seguirlos |
+
+Criterio de aceptación ampliado: un test por cada fila (1–7), además de los cinco originales.
+Rendimiento: el recorrido sin hash de directorios ignorados mantiene el límite de +10 %.
