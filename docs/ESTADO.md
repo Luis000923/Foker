@@ -71,8 +71,10 @@ M0, M2, M3, M4 y E6 completos en local; M1 con todo lo que no gasta API (manifie
   FKR-102 corrige dos. (1) `npm pack` descartaba `templates/nextjs-turbo/.gitignore` (tarball 35/36
   archivos): el proyecto nacía sin `.gitignore`. Ahora se empaqueta como `_gitignore` y se restaura;
   `init --template` garantiza `.foker/`. (2) `init --template` rechazaba un directorio con solo `.git`.
-  Pendientes menores: `init` sin plantilla no propone `node_modules/`; el README de `dist-local` no
-  avisa de que no se instale dentro del repo de Foker (npm falla con `edgesOut` sobre pnpm).
+  FKR-103: `pack-local` reescribía también los `package.json` de la plantilla (`workspace:*` →
+  `0.1.0`) y `pnpm install` del proyecto fallaba con 404 de `@repo/*`; ahora solo reescribe los
+  manifiestos raíz. El README avisa de no instalar dentro del repo de Foker y documenta pnpm.
+  Pendiente menor: `init` sin plantilla no propone `node_modules/`.
 - **FKR-098 · Gates y archivos ignorados por git (ADR-037)**: G1 ya no rechaza artefactos que
   generan los checks (`dist/`, `.eslintcache`, `.next/`). Primera versión (OpenCode, pathspecs)
   rechazada por la revisión de Codex: 7 vías de evasión válidas (secretos anidados,
