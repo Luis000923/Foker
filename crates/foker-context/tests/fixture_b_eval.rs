@@ -202,15 +202,17 @@ fn alcance_d5_niveles_senales_orden_y_fallback() {
         file("hub/a.ts", L2, 99.0, "CORE"),
     ];
     assert_eq!(
-        fixture_b::derive_scope_paths(&files),
+        fixture_b::derive_scope_paths(&files, "", &[]),
         ["a/**", "b/**", "c/**"]
     );
     files.reverse();
     assert_eq!(
-        fixture_b::derive_scope_paths(&files),
+        fixture_b::derive_scope_paths(&files, "", &[]),
         ["a/**", "b/**", "c/**"]
     );
-    assert!(fixture_b::derive_scope_paths(&[file("root.ts", L0, 99.0, "ANCHOR")]).is_empty());
+    assert!(
+        fixture_b::derive_scope_paths(&[file("root.ts", L0, 99.0, "ANCHOR")], "", &[]).is_empty()
+    );
     let mut fallback = vec![
         file("z/a.ts", L2, 1.0, "CORE"),
         file("a/b.ts", L2, 2.0, "DEPENDENCY_OF:x"),
@@ -218,12 +220,18 @@ fn alcance_d5_niveles_senales_orden_y_fallback() {
         file("a/a.ts", L2, 2.0, "CORE"),
         file("c/a.ts", L1, 99.0, "CORE"),
     ];
-    assert_eq!(fixture_b::derive_scope_paths(&fallback), ["a/**", "b/**"]);
+    assert_eq!(
+        fixture_b::derive_scope_paths(&fallback, "", &[]),
+        ["a/**", "b/**"]
+    );
     fallback.reverse();
-    assert_eq!(fixture_b::derive_scope_paths(&fallback), ["a/**", "b/**"]);
+    assert_eq!(
+        fixture_b::derive_scope_paths(&fallback, "", &[]),
+        ["a/**", "b/**"]
+    );
     fallback.push(file("direct/a.ts", L1, 0.1, "LEXICAL:a"));
     assert_eq!(
-        fixture_b::derive_scope_paths(&fallback),
+        fixture_b::derive_scope_paths(&fallback, "", &[]),
         ["a/**", "direct/**"]
     );
     fallback.extend([
@@ -232,7 +240,68 @@ fn alcance_d5_niveles_senales_orden_y_fallback() {
         file("config.ts", L3, 0.0, "CORE"),
     ]);
     assert_eq!(
-        fixture_b::derive_scope_paths(&fallback),
+        fixture_b::derive_scope_paths(&fallback, "", &[]),
         ["config.ts", "target/**"]
+    );
+}
+
+#[test]
+fn alcance_d6_web_piloto_limites_raiz_y_maximo() {
+    use foker_context::pack::{PackFile, RenderLevel::L3};
+    use foker_map::model::MapPackage;
+    let packages: Vec<_> = [
+        ("@repo/ui", "packages/ui"),
+        ("@repo/web", "apps/web"),
+        ("@repo/root", "."),
+        ("@repo/api", "packages/api"),
+    ]
+    .into_iter()
+    .map(|(name, path)| MapPackage {
+        id: format!("pkg:{name}"),
+        name: name.into(),
+        path: path.into(),
+        version: None,
+    })
+    .collect();
+    let mut files = vec![PackFile {
+        id: "apps/web/app/page.tsx".into(),
+        level: L3,
+        score: 1.0,
+        tokens: 1,
+        reasons: vec!["CORE".into()],
+        note: None,
+    }];
+    assert_eq!(
+        fixture_b::derive_scope_paths(
+            &files,
+            "Añade al paquete @repo/ui un componente Badge y úsalo en la página de inicio de apps/web",
+            &packages
+        ),
+        ["apps/web/app/**", "packages/ui/**"]
+    );
+    for task in [
+        "@repo/ui-kit",
+        "x@repo/ui",
+        "@repo/ui/foo",
+        "@repo/root",
+        "@repo/ui @repo/web @repo/api",
+    ] {
+        assert_eq!(
+            fixture_b::derive_scope_paths(&files, task, &packages),
+            ["apps/web/app/**"]
+        );
+    }
+    assert_eq!(
+        fixture_b::derive_scope_paths(
+            &files,
+            "(@repo/ui), @repo/web @repo/ui @repo/root",
+            &packages
+        ),
+        ["apps/web/**", "apps/web/app/**", "packages/ui/**"]
+    );
+    files[0].id = "packages/ui/badge.tsx".into();
+    assert_eq!(
+        fixture_b::derive_scope_paths(&files, "@repo/ui", &packages),
+        ["packages/ui/**"]
     );
 }

@@ -67,6 +67,7 @@ M0, M2, M3, M4 y E6 completos en local; M1 con todo lo que no gasta API (manifie
 
 ## Trabajo 2026-10-05 (tarde)
 
+- **FKR-106 · ADR-038**: sin `scope`, `foker_task_begin` añade al alcance derivado los paquetes del workspace nombrados en la tarea (máx. 2, nunca la raíz). En la web piloto el alcance de «Badge en @repo/ui» era solo `apps/web/app/**` y el agente tuvo que abrir otra tarea. Fixture B: cobertura de alcance 0,6222 → 0,6889 (validation 0,7143 → 0,8571), recall igual, 0 errores, ningún caso empeora; Fixture A sin cambios.
 - **FKR-104 · Plantilla**: la CSP añade `'unsafe-eval'` solo con `NODE_ENV=development` (React lo usa en `next dev`; la CSP de producción no cambia, comprobado sin errores con `next start` en la web piloto). `*.tsbuildinfo` en el `.gitignore` de la plantilla. Revisión Claude: un test importaba la plantilla desde fuera del paquete (REQ-REPO-001), corregido.
 - **FKR-105 · `${affected_packages}` y paquete raíz**: si un cambio afecta al paquete raíz (p. ej. `pnpm-lock.yaml`), los checks se ejecutan sin filtros sobre todo el workspace; antes generaban `--filter=<raíz>` y turbo fallaba con «No package found». Hallado en la web piloto. Revisión Claude: sin hallazgos.
 - **Web piloto · fricciones** (`~/Documentos/foker-web-piloto`, Foker instalado desde `dist-local`):

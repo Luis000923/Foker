@@ -98,3 +98,34 @@ it('completa las señales L1 con L2 sin señal, excluyendo L1 del grafo', () => 
     }),
   ).toEqual(['a/**', 'direct/**']);
 });
+
+const packages = [
+  { name: '@repo/ui', path: 'packages/ui' },
+  { name: '@repo/web', path: 'apps/web' },
+  { name: '@repo/root', path: '.' },
+  { name: '@repo/api', path: 'packages/api' },
+];
+
+it('D6 permite crear Badge en el paquete nombrado de la web piloto', () => {
+  expect(
+    deriveScopePaths(
+      { files: [file('apps/web/app/page.tsx', 'L3', 1)] },
+      'Añade al paquete @repo/ui un componente Badge y úsalo en la página de inicio de apps/web',
+      packages,
+    ),
+  ).toEqual(['apps/web/app/**', 'packages/ui/**']);
+});
+
+it('D6 respeta límites npm, excluye raíz y descarta más de dos paquetes', () => {
+  const pack = { files: [file('apps/web/app/page.tsx', 'L3', 1)] };
+  for (const task of ['@repo/ui-kit', 'x@repo/ui', '@repo/ui/foo', '@repo/root', '@repo/ui @repo/web @repo/api'])
+    expect(deriveScopePaths(pack, task, packages)).toEqual(['apps/web/app/**']);
+  expect(deriveScopePaths(pack, '(@repo/ui), @repo/web @repo/ui @repo/root', packages)).toEqual([
+    'apps/web/**',
+    'apps/web/app/**',
+    'packages/ui/**',
+  ]);
+  expect(deriveScopePaths({ files: [file('packages/ui/badge.tsx', 'L3', 1)] }, '@repo/ui', packages)).toEqual([
+    'packages/ui/**',
+  ]);
+});
