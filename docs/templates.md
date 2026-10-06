@@ -24,7 +24,10 @@ Incluye CSP, HSTS, nosniff, Referrer-Policy, helper same-origin probado con Vite
 entorno Zod validado al arrancar, prohibición de child_process y react/no-danger,
 secret-scan y perfil security con audit. Playwright comprueba cabeceras y se ejecuta
 por separado: no se ejecuta en el CI de Foker. La CSP básica permite inline para Next;
-su endurecimiento con nonces y HTTPS/proxy requieren revisión de producción.
+solo con `NODE_ENV=development` añade `'unsafe-eval'` a `script-src` para React.
+Producción y test conservan la CSP sin esa excepción. El `.gitignore` también ignora
+`*.tsbuildinfo`, generado por el typecheck incremental. Su endurecimiento con nonces
+y HTTPS/proxy requieren revisión de producción.
 
 Remote cache no está configurado. Exporta `TURBO_TELEMETRY_DISABLED=1` para desactivar
 telemetría (CI ya lo hace). pnpm tiene `minimumReleaseAge: 1440` y `allowBuilds: {}`.
