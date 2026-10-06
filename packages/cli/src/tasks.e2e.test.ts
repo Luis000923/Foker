@@ -1,12 +1,12 @@
 import { execFile } from 'node:child_process';
-import { cp, mkdir, mkdtemp, readFile, rm, unlink, writeFile } from 'node:fs/promises';
+import { cp, mkdir, mkdtemp, readFile, rm, symlink, unlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import * as core from '@foker/core';
 import { loadConfig, submitTask, TaskStore, TrustStore, validateProfile, verifyTask } from '@foker/engine';
-import { validate } from '@foker/schemas';
-import { afterEach, expect, it, vi } from 'vitest';
+import { type TaskEvidence, validate } from '@foker/schemas';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { stringify } from 'yaml';
 import { main } from './main.js';
 
@@ -58,6 +58,71 @@ async function submit(f: Awaited<ReturnType<typeof fixture>>) {
   expect(validate('task#/$defs/evidence', evidence)).toMatchObject({ ok: true });
   expect(await f.store.verifyLedger(f.task.task_id)).toBe(true);
   return result;
+}
+/**
+ * Fixture de ADR-037: `.gitignore` versionado, alcance `src/**` y un check que, como un
+ * lint/build real, deja artefactos ignorados (`dist/x.js`, `.eslintcache`) en cada ejecución.
+ * `ignoredFiles` se crea antes del commit para que git no lo versione: es el caso de un `.env`
+ * local ignorado y presente en el árbol.
+ */
+async function ignoredFixture(
+  options: {
+    policy?: Record<string, unknown>;
+    configPath?: string;
+    ignoredFiles?: Record<string, string>;
+    scope?: [string, ...string[]];
+  } = {},
+) {
+  const root = await mkdtemp(join(tmpdir(), 'foker-ignored-'));
+  const trustBaseDir = await mkdtemp(join(tmpdir(), 'foker-trust-'));
+  roots.push(root, trustBaseDir);
+  await exec('git', ['init', '-q'], { cwd: root });
+  const config = stringify({
+    version: 1,
+    policy: options.policy ?? {},
+    validation: {
+      profiles: { default: { checks: ['build'] } },
+      checks: {
+        build: {
+          run: [
+            process.execPath,
+            '-e',
+            "const fs=require('node:fs');fs.mkdirSync('dist',{recursive:true});" +
+              "fs.writeFileSync('dist/x.js','built\\n');fs.writeFileSync('.eslintcache','[]');" +
+              "if(fs.readFileSync('src/app.ts','utf8').includes('broken')){console.error('error: test failure');process.exit(1)}",
+          ],
+        },
+      },
+    },
+  });
+  await writeFile(join(root, options.configPath ?? 'foker.config.yaml'), config);
+  const gitignore = 'dist/\n.eslintcache\n.env\n';
+  await writeFile(join(root, '.gitignore'), gitignore);
+  for (const [path, content] of Object.entries(options.ignoredFiles ?? {})) await writeFile(join(root, path), content);
+  await mkdir(join(root, 'src'), { recursive: true });
+  await writeFile(join(root, 'src/app.ts'), 'export const app = 1;\n');
+  await exec('git', ['add', '.'], { cwd: root });
+  await exec('git', ['-c', 'user.name=Test', '-c', 'user.email=test@example.invalid', 'commit', '-qm', 'baseline'], {
+    cwd: root,
+  });
+  await new TrustStore(trustBaseDir).approve(
+    root,
+    (await loadConfig(root, options.configPath ? { configPath: options.configPath } : {})).commandsHash,
+  );
+  const store = new TaskStore(root, options.configPath ? { configPath: options.configPath } : {});
+  const scope: [string, ...string[]] = options.scope ?? ['src/**'];
+  const task = await store.begin({ description: `Alcance ${scope.join(' ')}`, scope: { paths: scope } });
+  return { root, trustBaseDir, store, task, config, gitignore, configPath: options.configPath };
+}
+/** `submit` con el conjunto de cambios de la evidencia, para comprobar qué entra en el diff. */
+async function submitWithChanges(f: Awaited<ReturnType<typeof ignoredFixture>>) {
+  const result = await submitTask(f.root, f.task.task_id, {
+    trustBaseDir: f.trustBaseDir,
+    ...(f.configPath ? { configPath: f.configPath } : {}),
+  });
+  expect(await f.store.verifyLedger(f.task.task_id)).toBe(true);
+  const evidence = JSON.parse(await readFile(join(f.root, result.evidence), 'utf8')) as TaskEvidence;
+  return { ...result, changes: evidence.changes };
 }
 it('REQ-TSK-001: test roto rechaza y agente corregido completa; verify reejecuta sin mutar', async () => {
   const f = await fixture();
@@ -534,4 +599,78 @@ it('config protegida ilegible o borrada bloquea con evidencia en lugar de quedar
       ]),
     });
   }
+});
+describe('ADR-037 · gates y archivos ignorados por git', () => {
+  it('el segundo submit pasa G1 aunque los checks dejen dist/x.js y .eslintcache ignorados', async () => {
+    const f = await ignoredFixture();
+    await writeFile(join(f.root, 'src/app.ts'), 'export const app = 1; // broken\n');
+    expect((await submitWithChanges(f)).state).toBe('REJECTED');
+    // El check fallido del primer intento ya dejó `dist/x.js` y `.eslintcache` en el árbol.
+    await writeFile(join(f.root, 'src/app.ts'), 'export const app = 2;\n');
+    const second = await submitWithChanges(f);
+    expect(second.state).toBe('COMPLETED');
+    expect(second.gates.find((g) => g.gate === 'scope')).toMatchObject({ status: 'pass', findings: [] });
+    expect(second.changes).toEqual([{ path: 'src/app.ts', change: 'modified' }]);
+    const verified = await verifyTask(f.root, f.task.task_id, { trustBaseDir: f.trustBaseDir });
+    expect(verified.matches).toBe(true);
+    expect(verified.evidence.changes).toEqual([{ path: 'src/app.ts', change: 'modified' }]);
+  });
+  it('.env ignorado y protegido editado por el agente bloquea en G2', async () => {
+    const f = await ignoredFixture({
+      policy: { protected_paths: ['.env'] },
+      ignoredFiles: { '.env': 'TOKEN=inicial\n' },
+      scope: ['src/**', '.env'],
+    });
+    await writeFile(join(f.root, '.env'), 'TOKEN=cambiado\n');
+    const result = await submitWithChanges(f);
+    expect(result.state).toBe('BLOCKED');
+    expect(result.changes).toEqual([{ path: '.env', change: 'modified' }]);
+    expect(result.gates.find((g) => g.gate === 'scope')).toMatchObject({ status: 'pass' });
+    expect(result.gates.find((g) => g.gate === 'policy')).toMatchObject({
+      status: 'blocked',
+      findings: [expect.objectContaining({ rule: 'policy/protected-path', file: '.env' })],
+    });
+  });
+  it('ignorar un archivo fuera de alcance no lo oculta: el cambio en .gitignore rompe G1', async () => {
+    const f = await ignoredFixture();
+    await writeFile(join(f.root, 'secreto.txt'), 'notas\n');
+    await writeFile(join(f.root, '.gitignore'), `${f.gitignore}secreto.txt\n`);
+    const result = await submitWithChanges(f);
+    expect(result.state).toBe('REJECTED');
+    // `secreto.txt` queda ignorado y fuera del conjunto; `.gitignore` es versionado y está fuera de alcance.
+    expect(result.changes).toEqual([{ path: '.gitignore', change: 'modified' }]);
+    expect(result.gates.find((g) => g.gate === 'scope')).toMatchObject({
+      status: 'fail',
+      findings: [expect.objectContaining({ rule: 'scope/out-of-scope', file: '.gitignore' })],
+    });
+  });
+});
+
+it('ADR-037 fila 4 E2E: submit con configuración alternativa bloquea el protegido ignorado', async () => {
+  const f = await ignoredFixture({
+    configPath: 'custom.yaml',
+    policy: { protected_paths: ['dist/**'] },
+    scope: ['src/**', 'dist/**'],
+  });
+  await mkdir(join(f.root, 'dist'), { recursive: true });
+  await writeFile(join(f.root, 'dist/custom.txt'), 'cambio protegido');
+  const result = await submitWithChanges(f);
+  expect(result.state).toBe('BLOCKED');
+  expect(result.changes).toEqual([{ path: 'dist/custom.txt', change: 'added' }]);
+  expect(result.gates.find((g) => g.gate === 'policy')).toMatchObject({
+    status: 'blocked',
+    findings: [expect.objectContaining({ rule: 'policy/protected-path', file: 'dist/custom.txt' })],
+  });
+});
+
+it('ADR-037 fila 7 E2E: enlace .env ignorado nuevo bloquea en G2 sin seguir el destino', async () => {
+  const f = await ignoredFixture({ policy: { protected_paths: ['.env'] }, scope: ['src/**', '.env'] });
+  await symlink('/destino-inexistente', join(f.root, '.env'));
+  const result = await submitWithChanges(f);
+  expect(result.state).toBe('BLOCKED');
+  expect(result.changes).toEqual([{ path: '.env', change: 'added' }]);
+  expect(result.gates.find((g) => g.gate === 'policy')).toMatchObject({
+    status: 'blocked',
+    findings: [expect.objectContaining({ rule: 'policy/protected-path', file: '.env' })],
+  });
 });

@@ -58,7 +58,6 @@ M0, M2, M3, M4 y E6 completos en local; M1 con todo lo que no gasta API (manifie
 ## Limpieza 2026-10-05
 
 - En `/home/luis/Documentos` solo queda `Foker/`. Worktrees retirados; las ramas se conservan:
-  `feat/FKR-098-gate-ignorados` (solo ADR-037, implementación pendiente),
   `feat/FKR-100-instalacion-local` (WIP de Codex sin revisar, `edea1ac`) y `chore/sistema-agentes`
   (WIP de otra sesión). Los worktrees nuevos van en `~/.cache/foker-wt/`.
 - **Fixture B** se movió a `~/.local/share/foker-bench/fixture-b` (FKR-101: ruta por defecto del

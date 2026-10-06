@@ -1,4 +1,4 @@
-import { mkdir, open, readdir, readFile, unlink, writeFile } from 'node:fs/promises';
+import { lstat, mkdir, open, readdir, readFile, unlink, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import {
   type Engine,
@@ -164,7 +164,10 @@ async function baselineText(root: string, task: Pick<TaskRecord, 'baseline'>, pa
 }
 async function added(root: string, task: Pick<TaskRecord, 'baseline'>, change: TaskChange) {
   if (change.change === 'deleted') return [];
-  const text = await readFile(join(root, normalizePath(root, change.path)), 'utf8');
+  // Los enlaces participan en G1/G2 por su ruta, sin leer el contenido de su destino.
+  if ((await lstat(join(root, change.path))).isSymbolicLink()) return [];
+  // El id viene del recorrido del árbol; en POSIX una barra invertida es parte del nombre.
+  const text = await readFile(join(root, change.path), 'utf8');
   if (change.change !== 'added' && (await baselineText(root, task, change.path)) !== null) {
     const diff = await gitRead(root, [
       'diff',
@@ -198,7 +201,7 @@ async function evaluate(root: string, task: TaskRecord, options: Options): Promi
   let changes: TaskChange[] = [];
   let map_hash = hash({});
   try {
-    changes = await diffSinceBaseline(root, task);
+    changes = await diffSinceBaseline(root, task, options.configPath);
   } catch (error) {
     if (!(error instanceof BaselineTamperedError)) throw error;
     gates.push(
@@ -287,16 +290,18 @@ async function evaluate(root: string, task: TaskRecord, options: Options): Promi
       let dependencies = /(^|\/)(pnpm-lock.yaml|package-lock.json|yarn.lock)$/.test(change.path);
       if (/(^|\/)package.json$/.test(change.path)) {
         const before = await baselineText(root, task, change.path);
-        const after = change.change === 'deleted' ? '{}' : await readFile(join(root, change.path), 'utf8');
+        const isLink = change.change !== 'deleted' && (await lstat(join(root, change.path))).isSymbolicLink();
+        const after = change.change === 'deleted' || isLink ? '{}' : await readFile(join(root, change.path), 'utf8');
         const extract = (text: string) =>
           Object.fromEntries(
             Object.entries(JSON.parse(text) as Record<string, unknown>).filter(([key]) => /dependencies/i.test(key)),
           );
         try {
           dependencies =
-            before === null
+            isLink ||
+            (before === null
               ? change.change !== 'added' || Object.keys(extract(after)).length > 0
-              : hash(extract(before)) !== hash(extract(after));
+              : hash(extract(before)) !== hash(extract(after)));
         } catch {
           dependencies = true;
         }
@@ -374,7 +379,7 @@ export async function submitTask(root: string, taskId: string, options: Options 
     // baseline tampering are handled by the gates so they still receive evidence.
     let changes: TaskChange[] | null;
     try {
-      changes = await store.diffSinceBaseline(initial);
+      changes = await diffSinceBaseline(root, initial, options.configPath);
     } catch (error) {
       if (!(error instanceof BaselineTamperedError)) throw error;
       changes = null;
@@ -472,7 +477,7 @@ export async function validateProfile(
     }
     const paths =
       (await gitRead(root, ['rev-parse', '--git-dir'])) === null
-        ? Object.keys(await treeSnapshot(root))
+        ? Object.keys(await treeSnapshot(root, undefined, options.configPath))
         : await gitDirtyFiles(root, true);
     const baseline = {
       git_head: (await gitRead(root, ['rev-parse', 'HEAD']))?.trim() ?? null,

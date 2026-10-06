@@ -40,3 +40,4 @@ Copia de `spec/adr/`. Una decisión nueva o modificada exige un ADR nuevo con n�
 | [ADR-034](ADR-034-contenido-completo-de-archivos-pequenos.md) | Contenido completo de archivos L2 pequeños | Aceptada (umbral a priori 64) |
 | [ADR-035](ADR-035-fixture-b-repositorios-reales.md) | Fixture B con repositorios reales | Propuesta (reglas congeladas; 45 tareas avaladas) |
 | [ADR-036](ADR-036-presupuesto-y-archivos-grandes-en-repos-reales.md) | Reparto del presupuesto y archivos grandes en repositorios reales | Aceptada con excepción (barrera A de D5) |
+| [ADR-037](ADR-037-gates-y-archivos-ignorados-por-git.md) | Gates y archivos ignorados por git | Aceptada |

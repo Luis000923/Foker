@@ -1,6 +1,6 @@
 # ADR-037 · Gates y archivos ignorados por git
 
-- **Estado**: Propuesta. Criterio fijado antes de implementar.
+- **Estado**: Aceptada (2026-10-05). Criterio fijado antes de implementar; diseño corregido tras la revisión cruzada (7 hallazgos válidos, todos con test).
 - **Fecha**: 2026-10-05
 - **Issue**: FKR-098
 - **Modifica**: FOKER-SPEC §12 (G1 Alcance y cálculo de cambios respecto al baseline). Sin cambios
@@ -23,20 +23,27 @@ al límite de 50.000 archivos (`FKR-MAP-003`).
 
 Con git disponible:
 
-1. Los archivos **ignorados por git** (`git ls-files --others --ignored --exclude-standard
-   --directory` o equivalente, siempre sin shell y con el ejecutor existente) **no forman parte del
+1. Los archivos **ignorados por git** (`git ls-files --others --ignored --exclude-per-directory=.gitignore
+   --directory -z` o equivalente, siempre sin shell y con el ejecutor existente) **no forman parte del
    conjunto de cambios** que evalúa G1, **salvo** que casen con `protected_paths` o con los globs de
    secretos. Esos siguen en el conjunto: G2 debe seguir bloqueando una edición de `.env` aunque
    esté ignorado.
-2. `treeSnapshot` no recorre ni hashea los directorios ignorados enteros. Los archivos ignorados
-   que casan con `protected_paths` o secretos se siguen hasheando, como hoy.
+2. `treeSnapshot` recorre con `readdir` los directorios ignorados, pero no hashea sus archivos
+   ordinarios. Las excepciones se deciden con `matchGlobs` de Foker y la política efectiva
+   de los gates (incluido `configPath`), sin traducir globs a pathspecs.
 3. Un archivo **versionado** que además case con `.gitignore` (añadido con `git add -f`) **no** se
    considera ignorado: cuenta como hoy.
 4. Las exclusiones se calculan en `begin` y en `submit` con la misma función, para que un
-   `.gitignore` editado durante la tarea no oculte cambios: un cambio en `.gitignore` es, a su vez,
-   un cambio sujeto a G1.
+   `.gitignore` editado durante la tarea no oculte cambios: todo archivo llamado `.gitignore` se hashea siempre, incluso
+   si se ignora a sí mismo, y sus cambios están sujetos a G1.
 
-Sin git, el comportamiento no cambia (no hay fuente fiable de ignorados).
+El baseline autentica también el modo (`git`/`none`) y las exclusiones. Si Git falla en submit,
+se reutilizan las exclusiones guardadas. Si begin fue `none`, submit conserva ese modo.
+Los baselines antiguos sin modo siguen siendo legibles como `none`, con su hash original.
+Los separadores se normalizan únicamente en Windows. Los symlinks se registran con hash
+del destino de `readlink`, sin seguirlos.
+
+Sin git, el conjunto de cambios no se reduce (no hay fuente fiable de ignorados).
 
 ## Criterio de aceptación (fijado a priori)
 

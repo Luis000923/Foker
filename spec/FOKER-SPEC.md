@@ -911,6 +911,21 @@ Reglas:
 5. **G5 Skill**: si la tarea declara skill, los checks de `foker.skill.yaml.validation` pasan.
 6. La evidencia (`evidence.json`, `schemas/task.schema.json`) está escrita y su hash enlazado en el evento.
 
+**Modificado por ADR-037 (FKR-098):** G1 evalúa el conjunto de cambios calculado por
+`diffSinceBaseline`, que con git disponible **excluye los archivos ignorados por `.gitignore`**
+(`git ls-files --others --ignored --exclude-per-directory=.gitignore --directory -z`), porque los artefactos que
+dejan los checks de un intento (`dist/`, `.next/`, `.turbo/`, `coverage/`, caches) no son cambios
+del agente. Excepciones, que sí forman parte del conjunto: los ignorados que casan con
+`protected_paths` o con los globs de secretos (G2 debe seguir viendo un `.env` ignorado), y los
+archivos versionados que además casen con `.gitignore` (`git add -f`). Un cambio en `.gitignore`
+es a su vez un cambio sujeto a G1: todo archivo llamado `.gitignore` se hashea siempre.
+Los directorios ignorados se recorren sin hashear archivos ordinarios; las excepciones se
+deciden con `matchGlobs` y la política efectiva de los gates (incluido `configPath`).
+Los symlinks cuentan mediante el hash de su destino, sin seguirlos. El baseline guarda modo
+y exclusiones: un fallo de git en submit reutiliza las guardadas; begin sin git mantiene
+el conjunto completo incluso si git se recupera. Baselines antiguos sin modo conservan ese
+comportamiento (`none`). Solo en Windows se normalizan barras invertidas.
+
 Que el agente "diga" que terminó no tiene ningún efecto. *Aceptación*: suite E2E con un agente simulado que hace submit con tests rotos, con cambios fuera de alcance, con un secreto y con cambio de dependencias; cada caso termina en el estado esperado.
 
 ### 12.5 Reintentos y fallos
