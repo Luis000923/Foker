@@ -20,20 +20,25 @@ node scripts/pack-local.mjs
 Genera ocho tarballs en `dist-local/` (ignorado por git): la CLI, sus seis paquetes
 `@foker/*` y el paquete nativo del host actual. El empaquetado es offline y no modifica
 los manifiestos originales; las dependencias del workspace quedan con versiones exactas.
+La conversión también se aplica a los manifiestos de las plantillas incluidas en la CLI.
 El lote es específico del sistema, arquitectura y libc del host; Linux musl no está soportado.
 
 En un proyecto limpio:
 
 1. Ejecuta `npm init -y`.
 2. Copia el bloque `overrides` de `dist-local/install-local.json` al `package.json`
-   del proyecto. Sus rutas absolutas apuntan a los tarballs locales; actualízalas si mueves el lote.
-3. Instala la CLI (sustituye la ruta y la versión por las generadas):
+   del proyecto: contiene solo los seis paquetes `@foker/*` y el paquete de plataforma,
+   sin entrada para `foker`. Sus rutas absolutas apuntan a los tarballs locales.
+3. Instala directamente el tarball cuya ruta absoluta figura en el campo `foker` de
+   `install-local.json`, fuera de `overrides` (sustituye la ruta del ejemplo por esa ruta):
 
    ```sh
-   npm install /ruta/al/lote/foker-0.0.0.tgz
-   npx --no-install foker doctor
+   npm install "/ruta/al/lote/foker-0.0.0.tgz"
+   npx foker --version
+   npx foker doctor
    ```
 
+Si mueves el lote, actualiza las rutas de `foker` y de `overrides`.
 El README del lote incluye el comando con su ruta y versión reales. No se publica nada;
 la instalación puede requerir red o caché para dependencias externas como YAML, Ajv y
 el SDK MCP. El empaquetador no las descarga ni prueba la instalación contra el registro.

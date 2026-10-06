@@ -1,5 +1,6 @@
 import { execFileSync } from 'node:child_process';
-import { copyFileSync, existsSync, readFileSync } from 'node:fs';
+import { closeSync, copyFileSync, existsSync, mkdtempSync, openSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -25,10 +26,24 @@ const isWindows = process.platform === 'win32';
  * @param {string} cwd
  */
 export function run(command, args, cwd) {
-  return execFileSync(command, args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'], shell: isWindows });
+  // Un archivo evita depender de pipes bloqueados por algunos entornos aislados.
+  const capture = mkdtempSync(join(tmpdir(), 'foker-command-'));
+  const output = join(capture, 'stdout');
+  const fd = openSync(output, 'w');
+  try {
+    execFileSync(command, args, { cwd, stdio: ['ignore', fd, 'inherit'], shell: isWindows });
+    return readFileSync(output, 'utf8');
+  } finally {
+    closeSync(fd);
+    rmSync(capture, { recursive: true, force: true });
+  }
 }
 
-/** Genera con napi-rs el paquete de plataforma y añade el addon ya compilado. */
+/** Genera con napi-rs el paquete de plataforma y añade el addon ya compilado.
+ * @param {string} coreDir
+ * @param {string} platform
+ * @param {string} binariesDir
+ */
 export function prepareNative(coreDir, platform, binariesDir = coreDir) {
   const pkg = JSON.parse(readFileSync(join(coreDir, 'package.json'), 'utf8'));
   const binaryFile = `${pkg.napi.binaryName}.${platform}.node`;
@@ -40,13 +55,18 @@ export function prepareNative(coreDir, platform, binariesDir = coreDir) {
   return platformDir;
 }
 
-/** Empaqueta únicamente archivos locales; no ejecuta lifecycle scripts ni consulta el registro. */
+/** Empaqueta únicamente archivos locales; no ejecuta lifecycle scripts ni consulta el registro.
+ * @param {string} dir
+ * @param {string} out
+ */
 export function pack(dir, out) {
   const result = JSON.parse(
     run(
       'npm',
       [
         'pack',
+        '.',
+        '--update-notifier=false',
         '--json',
         '--offline',
         '--ignore-scripts',
