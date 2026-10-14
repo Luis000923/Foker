@@ -43,3 +43,10 @@ Las versiones están fijadas; las referencias internas usan `workspace:*`.
 El MVP no incluye BD, autenticación, autorización ni rate limiting. La matriz inicial
 `docs/security/asvs-matrix.md` de cada proyecto documenta mecanismos, verificaciones
 y pendientes de ASVS 5.0: no afirma cumplimiento ni constituye certificación.
+
+## Design Tokens (ADR-039)
+
+`foker init --template nextjs-turbo` genera `foker/design-tokens.json` (esquema `design-tokens`:
+tipografía, colores claro/oscuro, espaciado, radios) y `apps/web/app/tokens.css` (variables CSS con
+modo oscuro por `prefers-color-scheme` y `[data-theme]`). El preset sale de `design.preset` en
+`foker.md` (`neutral` por defecto; también `forest`). No hay servicios en ejecución.

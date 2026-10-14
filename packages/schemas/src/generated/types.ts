@@ -217,6 +217,7 @@ taskEvidence?: TaskEvidence
 fokerConfig?: FokerConfig
 fokerSkill?: FokerSkill
 fokerMd?: FokerMdFrontmatter
+designTokens?: DesignTokens
 cliOutput?: CliOutput
 benchmarkResult?: BenchmarkResult
 benchmarkManifest?: BenchmarkManifest
@@ -843,6 +844,86 @@ name: string
 options?: {
 
 }
+}
+/**
+ * Arquitectura declarada; `foker skill install` resuelve las skills a partir de ella.
+ */
+architecture?: {
+/**
+ * @maxItems 16
+ */
+stack?: []|[string]|[string, string]|[string, string, string]|[string, string, string, string]|[string, string, string, string, string]|[string, string, string, string, string, string]|[string, string, string, string, string, string, string]|[string, string, string, string, string, string, string, string]|[string, string, string, string, string, string, string, string, string]|[string, string, string, string, string, string, string, string, string, string]|[string, string, string, string, string, string, string, string, string, string, string]|[string, string, string, string, string, string, string, string, string, string, string, string]|[string, string, string, string, string, string, string, string, string, string, string, string, string]|[string, string, string, string, string, string, string, string, string, string, string, string, string, string]|[string, string, string, string, string, string, string, string, string, string, string, string, string, string, string]|[string, string, string, string, string, string, string, string, string, string, string, string, string, string, string, string]
+orm?: ("drizzle" | "prisma" | "none")
+auth?: string
+security?: {
+owasp_asvs?: ("L1" | "L2" | "L3")
+}
+}
+/**
+ * Preset de Design Tokens estáticos con el que `foker init` hidrata la plantilla.
+ */
+design?: {
+preset?: string
+}
+}
+/**
+ * Design Tokens estáticos y deterministas: tipografía, color claro/oscuro, espaciado y radios. Sin servicios en ejecución.
+ */
+export interface DesignTokens {
+schema_version: 1
+name: string
+typography: {
+font_sans: string
+font_mono: string
+scale: {
+xs: string
+sm: string
+base: string
+lg: string
+xl: string
+"2xl": string
+"3xl": string
+}
+line_height: {
+tight: number
+normal: number
+relaxed: number
+}
+}
+colors: {
+light: {
+background: string
+foreground: string
+primary: string
+primary_foreground: string
+muted: string
+muted_foreground: string
+border: string
+danger: string
+}
+dark: {
+background: string
+foreground: string
+primary: string
+primary_foreground: string
+muted: string
+muted_foreground: string
+border: string
+danger: string
+}
+}
+spacing: {
+"1": string
+"2": string
+"3": string
+"4": string
+"6": string
+"8": string
+}
+radius: {
+sm: string
+md: string
+lg: string
 }
 }
 /**

@@ -1,0 +1,42 @@
+Foker
+Copyright (c) 2026 Luis (@Luis000923) — https://github.com/Luis000923/Foker.git
+
+Este producto incluye ideas, formatos y criterios de diseño derivados de los
+proyectos de código abierto listados abajo. Foker los reimplementa de forma
+independiente sobre su propia arquitectura; no redistribuye su código fuente salvo
+que un archivo lo indique expresamente con su licencia original.
+
+This product includes ideas, formats and design criteria derived from the open
+source projects listed below. Foker reimplements them independently on its own
+architecture and does not redistribute their source code unless a file states so
+explicitly with its original license.
+
+------------------------------------------------------------------------------
+vercel-labs/skills — Vercel Labs Team & Contributors — MIT License
+https://github.com/vercel-labs/skills.git
+Uso en Foker / Use in Foker: modelo de resolución, enlace e instalación de skills
+sin configuración manual (`foker skill install`, `foker init`).
+
+JuliusBrussee/caveman — Julius Brussee (@JuliusBrussee) & Contributors —
+Apache-2.0 / MIT License
+https://github.com/JuliusBrussee/caveman.git
+Uso en Foker / Use in Foker: directiva de salida ASD-STE100 y compresión
+determinista de cargas (JSON, YAML, CSV, logs) en `@foker/engine` (`compressor/`).
+
+mukul975/Anthropic-Cybersecurity-Skills — Mukul Jangra (@mukul975) &
+Contributors — Apache-2.0 License
+https://github.com/mukul975/Anthropic-Cybersecurity-Skills.git
+Uso en Foker / Use in Foker: base de conocimiento de referencia para las reglas
+defensivas de `foker check-security` en `@foker/policy` (OWASP ASVS Nivel 2,
+seguridad de agentes de IA).
+
+nexu-io/open-design — Nexu-io / OpenDesign Team (@nexu-io, @nettee) &
+Contributors — Apache-2.0 License
+https://github.com/nexu-io/open-design.git
+Uso en Foker / Use in Foker: inspiración para los esquemas de Design Tokens
+estáticos (tipografía, color, modo oscuro) de `@foker/schemas` y la plantilla
+`nextjs-turbo`. No se incluye el demonio de espacio de trabajo gráfico.
+------------------------------------------------------------------------------
+
+Los textos de licencia completos están en los repositorios enlazados.
+The full license texts are available in the linked repositories.

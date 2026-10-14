@@ -7,16 +7,76 @@
   "additionalProperties": false,
   "required": ["foker_spec", "name"],
   "properties": {
-    "foker_spec": { "const": 1 },
-    "name": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$", "maxLength": 214 },
-    "description": { "type": "string", "maxLength": 1024 },
+    "foker_spec": {
+      "const": 1
+    },
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+      "maxLength": 214
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 1024
+    },
     "template": {
       "type": "object",
       "additionalProperties": false,
       "required": ["name"],
       "properties": {
-        "name": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
-        "options": { "type": "object" }
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+        },
+        "options": {
+          "type": "object"
+        }
+      }
+    },
+    "architecture": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Arquitectura declarada; `foker skill install` resuelve las skills a partir de ella.",
+      "properties": {
+        "stack": {
+          "type": "array",
+          "maxItems": 16,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+            "maxLength": 64
+          }
+        },
+        "orm": {
+          "enum": ["drizzle", "prisma", "none"]
+        },
+        "auth": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(-[a-z0-9.]+)*$",
+          "maxLength": 64
+        },
+        "security": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "owasp_asvs": {
+              "enum": ["L1", "L2", "L3"]
+            }
+          }
+        }
+      }
+    },
+    "design": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Preset de Design Tokens estáticos con el que `foker init` hidrata la plantilla.",
+      "properties": {
+        "preset": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+          "maxLength": 64
+        }
       }
     }
   }

@@ -103,3 +103,12 @@ BD, AuthN/AuthZ, rate limiting y secure-fetch son **PENDIENTE V0.2** (§22; sin 
 el backlog). HTTPS/proxy y endurecimiento CSP necesitan revisión de producción.
 La validación de una tarea no reemplaza CI, revisión ni seguridad operacional de la aplicación.
 Consulta [templates.md](templates.md).
+
+## `foker check-security` (ADR-039)
+
+Quince reglas estáticas `FKR-SEC-001…015` en `@foker/policy`, mapeadas a capítulos de OWASP ASVS 5.0:
+SQL crudo, webhooks sin HMAC o con comparación no constante, handlers sin autorización, acceso a datos
+sin filtro de inquilino, CSP/HSTS ausentes, HTML sin escapar, `eval`, shell con datos, TLS desactivado,
+criptografía débil, CORS abierto, cookies sin atributos, herramientas MCP sin validación. Código de
+salida 5 si hay errores (`--strict`: también avisos). Son heurísticas léxicas: pueden fallar en ambos
+sentidos y no equivalen a cumplir ASVS ni sustituyen un SAST (ADR-017).

@@ -5,7 +5,8 @@ import { mapCommand } from './commands/map.js';
 import { mcpCommand } from './commands/mcp.js';
 import { pendingCommands } from './commands/pending.js';
 import { policyCheckCommand } from './commands/policy.js';
-import { skillCommands } from './commands/skills.js';
+import { checkSecurityCommand } from './commands/security.js';
+import { skillCommands, skillInstallCommand } from './commands/skills.js';
 import { syncCommand } from './commands/sync.js';
 import { taskCommands, validateCommand } from './commands/tasks.js';
 import { trustCommand } from './commands/trust.js';
@@ -21,6 +22,8 @@ export const commands = [
   validateCommand,
   ...taskCommands,
   ...skillCommands,
+  skillInstallCommand,
+  checkSecurityCommand,
   syncCommand,
   policyCheckCommand,
   doctorCommand,

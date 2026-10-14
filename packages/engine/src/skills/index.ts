@@ -160,3 +160,4 @@ export async function newSkill(root: string, name: string, dryRun = false) {
   }
   return files;
 }
+export { type InstallSkillsResult, installSkills, resolveSkillNames } from './resolve.js';
