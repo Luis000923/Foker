@@ -2,14 +2,25 @@
 
 Foker aporta contexto y validación; el bucle LLM pertenece al anfitrión. Necesita Node ≥ 22.14
 y el addon nativo de la plataforma. Ninguna clave API de IA es obligatoria: usa la sesión
-de tu suscripción del anfitrión (Claude Code, Codex/ChatGPT o Antigravity). Foker no llama a LLMs. **PENDIENTE FKR-080**: publicación npm y reserva de nombres
-(PREGUNTA-3). La instalación prevista en el proyecto es `pnpm add -D foker`; los comandos de esta
-guía usan ese paquete local. Hoy, para desarrollar Foker, sigue [development.md](development.md)
-y compila TS y el addon; la CLI compilada está en `packages/cli/dist/bin.js`.
+de tu suscripción del anfitrión (Claude Code, Codex/ChatGPT o Antigravity). Foker no llama a LLMs.
 
-## Instalación local (sin npm)
+## Instalación
 
-Sin publicar Foker en el registro npm, con las dependencias instaladas y TypeScript y
+La beta `0.1.0-beta.0` está en npm como `@foker/cli` (el comando es `foker`; npm rechazó el nombre
+`foker` por parecerse a `faker` y `bower`). Instálala como dependencia de desarrollo del proyecto:
+
+```sh
+pnpm add -D @foker/cli@beta     # o: npm install -D @foker/cli@beta
+pnpm exec foker --version       # con npm: npx foker --version
+pnpm exec foker doctor
+```
+
+Los comandos de esta guía usan `pnpm exec foker`. Para desarrollar Foker en sí, sigue
+[development.md](development.md); la CLI compilada está en `packages/cli/dist/bin.js`.
+
+## Instalación local desde el código fuente
+
+Para probar cambios propios sin el registro npm, con las dependencias instaladas y TypeScript y
 el addon nativo ya compilados, ejecuta desde la raíz de este repositorio:
 
 ```sh

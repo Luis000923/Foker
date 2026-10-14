@@ -4,8 +4,9 @@ Foker es infraestructura determinista para que agentes de IA (Claude Code, OpenC
 Antigravity, Codex u otro cliente MCP) desarrollen software en monorepos TypeScript con menos
 contexto y más seguridad.
 
-> **Estado**: versión previa, sin publicar en npm. Las cifras de ahorro de tokens aún no están
-> medidas con un benchmark; no las des por ciertas.
+> **Estado**: beta `0.1.0-beta.0`, publicada en npm como [`@foker/cli`](https://www.npmjs.com/package/@foker/cli)
+> (el comando se llama `foker`). Las cifras de ahorro de tokens aún no están medidas con un
+> benchmark; no las des por ciertas.
 
 ## Plataformas soportadas
 
@@ -14,6 +15,59 @@ Foker funciona en **macOS** (Intel y Apple Silicon), **Linux** (x64 y ARM64, gli
 como `optionalDependencies`: cada sistema descarga solo el suyo y nada se descarga en tiempo de
 ejecución. Alpine (musl), FreeBSD y Windows ARM64 no tienen binario en la beta; ahí `@foker/core`
 lanza `FKR-INT-003` y se puede compilar desde el código fuente (`pnpm build:native`, requiere Rust).
+
+## Instalación
+
+Requisitos: Node.js 22.14 o superior y Git. No hace falta ninguna clave de API: Foker no llama a LLMs;
+el agente anfitrión (Claude Code, OpenCode, Antigravity o Codex) usa su propia sesión.
+
+Instálalo como dependencia de desarrollo del proyecto, porque los archivos que genera `foker sync`
+invocan `npx --no-install foker`:
+
+```sh
+pnpm add -D @foker/cli@beta     # o: npm install -D @foker/cli@beta
+pnpm exec foker --version       # 0.1.0-beta.0   (con npm: npx foker --version)
+pnpm exec foker doctor          # comprueba Node, addon nativo, git e integraciones
+```
+
+El paquete se llama `@foker/cli`, no `foker`: npm rechazó ese nombre por parecerse a `faker` y `bower`.
+Instalar la CLI trae solo el addon nativo de tu plataforma. Si `doctor` indica que falta, consulta
+[Plataformas soportadas](#plataformas-soportadas).
+
+## Uso rápido
+
+En un repositorio existente (dentro de él, con la CLI instalada):
+
+```sh
+pnpm exec foker init --targets claude-code    # config, reglas y archivos del anfitrión; --dry-run para revisar
+pnpm exec foker trust                         # muestra los comandos y pide confirmación (terminal interactiva)
+pnpm exec foker map                           # construye el Project Map
+pnpm exec foker doctor                        # diagnóstico final
+```
+
+`--targets` acepta `claude-code`, `opencode`, `antigravity` y `codex`, separados por comas; sin él usa los
+detectados. Tras `init`, abre el proyecto en el agente: este llama a Foker por MCP (`foker mcp`) y por los
+archivos generados. Si cambias la configuración, ejecuta `pnpm exec foker sync`.
+
+Para un proyecto nuevo con la plantilla `nextjs-turbo`:
+
+```sh
+pnpm exec foker init mi-proyecto --template nextjs-turbo --targets claude-code
+cd mi-proyecto && pnpm install
+```
+
+Flujo de una tarea desde la CLI (el agente usa las mismas operaciones por MCP):
+
+```sh
+pnpm exec foker task begin "Corregir el cálculo" --scope 'src/**' --json    # devuelve el task_id
+pnpm exec foker context --task <task_id> --anchor src/calculo.ts            # contexto mínimo para el agente
+# ...el agente edita dentro del alcance...
+pnpm exec foker task submit <task_id> --summary "Cálculo corregido"         # ejecuta los checks
+pnpm exec foker check-security                                              # reglas defensivas estáticas
+```
+
+Una tarea solo termina cuando pasan los checks; las aprobaciones humanas (`foker task approve`) exigen
+terminal interactiva. Guía completa: [Primeros pasos](docs/getting-started.md).
 
 ## Qué aporta
 
