@@ -58,7 +58,7 @@ export function run(command, args, cwd) {
   }
 }
 
-/** Genera con napi-rs el paquete de plataforma y añade el addon ya compilado.
+/** Crea el paquete de plataforma con el addon ya compilado.
  * @param {string} coreDir
  * @param {string} platform
  * @param {string} binariesDir
@@ -68,11 +68,11 @@ export function prepareNative(coreDir, platform, binariesDir = coreDir) {
   const binaryFile = `${pkg.napi.binaryName}.${platform}.node`;
   const binary = join(binariesDir, binaryFile);
   if (!existsSync(binary)) throw new Error(`no existe el binario ${binary}`);
-  run(join(corePkgDir, 'node_modules', '.bin', isWindows ? 'napi.cmd' : 'napi'), ['create-npm-dirs'], coreDir);
   const platformDir = join(coreDir, 'npm', platform);
+  mkdirSync(platformDir, { recursive: true });
   copyFileSync(binary, join(platformDir, binaryFile));
   copyFileSync(join(root, 'LICENSE'), join(platformDir, 'LICENSE'));
-  finalizeNativePackage(platformDir, pkg, platform);
+  writeNativePackage(platformDir, pkg, platform, binaryFile);
   return platformDir;
 }
 
@@ -83,27 +83,30 @@ export function distTag(version) {
   return /^\d+\.\d+\.\d+-([a-z]+)/.exec(version)?.[1] ?? 'latest';
 }
 
-/** Fija en el package.json de plataforma lo que `napi create-npm-dirs` no garantiza: versión, licencia,
- * `os`/`cpu`/`libc` y `publishConfig`. Falla si algo no coincide con `@foker/core`.
+/** Escribe el package.json del paquete de plataforma (versión, licencia, `os`/`cpu`/`libc`, `publishConfig`).
+ * No usa `napi create-npm-dirs`: su bloqueo del sistema de archivos agota el tiempo en Windows.
  * @param {string} platformDir
- * @param {{ version: string, license: string }} corePkg
+ * @param {{ version: string, license: string, author?: string, repository?: object, engines?: object }} corePkg
  * @param {string} platform
+ * @param {string} binaryFile
  */
-export function finalizeNativePackage(platformDir, corePkg, platform) {
+export function writeNativePackage(platformDir, corePkg, platform, binaryFile) {
   const fields = PLATFORM_FIELDS[/** @type {keyof typeof PLATFORM_FIELDS} */ (platform)];
   if (!fields) throw new Error(`plataforma sin definición os/cpu/libc: ${platform}`);
-  const file = join(platformDir, 'package.json');
-  const pkg = JSON.parse(readFileSync(file, 'utf8'));
-  if (pkg.name !== `@foker/core-${platform}`) throw new Error(`nombre inesperado: ${pkg.name}`);
-  if (pkg.version !== corePkg.version) throw new Error(`${pkg.name}: versión ${pkg.version} != ${corePkg.version}`);
-  const { libc: _libc, ...rest } = pkg;
-  const out = {
-    ...rest,
+  const pkg = {
+    name: `@foker/core-${platform}`,
+    version: corePkg.version,
+    description: `Foker native addon (napi-rs) for ${platform}.`,
     license: corePkg.license,
+    author: corePkg.author,
+    repository: corePkg.repository,
     ...fields,
+    main: binaryFile,
+    files: [binaryFile],
+    engines: corePkg.engines,
     publishConfig: { access: 'public', tag: distTag(corePkg.version) },
   };
-  writeFileSync(file, `${JSON.stringify(out, null, 2)}\n`);
+  writeFileSync(join(platformDir, 'package.json'), `${JSON.stringify(pkg, null, 2)}\n`);
 }
 
 /** `optionalDependencies` de `@foker/core`: un paquete por plataforma soportada, versión exacta.
