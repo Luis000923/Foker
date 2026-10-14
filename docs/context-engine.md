@@ -357,3 +357,14 @@ cuatro valores en cada configuración: omitirlos hereda el default nuevo. El inf
 ```sh
 node --input-type=module -e 'import fs from "node:fs"; const r=JSON.parse(fs.readFileSync("benchmarks/fixture-b/results/adr036-calibration-2026-10-05.json","utf8")); fs.writeFileSync("/tmp/configs.json",JSON.stringify(r.reproduction_configs));'
 ```
+
+## Compresión de cargas y directiva de salida (ADR-039)
+
+`@foker/engine` exporta `shrinkPayload` (JSON → minificado y tabular; YAML sin comentarios; CSV con
+filas repetidas colapsadas `(xN)`; logs con solo errores, avisos, contexto y cola). Nunca lanza y nunca
+devuelve más texto que el original. Los archivos `.html`, `.htm`, `.tsx` y `.jsx` se omiten siempre: el
+código va por `foker map`. El servidor MCP lo aplica al `output_tail` de los checks no superados.
+`OUTPUT_DIRECTIVE` (ASD-STE100) está en los roles; `composeStaticPrefix` ordena directiva, reglas y
+skills de forma estable y devuelve una huella SHA-256 para detectar cambios que rompan el caché.
+
+`shrinkToolCatalog` (ADR-040, derivado de caveman, Apache-2.0) comprime catálogos de herramientas MCP/OpenAI: quita metadatos de esquema y reduce descripciones largas conservando las frases con restricciones. Con pérdida; no conserva `cache_control`.

@@ -1,0 +1,248 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://foker.dev/schemas/design-tokens/v1.json",
+  "title": "Design Tokens",
+  "description": "Design Tokens estáticos y deterministas: tipografía, color claro/oscuro, espaciado y radios. Sin servicios en ejecución.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "name", "typography", "colors", "spacing", "radius"],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+      "maxLength": 64
+    },
+    "typography": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["font_sans", "font_mono", "scale", "line_height"],
+      "properties": {
+        "font_sans": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "pattern": "^[A-Za-z0-9 ,'\"-]+$"
+        },
+        "font_mono": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "pattern": "^[A-Za-z0-9 ,'\"-]+$"
+        },
+        "scale": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["xs", "sm", "base", "lg", "xl", "2xl", "3xl"],
+          "properties": {
+            "xs": {
+              "type": "string",
+              "pattern": "^[0-9]+(\\.[0-9]+)?(rem|px)$"
+            },
+            "sm": {
+              "type": "string",
+              "pattern": "^[0-9]+(\\.[0-9]+)?(rem|px)$"
+            },
+            "base": {
+              "type": "string",
+              "pattern": "^[0-9]+(\\.[0-9]+)?(rem|px)$"
+            },
+            "lg": {
+              "type": "string",
+              "pattern": "^[0-9]+(\\.[0-9]+)?(rem|px)$"
+            },
+            "xl": {
+              "type": "string",
+              "pattern": "^[0-9]+(\\.[0-9]+)?(rem|px)$"
+            },
+            "2xl": {
+              "type": "string",
+              "pattern": "^[0-9]+(\\.[0-9]+)?(rem|px)$"
+            },
+            "3xl": {
+              "type": "string",
+              "pattern": "^[0-9]+(\\.[0-9]+)?(rem|px)$"
+            }
+          }
+        },
+        "line_height": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["tight", "normal", "relaxed"],
+          "properties": {
+            "tight": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 3
+            },
+            "normal": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 3
+            },
+            "relaxed": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 3
+            }
+          }
+        }
+      }
+    },
+    "colors": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["light", "dark"],
+      "properties": {
+        "light": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "background",
+            "foreground",
+            "primary",
+            "primary_foreground",
+            "muted",
+            "muted_foreground",
+            "border",
+            "danger"
+          ],
+          "properties": {
+            "background": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "foreground": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "primary": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "primary_foreground": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "muted": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "muted_foreground": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "border": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "danger": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            }
+          }
+        },
+        "dark": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "background",
+            "foreground",
+            "primary",
+            "primary_foreground",
+            "muted",
+            "muted_foreground",
+            "border",
+            "danger"
+          ],
+          "properties": {
+            "background": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "foreground": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "primary": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "primary_foreground": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "muted": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "muted_foreground": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "border": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "danger": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            }
+          }
+        }
+      }
+    },
+    "spacing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["1", "2", "3", "4", "6", "8"],
+      "properties": {
+        "1": {
+          "type": "string",
+          "pattern": "^[0-9]+(\\.[0-9]+)?(rem|px)$"
+        },
+        "2": {
+          "type": "string",
+          "pattern": "^[0-9]+(\\.[0-9]+)?(rem|px)$"
+        },
+        "3": {
+          "type": "string",
+          "pattern": "^[0-9]+(\\.[0-9]+)?(rem|px)$"
+        },
+        "4": {
+          "type": "string",
+          "pattern": "^[0-9]+(\\.[0-9]+)?(rem|px)$"
+        },
+        "6": {
+          "type": "string",
+          "pattern": "^[0-9]+(\\.[0-9]+)?(rem|px)$"
+        },
+        "8": {
+          "type": "string",
+          "pattern": "^[0-9]+(\\.[0-9]+)?(rem|px)$"
+        }
+      }
+    },
+    "radius": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sm", "md", "lg"],
+      "properties": {
+        "sm": {
+          "type": "string",
+          "pattern": "^[0-9]+(\\.[0-9]+)?(rem|px)$"
+        },
+        "md": {
+          "type": "string",
+          "pattern": "^[0-9]+(\\.[0-9]+)?(rem|px)$"
+        },
+        "lg": {
+          "type": "string",
+          "pattern": "^[0-9]+(\\.[0-9]+)?(rem|px)$"
+        }
+      }
+    }
+  }
+}

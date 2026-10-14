@@ -46,3 +46,15 @@ skills, MCP ofrece `foker://skills/{name}` y devuelve FKR-SKL-001 si no está vi
 
 `workflow_ref: SKILL.md` referencia el documento completo. Si se indica un fragmento,
 el encabezado correspondiente debe existir. Los assets binarios conservan sus bytes al sincronizar.
+
+## Instalación sin configuración (ADR-039)
+
+`foker.md` puede declarar `architecture` (`stack`, `orm`, `auth`, `security.owasp_asvs`).
+`foker skill install --yes` resuelve con una tabla fija las skills incluidas necesarias y las **copia**
+a `foker/skills/` (no enlaza: las skills no admiten symlinks, ADR-010). No sobrescribe las del
+proyecto. `foker init` hace lo mismo si `foker.md` declara `architecture`. `--dry-run` solo lista.
+Sin `--yes` y en modo no interactivo, el comando falla en lugar de preguntar.
+
+Las skills cargadas viajan en las secciones `static` del Context Pack (`rules`, `skill`), antes de
+`session` y `task`: es el prefijo estable que favorece el caché del anfitrión (ADR-016). El ahorro se
+mide, no se supone.

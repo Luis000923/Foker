@@ -246,6 +246,23 @@ Skills: new
 |---|---|---|---|
 | --strict | boolean | false | Validación estricta |
 
+## foker skill install
+
+Instala las skills que exige architecture en foker.md (copia, sin enlaces simbólicos)
+
+| Flag | Tipo | Default | Descripción |
+|---|---|---|---|
+| --yes | boolean | false | No pregunta (modo no interactivo) |
+| --from-spec | string | "" | Ruta del foker.md (por defecto foker.md) |
+
+## foker check-security
+
+Reglas defensivas OWASP ASVS Nivel 2 (15 reglas estáticas FKR-SEC-NNN)
+
+| Flag | Tipo | Default | Descripción |
+|---|---|---|---|
+| --strict | boolean | false | Los avisos también fallan |
+
 ## foker sync
 
 Genera o actualiza la configuración de los agentes anfitriones

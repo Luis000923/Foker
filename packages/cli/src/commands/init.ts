@@ -2,9 +2,23 @@ import { existsSync, readFileSync } from 'node:fs';
 import { lstat, mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { FokerError, normalizePath, resolveConfig } from '@foker/engine';
+import {
+  FokerError,
+  installSkills,
+  normalizePath,
+  renderTokensCss,
+  resolveConfig,
+  resolveSkillNames,
+} from '@foker/engine';
 import { detectHosts, HOST_IDS } from '@foker/integrations';
-import { type FokerConfig, type FokerMdFrontmatter, formatIssues, validate } from '@foker/schemas';
+import {
+  designPreset,
+  designPresetNames,
+  type FokerConfig,
+  type FokerMdFrontmatter,
+  formatIssues,
+  validate,
+} from '@foker/schemas';
 import { parse, stringify } from 'yaml';
 import { type Command, flag } from '../types.js';
 import { runSync } from './sync.js';
@@ -121,6 +135,8 @@ async function prepareTemplate(root: string, name: string, force: boolean, spec?
             name,
             description: spec?.description ?? 'Aplicación web inicial',
             template: { name: 'nextjs-turbo', ...(spec?.template?.options ? { options: spec.template.options } : {}) },
+            ...(spec?.architecture ? { architecture: spec.architecture } : {}),
+            ...(spec?.design ? { design: spec.design } : {}),
           };
           const result = validate('foker-md', frontmatter);
           if (!result.ok) throw new FokerError('FKR-CFG-001', formatIssues(result.issues));
@@ -134,6 +150,19 @@ async function prepareTemplate(root: string, name: string, force: boolean, spec?
     }
   }
   await walk();
+  // Design Tokens estáticos: el preset elegido en foker.md hidrata el CSS de la app.
+  const presetName = spec?.design?.preset ?? 'neutral';
+  const tokens = designPreset(presetName);
+  if (!tokens)
+    throw new FokerError(
+      'FKR-INP-001',
+      `Preset de diseño desconocido: ${presetName} (disponibles: ${designPresetNames().join(', ')})`,
+    );
+  for (const [path, content] of [
+    ['foker/design-tokens.json', `${JSON.stringify(tokens, null, 2)}\n`],
+    ['apps/web/app/tokens.css', renderTokensCss(tokens)],
+  ] as const)
+    files.push({ path, content, overwrite: existsSync(join(root, path)) });
   // Rechaza enlaces y colisiones de directorio en toda la ruta de destino.
   for (const file of files) {
     let path = join(root, file.path);
@@ -239,6 +268,11 @@ export const initCommand: Command = {
     const needsIgnore = !gitignore
       .split(/\r?\n/)
       .some((l) => ['.foker', '.foker/', '/.foker', '/.foker/'].includes(l.trim()));
+    // Skills zero-config: foker.md declara `architecture`; init copia las incluidas necesarias.
+    let archSpec = spec;
+    if (!archSpec && !template && existsSync(join(root, 'foker.md')))
+      archSpec = await readSpec(root, 'foker.md').catch(() => undefined);
+    const skillNames = archSpec?.architecture ? resolveSkillNames(archSpec) : [];
     const rulesPath = join(root, 'foker/rules.md');
     const writeRules = force || !existsSync(rulesPath);
 
@@ -258,9 +292,13 @@ export const initCommand: Command = {
       if (needsIgnore)
         await writeFile(gitignorePath, `${gitignore}${gitignore && !gitignore.endsWith('\n') ? '\n' : ''}.foker/\n`);
     }
-    const warnings = templateFiles
+    const warnings: { code: string; message: string }[] = templateFiles
       .filter((file) => file.overwrite)
       .map((file) => ({ code: 'FKR-INP-001', message: `Se sobrescribe ${file.path}` }));
+    const skills = skillNames.length ? await installSkills(root, skillNames, { dryRun }) : undefined;
+    for (const name of skills?.missing ?? [])
+      warnings.push({ code: 'FKR-SKL-001', message: `Skill resuelta pero inexistente: ${name}` });
+    if (skills) files.push(...skills.installed.map((n) => `foker/skills/${n}/`));
     const { plan, applied } = await runSync(root, { dryRun, config: resolveConfig(result.value).config });
     if (plan.conflicts.length) {
       return {
@@ -279,7 +317,7 @@ export const initCommand: Command = {
       .map((f) => `  ${f}`)
       .join('\n')}\n${dryRun ? '' : '\nSiguiente: revisa foker.config.yaml y ejecuta foker trust y foker map.\n'}`;
     return {
-      data: { root, targets: [...new Set(targets)].sort(), files, synced, applied },
+      data: { root, targets: [...new Set(targets)].sort(), files, synced, applied, ...(skills ? { skills } : {}) },
       warnings,
       human:
         human +

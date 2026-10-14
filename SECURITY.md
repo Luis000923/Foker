@@ -8,8 +8,7 @@ rama `main`. A partir de 0.1.0 se mantendrá con parches de seguridad la última
 ## Cómo informar de una vulnerabilidad
 
 **No abras un issue público.** Usa el formulario privado de *Security Advisories* del repositorio
-("Report a vulnerability"). PENDIENTE: dirección de correo de respaldo cuando exista el repositorio
-público (ver PREGUNTA-3 en la especificación).
+("Report a vulnerability").
 
 Incluye, si puedes: versión o commit, sistema operativo, pasos para reproducir, impacto y una prueba
 de concepto mínima. No incluyas secretos reales.

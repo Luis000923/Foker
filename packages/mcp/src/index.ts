@@ -14,6 +14,7 @@ import {
   nonexistentScopePaths,
   normalizePath,
   openEngine,
+  shrinkPayload,
   submitTask,
   TaskStore,
   TrustStore,
@@ -110,7 +111,7 @@ function compactCheck<T extends { status: string; output_tail?: string }>(check:
   return {
     ...rest,
     ...(check.status !== 'pass' && output_tail !== undefined
-      ? { output_tail: stripVTControlCharacters(output_tail) }
+      ? { output_tail: shrinkPayload(stripVTControlCharacters(output_tail), { format: 'log' }).text }
       : {}),
   };
 }

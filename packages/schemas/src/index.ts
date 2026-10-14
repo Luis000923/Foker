@@ -8,6 +8,7 @@ export {
   mcpTools,
   type ToolAnnotations,
 } from './bundle.js';
+export { designPreset, designPresetNames } from './design.js';
 export { type ErrorCodeInfo, errorCode, errorCodes, type Recoverability } from './errors.js';
 export * from './generated/types.js';
 export {

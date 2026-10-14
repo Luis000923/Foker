@@ -42,3 +42,5 @@ Copia de `spec/adr/`. Una decisión nueva o modificada exige un ADR nuevo con n�
 | [ADR-036](ADR-036-presupuesto-y-archivos-grandes-en-repos-reales.md) | Reparto del presupuesto y archivos grandes en repositorios reales | Aceptada con excepción (barrera A de D5) |
 | [ADR-037](ADR-037-gates-y-archivos-ignorados-por-git.md) | Gates y archivos ignorados por git | Aceptada |
 | [ADR-038](ADR-038-paquetes-nombrados-en-el-alcance-derivado.md) | Paquetes nombrados en el alcance derivado | Aceptada |
+| [ADR-039](ADR-039-integracion-proyectos-upstream.md) | Integración de proyectos upstream sobre la topología existente | Aceptada |
+| [ADR-040](ADR-040-compresor-catalogo-herramientas.md) | Compresor de catálogos de herramientas derivado de caveman | Aceptada |

@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "name": "forest",
+  "typography": {
+    "font_sans": "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
+    "font_mono": "ui-monospace, SFMono-Regular, Menlo, monospace",
+    "scale": {
+      "xs": "0.75rem",
+      "sm": "0.875rem",
+      "base": "1rem",
+      "lg": "1.125rem",
+      "xl": "1.25rem",
+      "2xl": "1.5rem",
+      "3xl": "1.875rem"
+    },
+    "line_height": {
+      "tight": 1.25,
+      "normal": 1.5,
+      "relaxed": 1.75
+    }
+  },
+  "colors": {
+    "light": {
+      "background": "#fafaf7",
+      "foreground": "#14231a",
+      "primary": "#166534",
+      "primary_foreground": "#ffffff",
+      "muted": "#ecefe8",
+      "muted_foreground": "#4d5f52",
+      "border": "#d9dfd3",
+      "danger": "#b91c1c"
+    },
+    "dark": {
+      "background": "#0c1410",
+      "foreground": "#e8efe9",
+      "primary": "#4ade80",
+      "primary_foreground": "#0c1410",
+      "muted": "#18251d",
+      "muted_foreground": "#9db3a3",
+      "border": "#2b3d32",
+      "danger": "#f87171"
+    }
+  },
+  "spacing": {
+    "1": "0.25rem",
+    "2": "0.5rem",
+    "3": "0.75rem",
+    "4": "1rem",
+    "6": "1.5rem",
+    "8": "2rem"
+  },
+  "radius": {
+    "sm": "0.25rem",
+    "md": "0.5rem",
+    "lg": "0.75rem"
+  }
+}

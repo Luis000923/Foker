@@ -1,0 +1,18 @@
+schema_version: 1
+name: asvs-l2-review
+version: 1.0.0
+purpose: Revisa un cambio contra las reglas defensivas de OWASP ASVS Nivel 2.
+triggers:
+  keywords: [asvs, seguridad, security, webhook, tenant]
+constraints:
+  - Respetar el alcance y las rutas protegidas
+  - No ejecutar scripts de skills ni ampliar permisos
+tools: [foker_task_begin, foker_context, foker_check, foker_task_submit]
+workflow_ref: SKILL.md#procedimiento
+validation:
+  checks: [typecheck, lint, test]
+outputs:
+  - kind: modified_files
+    within_scope: true
+permissions:
+  network: false
