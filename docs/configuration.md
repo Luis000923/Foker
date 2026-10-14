@@ -80,7 +80,7 @@ Los defaults de objetos resumen la configuración efectiva sin archivo. `<nombre
 | validation.checks.<nombre> (variante 1).cwd | string | Sin default | Directorio relativo al root. Opcional. Patrón: ^(?!/)[^\\\u0000]+$. Longitud mínima: 1. Longitud máxima: 512. |
 | validation.checks.<nombre> (variante 1).parser | "tsc" / "eslint" / "vitest" / "generic" | "generic" | Parser de hallazgos de la salida. Opcional. Valores: ["tsc","eslint","vitest","generic"]. |
 | validation.checks.<nombre> (variante 2) | object | {"timeout_s":300,"network":false,"parser":"generic"} | Verificador integrado de Foker. Opcional. |
-| validation.checks.<nombre> (variante 2).builtin | "secret-scan" | Sin default | Obligatoria si existe el objeto padre. Valores: ["secret-scan"]. |
+| validation.checks.<nombre> (variante 2).builtin | "secret-scan" / "static-security" | Sin default | Obligatoria si existe el objeto padre. Valores: ["secret-scan","static-security"]. |
 | validation.checks.<nombre> (variante 2).timeout_s | integer | 300 | Opcional. Mínimo: 1. Máximo: 3600. |
 
 ## policy

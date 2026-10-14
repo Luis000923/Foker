@@ -7,6 +7,14 @@ contexto y más seguridad.
 > **Estado**: versión previa, sin publicar en npm. Las cifras de ahorro de tokens aún no están
 > medidas con un benchmark; no las des por ciertas.
 
+## Plataformas soportadas
+
+Foker funciona en **macOS** (Intel y Apple Silicon), **Linux** (x64 y ARM64, glibc) y **Windows**
+(x64). El núcleo nativo llega como un paquete por plataforma (`@foker/core-<plataforma>`) instalado
+como `optionalDependencies`: cada sistema descarga solo el suyo y nada se descarga en tiempo de
+ejecución. Alpine (musl), FreeBSD y Windows ARM64 no tienen binario en la beta; ahí `@foker/core`
+lanza `FKR-INT-003` y se puede compilar desde el código fuente (`pnpm build:native`, requiere Rust).
+
 ## Qué aporta
 
 1. **Conocimiento estructural**: un Project Map (qué existe, dónde y qué depende de qué), calculado

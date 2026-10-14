@@ -1357,8 +1357,10 @@ Métricas agregadas: tasa de éxito por brazo; **tokens de entrada totales por t
 | `x86_64-apple-darwin` | `@foker/core-darwin-x64` | `macos-15` (cross a x64) | smoke test en `macos-15-intel` |
 | `aarch64-apple-darwin` | `@foker/core-darwin-arm64` | `macos-15` | — |
 | `x86_64-pc-windows-msvc` | `@foker/core-win32-x64-msvc` | `windows-2025` | — |
-| `aarch64-pc-windows-msvc` | `@foker/core-win32-arm64-msvc` | `windows-11-arm` | **Nuevo** respecto a V1 |
+| `aarch64-pc-windows-msvc` | `@foker/core-win32-arm64-msvc` | `windows-11-arm` | Se compila y prueba en `release.yml`, pero no se publica en la beta `0.1.0-beta.0` |
 | musl (x64/arm64) | — | — | V0.2 (Alpine) |
+
+**Soporte oficial de la beta `0.1.0-beta.0`**: macOS (`darwin-x64`, `darwin-arm64`), Linux (`linux-x64-gnu`, `linux-arm64-gnu`) y Windows (`win32-x64-msvc`). Los cinco paquetes se publican con `os`/`cpu`/`libc`, `publishConfig` y la misma versión que `@foker/core`; `@foker/core` los declara como `optionalDependencies` al empaquetar (`node scripts/native-pack.mjs`), no en el repo, porque antes de publicar pnpm no puede resolverlos.
 
 Node.js soportado: **22.14+, 24.x, 26.x** (**HECHO**: 22 en mantenimiento hasta 2027-04-30; 26 LTS desde 2026-10-28). Paquete principal sin `postinstall` (los binarios llegan como `optionalDependencies` con `os`/`cpu`/`libc`, patrón estándar de napi-rs), compatible con pnpm 10+ que bloquea scripts de dependencias por defecto.
 
@@ -1371,6 +1373,7 @@ Node.js soportado: **22.14+, 24.x, 26.x** (**HECHO**: 22 en mantenimiento hasta 
 | `ci.yml` | PR y push a `main` | `lint` (fmt, clippy, deny, biome, tsc, regla de dependencias, `sync --check` del propio repo) → `test` (matriz §19.1, addon compilado nativamente en cada runner) → `e2e` (Linux: paquete empaquetado) |
 | `nightly.yml` | cron diario | Matriz completa (incl. `windows-11-arm`, `macos-15-intel`), property tests ampliados, rendimiento |
 | `release.yml` | Merge del PR de versión de Changesets | `build` (6 targets) → `smoke` (instalar tarball en runner nativo, `foker doctor`, `foker map` sobre `monorepo-pnpm` y comparar `content_hash` con el esperado) → `publish` (npm trusted publishing) → `github-release` (artefactos + SHA-256) |
+| `release-beta.yml` | Manual (`workflow_dispatch`) | `build` (5 plataformas soportadas) → `smoke` en runner nativo → `pack` (`scripts/native-pack.mjs`: tarballs de `@foker/core` y `@foker/core-<plataforma>` como artefacto). No publica |
 | `benchmark.yml` | Manual (`workflow_dispatch`) con entorno protegido | Arnés §20; requiere aprobación y secreto de API del entorno `benchmark` |
 
 Seguridad de CI: Actions fijadas por SHA; `permissions:` mínimos por job (`contents: read` por defecto; `id-token: write` solo en `publish`); sin `pull_request_target` con checkout de código del PR; Dependabot/Renovate para Actions, cargo y npm con `minimumReleaseAge`.

@@ -53,6 +53,7 @@ Cada bug corregido añade un caso de regresión.
 |---|---|---|
 | `ci.yml` | PR y push a `main` | `lint` (fmt, clippy, deny, biome, tsc, regla de dependencias) → `test` en 4 runners |
 | `release.yml` | Manual y PR que toca el addon | `build` del addon en 6 targets → `smoke` de cada artefacto empaquetado en su runner nativo. Todavía no publica (FKR-080) |
+| `release-beta.yml` | Manual | `build` en las 5 plataformas soportadas → `smoke` nativo → `pack`: tarballs npm de `@foker/core` y los paquetes de plataforma como artefacto. No publica |
 
 `benchmark.yml` llega con su issue (FOKER-SPEC §21.2). Todas las
 Actions se fijan por SHA y cada job tiene permisos mínimos.

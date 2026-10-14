@@ -154,7 +154,7 @@
           "additionalProperties": false,
           "required": ["builtin"],
           "properties": {
-            "builtin": { "enum": ["secret-scan"] },
+            "builtin": { "enum": ["secret-scan", "static-security"] },
             "timeout_s": { "type": "integer", "minimum": 1, "maximum": 3600 }
           }
         }

@@ -21,6 +21,9 @@ export interface NativeBinding {
   FokerEngine: NativeEngineClass;
 }
 
+/** Plataformas con addon publicado (`@foker/core-<plataforma>`); musl y FreeBSD quedan fuera del MVP. */
+const SUPPORTED_PLATFORMS = ['darwin-x64', 'darwin-arm64', 'linux-x64 (glibc)', 'linux-arm64 (glibc)', 'win32-x64'];
+
 const require = createRequire(import.meta.url);
 
 /** Versión de este paquete; el addon debe coincidir exactamente (REQ-NAPI-003). */
@@ -57,7 +60,7 @@ export function loadBinding<T extends NativeBinding>(load: () => T, expectedVers
   } catch (error) {
     throw new FokerError(
       'FKR-INT-003',
-      `No hay addon nativo de Foker para ${process.platform}-${process.arch}. Consulta las plataformas soportadas.`,
+      `No hay addon nativo de Foker para ${process.platform}-${process.arch}. Plataformas soportadas: ${SUPPORTED_PLATFORMS.join(', ')}. En otra plataforma, compila desde el código fuente con Rust: pnpm build:native.`,
       { cause: error },
     );
   }
