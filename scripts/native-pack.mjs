@@ -71,6 +71,7 @@ export function prepareNative(coreDir, platform, binariesDir = coreDir) {
   run(join(corePkgDir, 'node_modules', '.bin', isWindows ? 'napi.cmd' : 'napi'), ['create-npm-dirs'], coreDir);
   const platformDir = join(coreDir, 'npm', platform);
   copyFileSync(binary, join(platformDir, binaryFile));
+  copyFileSync(join(root, 'LICENSE'), join(platformDir, 'LICENSE'));
   finalizeNativePackage(platformDir, pkg, platform);
   return platformDir;
 }
@@ -161,6 +162,7 @@ export function packRelease(binariesDir, out) {
     for (const file of ['package.json', ...source.files])
       cpSync(join(corePkgDir, file), join(stage, file), { recursive: true });
     const staged = JSON.parse(readFileSync(join(stage, 'package.json'), 'utf8'));
+    copyFileSync(join(root, 'LICENSE'), join(stage, 'LICENSE'));
     staged.optionalDependencies = nativeOptionalDependencies(staged.version);
     writeFileSync(join(stage, 'package.json'), `${JSON.stringify(staged, null, 2)}\n`);
     mkdirSync(out, { recursive: true });
