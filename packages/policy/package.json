@@ -2,7 +2,7 @@
   "name": "@foker/policy",
   "version": "0.0.0",
   "description": "Política de Foker: rutas protegidas, aprobaciones, secretos, workspace trust y ejecución segura.",
-  "license": "UNLICENSED",
+  "license": "Apache-2.0",
   "type": "module",
   "exports": {
     ".": {

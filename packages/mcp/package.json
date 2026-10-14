@@ -2,7 +2,7 @@
   "name": "@foker/mcp",
   "version": "0.0.0",
   "description": "Servidor MCP stdio de Foker.",
-  "license": "UNLICENSED",
+  "license": "Apache-2.0",
   "type": "module",
   "exports": {
     ".": {

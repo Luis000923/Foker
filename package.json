@@ -2,7 +2,7 @@
   "name": "foker-monorepo",
   "private": true,
   "description": "Foker: infraestructura determinista para agentes de IA que desarrollan monorepos TypeScript.",
-  "license": "UNLICENSED",
+  "license": "Apache-2.0",
   "type": "module",
   "packageManager": "pnpm@11.9.0",
   "engines": {

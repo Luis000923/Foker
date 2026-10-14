@@ -2,7 +2,7 @@
   "name": "@foker/schemas",
   "version": "0.0.0",
   "description": "JSON Schemas de Foker, tipos TypeScript generados y validadores.",
-  "license": "UNLICENSED",
+  "license": "Apache-2.0",
   "type": "module",
   "exports": {
     ".": {

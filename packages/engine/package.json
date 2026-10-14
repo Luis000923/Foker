@@ -2,7 +2,7 @@
   "name": "@foker/engine",
   "version": "0.0.0",
   "description": "Motor de Foker: configuraci\u00f3n, tareas, gates, validaci\u00f3n, Skills y auditor\u00eda.",
-  "license": "UNLICENSED",
+  "license": "Apache-2.0",
   "type": "module",
   "exports": {
     ".": {

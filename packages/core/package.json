@@ -2,7 +2,7 @@
   "name": "@foker/core",
   "version": "0.0.0",
   "description": "Cargador del addon nativo de Foker (napi-rs).",
-  "license": "UNLICENSED",
+  "license": "Apache-2.0",
   "type": "module",
   "exports": {
     ".": {

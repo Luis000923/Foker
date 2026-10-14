@@ -2,7 +2,7 @@
   "name": "@foker/integrations",
   "version": "0.0.0",
   "description": "Generadores de configuración para Claude Code, OpenCode, Antigravity y Codex.",
-  "license": "UNLICENSED",
+  "license": "Apache-2.0",
   "type": "module",
   "exports": {
     ".": {

@@ -2,7 +2,7 @@
   "name": "foker",
   "version": "0.0.0",
   "description": "CLI de Foker.",
-  "license": "UNLICENSED",
+  "license": "Apache-2.0",
   "type": "module",
   "exports": {
     ".": {
