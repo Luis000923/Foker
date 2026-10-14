@@ -1380,7 +1380,7 @@ Seguridad de CI: Actions fijadas por SHA; `permissions:` mínimos por job (`cont
 
 ### 21.3 Publicación
 - **HECHO**: npm *trusted publishing* con OIDC requiere npm ≥ 11.5.1 y Node ≥ 22.14 en el job, `id-token: write`, y genera procedencia automáticamente.
-- Paquetes: `foker` (CLI, `bin: foker`), `@foker/core` + 6 de plataforma, `@foker/schemas`, `@foker/mcp`, `@foker/engine`, `@foker/policy`, `@foker/integrations`. **PENDIENTE**: reservar `foker` (el registro devolvía 404 el 2026-10-04) y el scope `@foker` (PREGUNTA-3).
+- Paquetes: `@foker/cli` (CLI, `bin: foker`; `foker` lo rechazó npm por parecerse a `faker` y `bower`, E403 el 2026-10-14), `@foker/core` + 6 de plataforma, `@foker/schemas`, `@foker/mcp`, `@foker/engine`, `@foker/policy`, `@foker/integrations`. Scope `@foker` creado el 2026-10-14 (PREGUNTA-3 resuelta).
 - Versionado y changelog con Changesets en modo *fixed* (lockstep). Canales: `next` (prereleases `0.x.y-next.n`) y `latest`.
 - Crates: no se publican en crates.io en el MVP.
 

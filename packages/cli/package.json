@@ -1,5 +1,5 @@
 {
-  "name": "foker",
+  "name": "@foker/cli",
   "version": "0.1.0-beta.0",
   "description": "Foker CLI: deterministic infrastructure for AI agents working on TypeScript monorepos.",
   "license": "Apache-2.0",

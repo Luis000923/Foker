@@ -19,7 +19,7 @@ export const TS_GRAPH = {
   '@foker/engine': ['@foker/core', '@foker/policy', '@foker/schemas'],
   '@foker/integrations': ['@foker/schemas'],
   '@foker/mcp': ['@foker/engine'],
-  foker: ['@foker/engine', '@foker/integrations', '@foker/mcp'],
+  '@foker/cli': ['@foker/engine', '@foker/integrations', '@foker/mcp'],
 };
 
 /** @type {Record<string, string[]>} */

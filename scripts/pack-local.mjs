@@ -73,7 +73,7 @@ export function packLocal(out = join(root, 'dist-local')) {
     for (const dir of [...packages.map((name) => join(work, name)), native]) {
       const pkg = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8'));
       const tarball = pack(dir, out);
-      if (pkg.name === 'foker') cliTarball = tarball;
+      if (pkg.name === '@foker/cli') cliTarball = tarball;
       else overrides[pkg.name] = `file:${join(out, tarball)}`;
     }
     writeFileSync(
