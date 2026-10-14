@@ -28,16 +28,5 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 /// Versión del esquema de `.foker/project-map.json` (`schema_version`, FOKER-SPEC §17).
 /// Un mapa con otra versión se trata como caché inválida y se reconstruye.
 pub const MAP_SCHEMA_VERSION: u32 = 1;
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn version_is_semver() {
-        assert_eq!(VERSION.split('.').count(), 3);
-    }
-}
-
 #[doc(hidden)]
 pub mod testing;

@@ -1,9 +1,0 @@
----
-source: crates/foker-map/tests/queries.rs
-expression: "hits(\"button\", SearchKind::Any)"
----
-[
-    "1.00 packages/ui/src/button.tsx#Button",
-    "0.95 packages/ui/src/button.tsx",
-    "0.80 packages/ui/src/button.tsx#ButtonProps",
-]

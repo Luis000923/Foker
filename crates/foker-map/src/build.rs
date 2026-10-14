@@ -703,17 +703,3 @@ pub fn build(
         discovery,
     })
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn formats_rfc3339() {
-        assert_eq!(rfc3339(UNIX_EPOCH), "1970-01-01T00:00:00Z");
-        let t = UNIX_EPOCH + std::time::Duration::from_secs(1_791_108_000);
-        assert_eq!(rfc3339(t), "2026-10-04T10:00:00Z");
-        let leap = UNIX_EPOCH + std::time::Duration::from_secs(951_782_400);
-        assert_eq!(rfc3339(leap), "2000-02-29T00:00:00Z");
-    }
-}

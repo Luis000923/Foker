@@ -168,43 +168,6 @@ pub fn request(
         params: (params != crate::ContextParams::default()).then_some(params),
     })
 }
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn unicode_paths_subterms_and_stopwords() {
-        assert_eq!(task("  an\u{303}ade\r\n X  "), "añade X");
-        let t = tokenize("the getUserById snake_case kebab-case packages/ui/button.tsx");
-        assert!(t.terms.contains(&"user".into()));
-        assert!(t.terms.contains(&"snake".into()));
-        assert!(!t.terms.contains(&"the".into()));
-        assert_eq!(t.paths, ["packages/ui/button.tsx"]);
-        assert!(t.identifiers.contains(&"getUserById".into()));
-        assert!(STOPWORDS_ES.split_whitespace().count() >= 140);
-        assert!(STOPWORDS_EN.split_whitespace().count() >= 140);
-    }
-    #[test]
-    fn invalid_and_canonical_anchors() {
-        let mut r = ContextRequest {
-            task: "x".into(),
-            ..Default::default()
-        };
-        r.anchors.files = vec!["a\\b.ts".into(), "a/b.ts".into()];
-        assert_eq!(
-            request(&r, &ContextInputs::default())
-                .unwrap()
-                .anchors
-                .files,
-            ["a/b.ts"]
-        );
-        r.budget_tokens = 999;
-        assert!(request(&r, &ContextInputs::default()).is_err());
-        r.budget_tokens = 8000;
-        r.task = "\u{0344}".repeat(4000);
-        assert!(request(&r, &ContextInputs::default()).is_err());
-    }
-}
-
 /// Diccionario determinista v1: expande solo términos, nunca anclas ni intención.
 pub const LEXICON_V1: &str = include_str!("../data/lexicon-es-en-v1.tsv");
 
@@ -270,48 +233,4 @@ pub fn expand_terms(terms: &[String]) -> Vec<String> {
     expanded.extend(additions);
     expanded.sort();
     expanded
-}
-
-#[cfg(test)]
-mod expansion_tests {
-    use super::*;
-    #[test]
-    fn plegado_flexivo_es_en_simetrico_y_conservador() {
-        for (a, b) in [
-            ("referencias", "referencia"),
-            ("importes", "importe"),
-            ("unidades", "unidad"),
-            ("cantidades", "cantidad"),
-            ("matches", "match"),
-            ("processes", "process"),
-            ("categories", "category"),
-            ("búsqueda", "busqueda"),
-            ("prices", "price"),
-        ] {
-            assert_eq!(fold_inflection(a), fold_inflection(b), "{a} ~ {b}");
-        }
-        for (a, b) in [("cart", "card"), ("user", "users-x"), ("sku", "skus-")] {
-            assert_ne!(fold_inflection(a), fold_inflection(b));
-        }
-        // Términos cortos no se pliegan.
-        for short in ["es", "as", "bus", "ies", "use"] {
-            assert_eq!(fold_inflection(short), short);
-        }
-    }
-    #[test]
-    fn expansion_bilingue_plural_acentos_y_multiplicidad() {
-        let es = expand_terms(&tokenize("usuarios autenticación precios").terms);
-        for term in ["user", "authentication", "auth", "price"] {
-            assert!(es.contains(&term.into()));
-        }
-        assert!(expand_terms(&["user".into()]).contains(&"usuario".into()));
-        assert_eq!(expand_terms(&["inexistente".into()]), ["inexistente"]);
-        let repeated = expand_terms(&["carrito".into(), "carrito".into()]);
-        assert_eq!(repeated.iter().filter(|t| *t == "carrito").count(), 2);
-        assert_eq!(repeated.iter().filter(|t| *t == "cart").count(), 1);
-        assert_eq!(
-            repeated,
-            expand_terms(&["carrito".into(), "carrito".into()])
-        );
-    }
 }

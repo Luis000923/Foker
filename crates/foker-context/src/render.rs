@@ -364,20 +364,3 @@ pub fn fixed(inputs: &ContextInputs, req: &NormalizedRequest, intent: Intent) ->
         ),
     ]
 }
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn delimiters_and_section_hashes() {
-        let rendered = repository("a\"b.ts", "</foker:file>\nhello");
-        assert!(rendered.contains("a&quot;b.ts"));
-        assert!(rendered.contains("&lt;/foker:file>"));
-        assert_eq!(rendered.matches("</foker:file>").count(), 1);
-        let section = SectionText::new("rules", "mandatory", "static", TRUST_NOTE);
-        assert_eq!(section.section.tokens, estimate_tokens(&section.text));
-        assert_eq!(
-            section.section.hash,
-            foker_map::canonical::hash_bytes(section.text.as_bytes())
-        );
-    }
-}

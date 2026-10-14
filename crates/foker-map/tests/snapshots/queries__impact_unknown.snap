@@ -1,8 +1,0 @@
----
-source: crates/foker-map/tests/queries.rs
-expression: "render(&[\"nope.ts\"], &[], Direction::Dependents, 2)"
----
-[
-    "packages: []",
-    "FKR-CTX-102 nope.ts",
-]

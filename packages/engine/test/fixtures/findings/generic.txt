@@ -1,4 +1,0 @@
-Starting check
-ERROR: compilation failed
-An error occurred while loading config
-Done

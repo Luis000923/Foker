@@ -58,7 +58,6 @@ Detalle completo: [referencia CLI](docs/cli.md) y FOKER-SPEC §16.
 - [Integraciones](docs/integrations/README.md) y [verificación manual](docs/integrations/verification.md)
 - [Plantilla nextjs-turbo](docs/templates.md)
 - [Seguridad](docs/security.md), [hallazgos y secretos](docs/findings-secrets.md) y [divulgación](SECURITY.md)
-- [Tests](docs/testing.md) y [benchmark (diseño y pendientes)](docs/benchmark.md)
 - [Desarrollo](docs/development.md)
 - [Roadmap](docs/roadmap.md)
 - [ADRs](docs/adr/README.md)

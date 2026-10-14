@@ -1,6 +1,5 @@
 packages:
   - packages/*
-  - benchmarks
 
 # Supply chain (FOKER-SPEC §21.2): no instalar versiones publicadas hace menos de 1 día.
 minimumReleaseAge: 1440

@@ -122,16 +122,3 @@ pub(crate) fn build_with_seed_counts(
         counts,
     ))
 }
-
-#[cfg(test)]
-pub(crate) fn fixture_state() -> &'static MapState {
-    static STATE: std::sync::OnceLock<MapState> = std::sync::OnceLock::new();
-    STATE.get_or_init(|| {
-        foker_map::build::build(
-            &Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/monorepo-pnpm"),
-            &foker_map::config::MapConfig::default(),
-            &mut foker_map::build::ParseCache::new(),
-        )
-        .unwrap()
-    })
-}

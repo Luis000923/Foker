@@ -13,7 +13,6 @@ import { fileURLToPath } from 'node:url';
  * @type {Record<string, string[]>}
  */
 export const TS_GRAPH = {
-  '@foker/benchmarks': ['@foker/schemas', '@foker/core', '@foker/engine'],
   '@foker/core': [],
   '@foker/schemas': [],
   '@foker/policy': ['@foker/schemas'],
@@ -115,7 +114,6 @@ export function checkTypeScript(root) {
   const packageDirs = (existsSync(packagesDir) ? readdirSync(packagesDir) : [])
     .sort()
     .map((dir) => join(packagesDir, dir));
-  if (existsSync(join(root, 'benchmarks/package.json'))) packageDirs.push(join(root, 'benchmarks'));
   for (const pkgDir of packageDirs) {
     const pkgPath = join(pkgDir, 'package.json');
     if (!existsSync(pkgPath)) continue;

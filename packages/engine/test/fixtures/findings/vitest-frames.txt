@@ -1,7 +1,0 @@
- FAIL  src/app.test.ts > first failure
- ❯ ../../../outside.ts:1:2
- ❯ src/app.test.ts:12:8
- ❯ ../shared/helper.ts:20:4
- FAIL  src/other.test.ts > second failure
- ❯ src/other.test.ts:30:6
- ❯ src/app.test.ts:40:2

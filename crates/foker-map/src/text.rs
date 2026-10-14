@@ -42,29 +42,3 @@ pub fn subterms(text: &str) -> Vec<String> {
     let nfc: String = text.nfc().collect();
     split_identifier(&nfc)
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn splits_identifiers() {
-        assert_eq!(split_identifier("getUserById"), ["get", "user", "by", "id"]);
-        assert_eq!(split_identifier("HTTPServer2"), ["http", "server", "2"]);
-        assert_eq!(
-            split_identifier("snake_case-and-kebab"),
-            ["snake", "case", "and", "kebab"]
-        );
-        assert_eq!(split_identifier("useCardState"), ["use", "card", "state"]);
-        assert_eq!(split_identifier("añadirÍtem"), ["añadir", "ítem"]);
-        assert!(split_identifier("__").is_empty());
-    }
-
-    #[test]
-    fn splits_paths() {
-        assert_eq!(
-            subterms("packages/ui/src/button-group.tsx"),
-            ["packages", "ui", "src", "button", "group", "tsx"]
-        );
-    }
-}

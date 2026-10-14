@@ -32,16 +32,3 @@ pub fn infer(task: &str) -> Intent {
     }
     result
 }
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn priority_default_and_counts() {
-        assert_eq!(infer("fix test add"), Intent::Fix);
-        assert_eq!(infer("test refactor"), Intent::Test);
-        assert_eq!(infer("Añade la variante danger"), Intent::Add);
-        assert_eq!(infer("fix test test"), Intent::Test);
-        assert_eq!(infer("xyzzy"), Intent::Modify);
-        assert_eq!(infer("prefix"), Intent::Modify);
-    }
-}

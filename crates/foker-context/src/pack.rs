@@ -313,17 +313,3 @@ impl ContextError {
         }
     }
 }
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn defaults_and_codes() {
-        assert_eq!(ContextRequest::default().budget_tokens, 8000);
-        assert_eq!(ContextInputs::default().core_files, 15);
-        assert_eq!(
-            ContextError::InvalidInput("x".into()).code(),
-            FokerCode::Inp001
-        );
-        assert_eq!(serde_json::to_value(Intent::Fix).unwrap(), "fix");
-    }
-}

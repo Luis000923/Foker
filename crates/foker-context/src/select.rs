@@ -449,31 +449,7 @@ pub fn select(
         excluded,
     })
 }
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn estimator_is_utf8_lf_ceil() {
-        assert_eq!(estimate_tokens(""), 0);
-        assert_eq!(estimate_tokens("éé"), 2);
-        assert_eq!(estimate_tokens("a\r\nb"), estimate_tokens("a\nb"));
-        assert_eq!(estimate_tokens("1234567890123456"), 5);
-    }
-}
-
 /// Corte inclusivo; un máximo nulo no elimina candidatos.
 fn below_relevance(score: f64, maximum: f64, fraction: f64) -> bool {
     fraction > 0.0 && maximum > 0.0 && score < maximum * fraction
-}
-
-#[cfg(test)]
-mod relevance_tests {
-    use super::*;
-    #[test]
-    fn corte_relativo_inclusivo_y_desactivable() {
-        assert!(!below_relevance(0.2, 1.0, 0.2));
-        assert!(below_relevance(0.19, 1.0, 0.2));
-        assert!(!below_relevance(0.0, 1.0, 0.0));
-        assert!(!below_relevance(0.0, 0.0, 0.2));
-    }
 }

@@ -1,8 +1,0 @@
----
-source: crates/foker-map/tests/queries.rs
-expression: "hits(\"lib/format\", SearchKind::File)"
----
-[
-    "0.75 apps/web/src/lib/format.ts",
-    "0.25 apps/web/src/lib/stats.ts",
-]

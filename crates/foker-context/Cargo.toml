@@ -16,8 +16,6 @@ thiserror.workspace = true
 libm.workspace = true
 
 [dev-dependencies]
-insta.workspace = true
-proptest.workspace = true
 tempfile.workspace = true
 
 [lints]

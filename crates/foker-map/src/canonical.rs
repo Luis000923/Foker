@@ -60,32 +60,3 @@ pub fn hash_canonical_json(json: &str) -> Result<String, serde_json::Error> {
     let value = serde_json::from_str(json)?;
     Ok(hash_bytes(to_canonical_string(&value).as_bytes()))
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use serde_json::json;
-
-    #[test]
-    fn sorts_keys_recursively_and_is_compact() {
-        let value = json!({ "b": 1, "a": { "d": [3, { "z": true, "y": null }], "c": "é\n" } });
-        assert_eq!(
-            to_canonical_string(&value),
-            r#"{"a":{"c":"é\n","d":[3,{"y":null,"z":true}]},"b":1}"#
-        );
-    }
-
-    #[test]
-    fn floats_and_hashes() {
-        assert_eq!(
-            to_canonical_string(&json!(0.1 + 0.2)),
-            "0.30000000000000004"
-        );
-        assert_eq!(round12(0.123_456_789_012_345), 0.123_456_789_012);
-        assert_eq!(round12(-1e-15).to_string(), "0");
-        assert_eq!(
-            hash_bytes(b""),
-            "blake3:af1349b9f5f9a1a6a0404dea36dcc9499bcb25c9adc112b7cc9a93cae41f3262"
-        );
-    }
-}

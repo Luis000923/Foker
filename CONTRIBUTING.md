@@ -51,7 +51,6 @@ Cada bug corregido añade un caso de regresión.
 
 | Workflow | Disparador | Qué hace |
 |---|---|---|
-| `nightly.yml` | Diario (cron) y manual | Matriz completa (incl. `windows-11-arm`, `macos-15-intel`, Node 22/24/26), `PROPTEST_CASES=1000`, rendimiento `large-10k` contra `benchmarks/perf-baseline.json`; regresión > 20 % abre issue |
 | `ci.yml` | PR y push a `main` | `lint` (fmt, clippy, deny, biome, tsc, regla de dependencias) → `test` en 4 runners |
 | `release.yml` | Manual y PR que toca el addon | `build` del addon en 6 targets → `smoke` de cada artefacto empaquetado en su runner nativo. Todavía no publica (FKR-080) |
 
@@ -64,7 +63,7 @@ Actions se fijan por SHA y cada job tiene permisos mínimos.
 |---|---|
 | Entrada | [README](README.md), [primeros pasos](docs/getting-started.md), esta guía |
 | Diseño | [Arquitectura](docs/architecture.md), [mapa](docs/project-map.md), [contexto](docs/context-engine.md), [ADRs](docs/adr/README.md) |
-| Desarrollo y calidad | [Desarrollo](docs/development.md), [tests](docs/testing.md), [benchmark](docs/benchmark.md), [roadmap](docs/roadmap.md) |
+| Desarrollo y calidad | [Desarrollo](docs/development.md), [roadmap](docs/roadmap.md) |
 | Uso | [Agentes](docs/agents.md), [tareas](docs/tasks.md), [skills](docs/skills.md), [MCP](docs/mcp.md), [integraciones](docs/integrations/README.md), [verificación](docs/integrations/verification.md), [plantillas](docs/templates.md) |
 | Seguridad | [Divulgación](SECURITY.md), [seguridad](docs/security.md), [trust/checks](docs/config-trust-exec.md), [secretos](docs/findings-secrets.md) |
 | Referencias generadas | [CLI](docs/cli.md): test docs.test.ts de CLI; [configuración](docs/configuration.md): `node packages/schemas/scripts/generate.mjs` o test docs.test.ts de schemas con UPDATE_SNAPSHOTS=1 |

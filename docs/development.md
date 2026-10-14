@@ -22,8 +22,6 @@ Resumen de FOKER-SPEC §7.7 y §19.
 | `pnpm lint` / `pnpm format` | Biome |
 | `pnpm check:deps` | Regla de dependencias entre módulos (REQ-REPO-001) |
 | `pnpm build:native` | Compila el addon `foker-napi` para la plataforma local (`packages/core/*.node`) |
-| `pnpm test` | `build:native` + `cargo nextest run` + `vitest run` |
-| `pnpm test:rust` / `pnpm test:ts` | Cada mitad por separado (`test:ts` necesita el addon compilado) |
 | `pnpm clean` | Borra `dist/` y `target/` |
 | `pnpm verify` | Todo lo que exige la Definition of Done: fmt, clippy, Biome, tsc, regla de dependencias, generados y tests |
 

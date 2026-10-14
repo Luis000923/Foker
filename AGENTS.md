@@ -27,6 +27,5 @@ de ellos es PENDIENTE (ver `spec/RECONSTRUCCION.md`). No inventes su contenido.
 | Instalar dependencias | `pnpm install` |
 | Lint y formato (TS, JSON) | `pnpm lint` / `pnpm format` |
 | Tipos | `pnpm typecheck` |
-| Tests Rust + TS | `pnpm test` |
 | Build TS | `pnpm build` |
 | Lint Rust | `cargo fmt --check && cargo clippy --workspace --all-targets -- -D warnings` |

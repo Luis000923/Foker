@@ -1,5 +1,0 @@
-{
-  "name": "@rc/main-field",
-  "version": "1.0.0",
-  "main": "./lib/entry.ts"
-}

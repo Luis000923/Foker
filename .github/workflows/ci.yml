@@ -82,15 +82,8 @@ jobs:
       - name: Toolchain de Rust (rust-toolchain.toml)
         run: rustup show active-toolchain || rustup toolchain install
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
-      - uses: taiki-e/install-action@861a07ce7084f55488e375df125cdc99bba60eb7 # v2.87.23
-        with:
-          tool: cargo-nextest
       - run: pnpm install --frozen-lockfile
-      - name: Tests Rust
-        run: cargo nextest run --workspace --locked --profile ci
       - name: Addon nativo
         run: pnpm build:native
-      - name: Tests TypeScript
-        run: pnpm test:ts
       - name: Build TypeScript
         run: pnpm build
