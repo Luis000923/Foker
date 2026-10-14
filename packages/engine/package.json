@@ -1,8 +1,14 @@
 {
   "name": "@foker/engine",
-  "version": "0.0.0",
-  "description": "Motor de Foker: configuraci\u00f3n, tareas, gates, validaci\u00f3n, Skills y auditor\u00eda.",
+  "version": "0.1.0-beta.0",
+  "description": "Foker engine: configuration, tasks, gates, validation, skills, audit, and deterministic Caveman payload compression.",
   "license": "Apache-2.0",
+  "author": "Luis (@Luis000923)",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Luis000923/Foker.git",
+    "directory": "packages/engine"
+  },
   "type": "module",
   "exports": {
     ".": {

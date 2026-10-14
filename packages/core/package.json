@@ -1,8 +1,14 @@
 {
   "name": "@foker/core",
-  "version": "0.0.0",
-  "description": "Cargador del addon nativo de Foker (napi-rs).",
+  "version": "0.1.0-beta.0",
+  "description": "Foker native core: Rust AST context engine and PageRank bindings (napi-rs) for Linux x64 and Windows x64.",
   "license": "Apache-2.0",
+  "author": "Luis (@Luis000923)",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Luis000923/Foker.git",
+    "directory": "packages/core"
+  },
   "type": "module",
   "exports": {
     ".": {

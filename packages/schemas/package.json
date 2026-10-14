@@ -1,8 +1,14 @@
 {
   "name": "@foker/schemas",
-  "version": "0.0.0",
-  "description": "JSON Schemas de Foker, tipos TypeScript generados y validadores.",
+  "version": "0.1.0-beta.0",
+  "description": "JSON Schemas and contracts for Foker: generated TypeScript types and validators.",
   "license": "Apache-2.0",
+  "author": "Luis (@Luis000923)",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Luis000923/Foker.git",
+    "directory": "packages/schemas"
+  },
   "type": "module",
   "exports": {
     ".": {

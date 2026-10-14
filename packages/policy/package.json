@@ -1,8 +1,14 @@
 {
   "name": "@foker/policy",
-  "version": "0.0.0",
-  "description": "Política de Foker: rutas protegidas, aprobaciones, secretos, workspace trust y ejecución segura.",
+  "version": "0.1.0-beta.0",
+  "description": "Foker policy: protected paths, approvals, secrets, workspace trust, and static ASVS L2 subset security audit.",
   "license": "Apache-2.0",
+  "author": "Luis (@Luis000923)",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Luis000923/Foker.git",
+    "directory": "packages/policy"
+  },
   "type": "module",
   "exports": {
     ".": {
