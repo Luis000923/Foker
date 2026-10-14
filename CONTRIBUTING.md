@@ -68,6 +68,6 @@ Actions se fijan por SHA y cada job tiene permisos mínimos.
 | Seguridad | [Divulgación](SECURITY.md), [seguridad](docs/security.md), [trust/checks](docs/config-trust-exec.md), [secretos](docs/findings-secrets.md) |
 | Referencias generadas | [CLI](docs/cli.md): test docs.test.ts de CLI; [configuración](docs/configuration.md): `node packages/schemas/scripts/generate.mjs` o test docs.test.ts de schemas con UPDATE_SNAPSHOTS=1 |
 
-REQ-DOC-001: CI comprueba ambas referencias; consulta [testing.md](docs/testing.md) antes de
+REQ-DOC-001: CI comprueba ambas referencias; ten en cuenta
 regenerar. Documenta pendientes con su issue; no presentes la especificación como comportamiento
 implementado ni edites a mano archivos generados.
