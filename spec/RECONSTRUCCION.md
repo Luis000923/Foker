@@ -14,7 +14,7 @@ invirtiendo `foker-vault/.tools/generar_boveda.py` sobre las notas de `foker-vau
 - `referencia-parcial/` contiene únicamente los resúmenes de la bóveda: NO son normativos.
 
 Hasta recuperar el original, cualquier detalle que dependa de esos archivos es PENDIENTE
-(ver docs/ESTADO.md). Si aparece `foker-spec/`, sustituir este directorio por la copia exacta.
+Si aparece `foker-spec/`, sustituir este directorio por la copia exacta.
 
 ## Actualización 2026-10-03 (ADR-019)
 Por decisión del usuario, los contratos que faltaban se reescribieron desde esta especificación:
