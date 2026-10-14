@@ -78,6 +78,35 @@
           "maxLength": 64
         }
       }
+    },
+    "design_system": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Contrato estático compatible con paquetes open-design; no carga contenido remoto ni inicia procesos.",
+      "required": ["name"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+          "maxLength": 64
+        },
+        "preset": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+          "maxLength": 64
+        },
+        "format": { "const": "open-design/v1" },
+        "files": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "enum": ["DESIGN.md", "manifest.json", "tokens.css"] },
+          "allOf": [
+            { "contains": { "const": "DESIGN.md" } },
+            { "contains": { "const": "manifest.json" } },
+            { "contains": { "const": "tokens.css" } }
+          ]
+        }
+      }
     }
   }
 }

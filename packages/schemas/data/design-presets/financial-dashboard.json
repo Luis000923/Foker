@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "name": "financial-dashboard",
+  "typography": {
+    "font_sans": "Inter, system-ui, sans-serif",
+    "font_mono": "JetBrains Mono, ui-monospace, monospace",
+    "scale": {
+      "xs": "0.75rem",
+      "sm": "0.875rem",
+      "base": "1rem",
+      "lg": "1.125rem",
+      "xl": "1.25rem",
+      "2xl": "1.5rem",
+      "3xl": "1.875rem"
+    },
+    "line_height": { "tight": 1.2, "normal": 1.5, "relaxed": 1.7 }
+  },
+  "colors": {
+    "light": {
+      "background": "#f8fafc",
+      "foreground": "#172033",
+      "primary": "#0f766e",
+      "primary_foreground": "#ffffff",
+      "muted": "#e2e8f0",
+      "muted_foreground": "#475569",
+      "border": "#cbd5e1",
+      "danger": "#b91c1c"
+    },
+    "dark": {
+      "background": "#09111f",
+      "foreground": "#e2e8f0",
+      "primary": "#2dd4bf",
+      "primary_foreground": "#062a2a",
+      "muted": "#142238",
+      "muted_foreground": "#94a3b8",
+      "border": "#29405f",
+      "danger": "#fb7185"
+    }
+  },
+  "spacing": { "1": "0.25rem", "2": "0.5rem", "3": "0.75rem", "4": "1rem", "6": "1.5rem", "8": "2rem" },
+  "radius": { "sm": "0.25rem", "md": "0.5rem", "lg": "0.75rem" }
+}

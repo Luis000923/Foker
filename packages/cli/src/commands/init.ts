@@ -65,7 +65,10 @@ export function initialConfig(root: string, name: string, description: string | 
   const scripts = (pkg?.['scripts'] ?? {}) as Record<string, string>;
   const pm = packageManager(root);
   const monorepo = existsSync(join(root, 'pnpm-workspace.yaml')) || Array.isArray(pkg?.['workspaces']);
-  const checks: Record<string, unknown> = { secrets: { builtin: 'secret-scan' } };
+  const checks: Record<string, unknown> = {
+    secrets: { builtin: 'secret-scan' },
+    security: { builtin: 'static-security' },
+  };
   for (const script of ['typecheck', 'lint', 'test']) {
     if (scripts[script]) checks[script] = { run: [pm, 'run', script], timeout_s: script === 'test' ? 600 : 300 };
   }
@@ -82,7 +85,7 @@ export function initialConfig(root: string, name: string, description: string | 
       profiles: {
         quick: { checks: available.includes('typecheck') ? ['typecheck'] : ['secrets'] },
         default: { checks: [...available, 'secrets'] },
-        security: { checks: ['secrets'] },
+        security: { checks: ['security', 'secrets'] },
       },
       checks,
     },
@@ -137,6 +140,7 @@ async function prepareTemplate(root: string, name: string, force: boolean, spec?
             template: { name: 'nextjs-turbo', ...(spec?.template?.options ? { options: spec.template.options } : {}) },
             ...(spec?.architecture ? { architecture: spec.architecture } : {}),
             ...(spec?.design ? { design: spec.design } : {}),
+            ...(spec?.design_system ? { design_system: spec.design_system } : {}),
           };
           const result = validate('foker-md', frontmatter);
           if (!result.ok) throw new FokerError('FKR-CFG-001', formatIssues(result.issues));
@@ -151,7 +155,7 @@ async function prepareTemplate(root: string, name: string, force: boolean, spec?
   }
   await walk();
   // Design Tokens estáticos: el preset elegido en foker.md hidrata el CSS de la app.
-  const presetName = spec?.design?.preset ?? 'neutral';
+  const presetName = spec?.design_system?.preset ?? spec?.design?.preset ?? 'neutral';
   const tokens = designPreset(presetName);
   if (!tokens)
     throw new FokerError(

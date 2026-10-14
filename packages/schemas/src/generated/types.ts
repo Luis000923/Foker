@@ -83,7 +83,7 @@ cwd?: Glob
  */
 parser?: ("tsc" | "eslint" | "vitest" | "generic")
 } | {
-builtin: "secret-scan"
+builtin: ("secret-scan" | "static-security")
 timeout_s?: number
 })
 /**
@@ -864,6 +864,15 @@ owasp_asvs?: ("L1" | "L2" | "L3")
  */
 design?: {
 preset?: string
+}
+/**
+ * Contrato estático compatible con paquetes open-design; no carga contenido remoto ni inicia procesos.
+ */
+design_system?: {
+name: string
+preset?: string
+format?: "open-design/v1"
+files?: ("DESIGN.md" | "manifest.json" | "tokens.css")[]
 }
 }
 /**

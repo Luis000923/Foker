@@ -23,6 +23,7 @@ import type {
 import { loadConfig } from '../config.js';
 import { type FindingParser, runProfileCheck } from '../findings/index.js';
 import { gitDirtyFiles, gitRead } from '../git.js';
+import { checkSecurity } from '../security.js';
 import { effectiveWritePaths, loadSkill } from '../skills/index.js';
 import { BaselineTamperedError, diffSinceBaseline, treeSnapshot } from './baseline.js';
 import { TaskStore } from './index.js';
@@ -138,6 +139,17 @@ async function execute(
         result.findings.push({ rule: 'check/failed', message: `Check ${name}: ${result.status}` });
       const { notExecuted: _, code: __, ...checked } = result;
       checks.push(checked);
+    } else if (check.builtin === 'static-security') {
+      const report = await checkSecurity(root);
+      const failed = report.findings.some((finding) => finding.severity === 'error');
+      checks.push({
+        check: name,
+        status: failed ? 'fail' : 'pass',
+        exit_code: failed ? 1 : 0,
+        duration_ms: 0,
+        findings: report.findings,
+        output_tail: `Static Automatable Security Controls (OWASP ASVS L2 Subset): ${report.scanned} archivos analizados.`,
+      });
     } else {
       checks.push({
         check: name,
