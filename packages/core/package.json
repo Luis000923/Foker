@@ -1,7 +1,7 @@
 {
   "name": "@foker/core",
   "version": "0.1.0-beta.0",
-  "description": "Foker native core: Rust AST context engine and PageRank bindings (napi-rs) for Linux x64 and Windows x64.",
+  "description": "Foker native core: Rust AST context engine and PageRank bindings (napi-rs) for macOS, Linux (glibc) and Windows x64.",
   "license": "Apache-2.0",
   "author": "Luis (@Luis000923)",
   "repository": {
@@ -39,8 +39,7 @@
       "aarch64-unknown-linux-gnu",
       "x86_64-apple-darwin",
       "aarch64-apple-darwin",
-      "x86_64-pc-windows-msvc",
-      "aarch64-pc-windows-msvc"
+      "x86_64-pc-windows-msvc"
     ]
   }
 }
