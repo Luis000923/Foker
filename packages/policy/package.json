@@ -9,6 +9,10 @@
     "url": "git+https://github.com/Luis000923/Foker.git",
     "directory": "packages/policy"
   },
+  "publishConfig": {
+    "access": "public",
+    "tag": "beta"
+  },
   "type": "module",
   "exports": {
     ".": {
