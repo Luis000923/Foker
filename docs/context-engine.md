@@ -366,3 +366,5 @@ devuelve más texto que el original. Los archivos `.html`, `.htm`, `.tsx` y `.js
 código va por `foker map`. El servidor MCP lo aplica al `output_tail` de los checks no superados.
 `OUTPUT_DIRECTIVE` (ASD-STE100) está en los roles; `composeStaticPrefix` ordena directiva, reglas y
 skills de forma estable y devuelve una huella SHA-256 para detectar cambios que rompan el caché.
+
+`shrinkToolCatalog` (ADR-040, derivado de caveman, Apache-2.0) comprime catálogos de herramientas MCP/OpenAI: quita metadatos de esquema y reduce descripciones largas conservando las frases con restricciones. Con pérdida; no conserva `cache_control`.
