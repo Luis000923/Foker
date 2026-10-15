@@ -104,6 +104,17 @@ async function refreshAffected(engine: Engine, paths: string[], deleted: string[
     rootPreviouslyAffected || map.project.packages.some((pkg) => pkg.path === '.' && packages.has(pkg.name));
   return { report, packages: allPackages ? [] : [...packages].sort() };
 }
+/** Falla si algún check requerido no está definido, indicando de dónde sale el requisito. */
+export function assertChecksExist(defined: Record<string, unknown>, required: { name: string; origin: string }[]) {
+  const missing = required.filter(({ name }) => !defined[name]);
+  if (!missing.length) return;
+  const detail = missing.map(({ name, origin }) => `${name} (pedido por ${origin})`).join(', ');
+  throw new FokerError(
+    'FKR-VAL-001',
+    `Check inexistente: ${detail}. Definidos en validation.checks: ${Object.keys(defined).join(', ') || 'ninguno'}. ` +
+      'Añádelo a foker.config.yaml (ruta protegida, la edita una persona) y ejecuta «foker trust» en un terminal.',
+  );
+}
 async function execute(
   root: string,
   loaded: Loaded,
@@ -113,8 +124,10 @@ async function execute(
   gate: GateResult['gate'],
   secrets: Finding[] = [],
 ): Promise<GateResult> {
-  for (const name of names)
-    if (!loaded.config.validation.checks[name]) throw new FokerError('FKR-VAL-001', `Check inexistente: ${name}`);
+  assertChecksExist(
+    loaded.config.validation.checks,
+    names.map((name) => ({ name, origin: gate === 'skill' ? 'la skill de la tarea' : 'el perfil de validación' })),
+  );
   if (!(await new TrustStore(options.trustBaseDir).isTrusted(root, loaded.commandsHash)))
     return {
       gate,
@@ -407,8 +420,13 @@ export async function submitTask(root: string, taskId: string, options: Options 
       try {
         const loaded = await loadConfig(root, options.configPath ? { configPath: options.configPath } : {});
         const skill = await skillFor(root, initial, options);
-        for (const name of [...profileChecks(loaded, initial.profile), ...(skill?.validation.checks ?? [])])
-          if (!loaded.config.validation.checks[name]) throw new FokerError('FKR-VAL-001', `Check inexistente: ${name}`);
+        assertChecksExist(loaded.config.validation.checks, [
+          ...profileChecks(loaded, initial.profile).map((name) => ({
+            name,
+            origin: `perfil «${initial.profile}»`,
+          })),
+          ...(skill?.validation.checks ?? []).map((name) => ({ name, origin: `skill «${initial.skill}»` })),
+        ]);
       } catch (error) {
         if (
           !changes.some(

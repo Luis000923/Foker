@@ -653,6 +653,41 @@
       "timeout_s": 5
     },
     {
+      "name": "foker_task_cancel",
+      "title": "Cancelar tarea",
+      "description": "Abandona una tarea no terminal (RUNNING, BLOCKED…) y libera el hook de parada. Devuelve la tarea CANCELLED.",
+      "inputSchema": {
+        "title": "FokerTaskCancelInput",
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["task_id"],
+        "properties": {
+          "task_id": {
+            "$ref": "../common/v1.json#/$defs/taskId"
+          }
+        }
+      },
+      "outputSchema": {
+        "title": "FokerTaskCancelOutput",
+        "type": "object",
+        "anyOf": [
+          {
+            "$ref": "../task/v1.json"
+          },
+          {
+            "$ref": "#/$defs/mcpToolError"
+          }
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false
+      },
+      "timeout_s": 5
+    },
+    {
       "name": "foker_task_submit",
       "title": "Enviar tarea a validación",
       "description": "Ejecuta checks y gates del intento. Solo COMPLETED termina; REJECTED: corrige y reenvía; AWAITING_APPROVAL/BLOCKED: informa al humano. Consume un intento.",

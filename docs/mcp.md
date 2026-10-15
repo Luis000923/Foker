@@ -15,6 +15,7 @@ Las ocho herramientas aparecen en orden alfabético, con título, anotaciones y 
 | `foker_status` | Versiones, frescura del mapa, perfiles, tareas activas y trust. |
 | `foker_task_begin` | Rechaza intersecciones de alcance con globs protegidos aunque no estén en el mapa (`FKR-POL-002`, lista `protected_paths_in_scope` en el mensaje); captura baseline y devuelve un task_id; idempotente con `client_token`. |
 | `foker_task_get` | Lee el TaskRecord y renueva el lease. |
+| `foker_task_cancel` | Abandona una tarea no terminal (`CANCELLED`) y libera el hook de parada. |
 | `foker_task_submit` | Ejecuta gates y devuelve evidencia y siguiente acción. |
 
 Las llamadas con `task_id` renuevan el lease. Las tareas se atribuyen a `mcp:<clientInfo.name>`. MCP nunca concede trust ni aprueba tareas. El usuario concede confianza mediante la CLI. Los checks declarados requieren trust y pueden producir artefactos del proyecto conforme a §10.3; Foker escribe su propio estado solamente en `.foker/`.

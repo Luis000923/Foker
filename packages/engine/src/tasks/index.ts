@@ -376,4 +376,4 @@ export class TaskStore {
   }
 }
 
-export { submitTask, validateProfile, verifyTask } from './gates.js';
+export { assertChecksExist, submitTask, validateProfile, verifyTask } from './gates.js';

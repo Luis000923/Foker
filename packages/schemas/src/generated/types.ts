@@ -194,6 +194,7 @@ recoverable: boolean
 scope_derived?: boolean
 } | McpToolError)
 export type FokerTaskGetOutput = (TaskRecord | McpToolError)
+export type FokerTaskCancelOutput = (TaskRecord | McpToolError)
 export type FokerTaskSubmitOutput = ({
 task_id: TaskId
 state: TaskState
@@ -235,6 +236,8 @@ foker_task_begin_input?: FokerTaskBeginInput
 foker_task_begin_output?: FokerTaskBeginOutput
 foker_task_get_input?: FokerTaskGetInput
 foker_task_get_output?: FokerTaskGetOutput
+foker_task_cancel_input?: FokerTaskCancelInput
+foker_task_cancel_output?: FokerTaskCancelOutput
 foker_task_submit_input?: FokerTaskSubmitInput
 foker_task_submit_output?: FokerTaskSubmitOutput
 }
@@ -1351,6 +1354,9 @@ budget: McpContextBudget
 rendered: string
 }
 export interface FokerTaskGetInput {
+task_id: TaskId
+}
+export interface FokerTaskCancelInput {
 task_id: TaskId
 }
 export interface FokerTaskSubmitInput {

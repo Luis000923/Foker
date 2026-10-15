@@ -34,8 +34,13 @@ export function evaluateCommand(command: string, protectedPaths: string[]): Deci
   const literals = protectedPaths
     .map((g) => g.replace(/\/?\*\*.*$/, '').replace(/^\*\*\//, ''))
     .filter((l) => l.length > 1);
-  if (WRITE_OPS.test(command) && literals.some((l) => command.includes(l))) {
-    return { allowed: false, reason: 'El comando modifica una ruta protegida de Foker.' };
+  // Cada segmento (&&, ||, ;, |, saltos de línea) se evalúa por separado: un `cat` o `grep` que lee una
+  // ruta protegida no debe bloquearse porque otro segmento del mismo comando escriba en otro sitio.
+  for (const segment of command.split(/&&|\|\||;|\||\n/)) {
+    // `2>&1`, `>/dev/null` y `2>/dev/null` descartan salida; no escriben en el proyecto.
+    const text = segment.replace(/\d*>&\d+/g, ' ').replace(/\d*>>?\s*\/dev\/null/g, ' ');
+    if (WRITE_OPS.test(text) && literals.some((l) => text.includes(l)))
+      return { allowed: false, reason: `El comando modifica una ruta protegida de Foker: ${segment.trim()}` };
   }
   return { allowed: true };
 }
@@ -78,7 +83,7 @@ export const policyCheckCommand: Command = {
       if (input.stop_hook_active) return { data: { allowed: true }, warnings: [], human: '', exitCode: 0 };
       const running = (await new TaskStore(root).list()).filter((t) => t.state === 'RUNNING');
       if (running.length === 0) return { data: { allowed: true }, warnings: [], human: '', exitCode: 0 };
-      const reason = `Hay tareas de Foker en RUNNING sin enviar (${running.map((t) => t.task_id).join(', ')}). Llama a foker_task_submit o cancélalas antes de terminar.`;
+      const reason = `Hay tareas de Foker en RUNNING sin enviar (${running.map((t) => t.task_id).join(', ')}). Llama a foker_task_submit, o abandónalas con foker_task_cancel (MCP) o «foker task cancel <task_id>» (CLI) antes de terminar. Si no puedes avanzar, cancela y avisa a la persona del bloqueo.`;
       return {
         data: { allowed: false, reason },
         warnings: [],

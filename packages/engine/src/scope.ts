@@ -34,7 +34,22 @@ export function assertUnprotectedScope(scope: string[], protectedGlobs: string[]
     throw new FokerError('FKR-POL-002', `Alcance protegido: ${JSON.stringify({ protected_paths_in_scope })}`);
 }
 
-/** Admite archivos nuevos solo cuando su directorio ya existe; no sigue symlinks. */
+/** Segmentos literales de un glob, sin el último si es un archivo/patrón: «src/**» → ['src']. */
+function literalDirectory(glob: string): string[] {
+  const segments = glob.split('/').filter(Boolean);
+  const literal: string[] = [];
+  for (const segment of segments) {
+    if (/[*?[\]{}!]/.test(segment)) break;
+    literal.push(segment);
+  }
+  // «src/a.ts» sin comodines: el último segmento es un archivo, no un directorio.
+  if (literal.length === segments.length) literal.pop();
+  return literal;
+}
+/**
+ * Admite archivos nuevos solo cuando su directorio ya existe, o cuando se crea un único
+ * nivel nuevo bajo uno existente (andamiaje: «src/**» en un repo sin src/); no sigue symlinks.
+ */
 export async function nonexistentScopePaths(root: string, scope: string[], files: string[]): Promise<string[]> {
   for (const glob of scope) {
     normalizePath(root, glob);
@@ -54,6 +69,10 @@ export async function nonexistentScopePaths(root: string, scope: string[], files
   await walk('.');
   return unmatched.filter((glob) => {
     const parent = glob.endsWith('/') ? glob.slice(0, -1) : posix.dirname(glob);
+    const literal = literalDirectory(glob);
+    const [top] = literal;
+    if (literal.length === 1 && top && !top.startsWith('.') && top !== 'node_modules' && !directories.includes(top))
+      return false;
     return !directories.some(
       (directory) =>
         // Ancla el directorio al root: «src» como glob de basename también

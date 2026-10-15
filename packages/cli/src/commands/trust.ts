@@ -10,7 +10,10 @@ export const trustCommand: Command = {
     if (ctx.flags['yes'] && !(ctx.flags['ci'] && ctx.env['CI'] === 'true'))
       throw new FokerError('FKR-INP-001', '--yes exige --ci y CI=true');
     if (!ctx.flags['yes'] && (ctx.nonInteractive || !ctx.confirm))
-      throw new FokerError('FKR-POL-010', 'Trust requiere confirmación por TTY');
+      throw new FokerError(
+        'FKR-POL-010',
+        'Trust requiere confirmación por TTY. Sal de la sesión del agente y ejecuta «foker trust» (o «npx foker trust») en un terminal interactivo, en la raíz del proyecto; en CI usa «foker trust --yes --ci» con CI=true.',
+      );
     const loaded = await loadConfig(ctx.cwd, ctx.flags['config'] ? { configPath: String(ctx.flags['config']) } : {});
     for (const [name, check] of Object.entries(loaded.config.validation.checks))
       ctx.display(`${name}: ${JSON.stringify(check && 'run' in check ? check.run : check)}\n`);

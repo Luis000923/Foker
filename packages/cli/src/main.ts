@@ -75,8 +75,15 @@ export async function main(argv: string[], env: NodeJS.ProcessEnv, io: IO): Prom
         throw new FokerError('FKR-INP-001', `Flag inválido para ${commandName}: --${token.name}`);
     }
     const args = parsed.positionals.slice(command?.name.split(' ').length ?? 0);
-    if (parsed.positionals.length && !command)
-      throw new FokerError('FKR-INP-001', `Comando desconocido: ${commandName}`);
+    if (parsed.positionals.length && !command) {
+      const group = commands.filter((c) => c.name.startsWith(`${commandName} `)).map((c) => c.name);
+      throw new FokerError(
+        'FKR-INP-001',
+        group.length
+          ? `Comando desconocido: ${commandName}. Subcomandos: ${group.join(', ')}`
+          : `Comando desconocido: ${commandName}`,
+      );
+    }
     if (command && args.length > command.maxArgs)
       throw new FokerError('FKR-INP-001', `Argumentos inválidos para ${command.name}`);
     if (parsed.values['version']) {

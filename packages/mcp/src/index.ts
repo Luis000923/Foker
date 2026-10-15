@@ -3,6 +3,7 @@ import { createRequire } from 'node:module';
 import { basename, join, resolve } from 'node:path';
 import { stripVTControlCharacters } from 'node:util';
 import {
+  assertChecksExist,
   assertUnprotectedScope,
   type ContextRequest,
   deriveScopePaths,
@@ -207,6 +208,8 @@ function serverFactory(options: FokerServerOptions) {
       if (typeof args['task_id'] === 'string') await tasks.touch(args['task_id']);
       if (name === 'foker_task_get')
         return { data: (await tasks.get(String(args['task_id']))) as unknown as Record<string, unknown> };
+      if (name === 'foker_task_cancel')
+        return { data: (await tasks.cancel(String(args['task_id']))) as unknown as Record<string, unknown> };
       if (name === 'foker_check') {
         const input = args as FokerCheckInput;
         const result = await validateProfile(root, {
@@ -240,6 +243,12 @@ function serverFactory(options: FokerServerOptions) {
         const profile = loaded.config.validation.profiles[input.profile ?? 'default'];
         if (!profile) throw new FokerError('FKR-VAL-001', 'Perfil inexistente');
         if (input.skill) await gatherContextInputs(root, { skill: input.skill });
+        // Begin y submit exigen los mismos checks: perfil más los de la skill.
+        const skillChecks = input.skill ? (await loadSkill(root, input.skill)).manifest.validation.checks : [];
+        assertChecksExist(loaded.config.validation.checks, [
+          ...profile.checks.map((name) => ({ name, origin: `perfil «${input.profile ?? 'default'}»` })),
+          ...skillChecks.map((name) => ({ name, origin: `skill «${input.skill}»` })),
+        ]);
         const project = JSON.parse(await engine.exportMapJson()) as ProjectMap;
         const { context, ...taskInput } = input;
         const files = Object.keys(project.files);
@@ -329,7 +338,7 @@ function serverFactory(options: FokerServerOptions) {
             allowed_paths: task.scope.paths,
             ...(!input.scope ? { scope_derived: true } : {}),
             protected_paths_in_scope: [],
-            checks: profile.checks,
+            checks: [...new Set([...profile.checks, ...skillChecks])],
           },
         };
       }
