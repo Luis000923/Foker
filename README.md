@@ -14,16 +14,17 @@ contexto y más seguridad.
 
 ## Empieza aquí
 
-Instala Foker en el proyecto que quieres gestionar; no necesita claves de API de IA. Después
-inicialízalo, revisa los comandos que autorizarás y crea el mapa del proyecto:
+Instala Foker **desde la carpeta del proyecto que quieres gestionar**, no desde tu directorio
+personal. No necesita claves de API de IA. Si aún no tienes un proyecto, créalo primero con
+`npm init -y`. Después inicialízalo, revisa los comandos que autorizarás y crea el mapa:
 
 ```sh
-pnpm add -D @foker/cli@beta
-pnpm exec foker init --targets codex
-pnpm exec foker trust
-pnpm exec foker map
-pnpm exec foker sync --target codex
-pnpm exec foker doctor
+npm install -D @foker/cli@beta
+npx foker init --targets codex
+npx foker trust
+npx foker map
+npx foker sync --target codex
+npx foker doctor
 ```
 
 Abre luego el proyecto en tu agente anfitrión. Para realizar una tarea, el flujo es siempre:
@@ -34,10 +35,10 @@ Abre luego el proyecto en tu agente anfitrión. Para realizar una tarea, el fluj
 4. Enviar la tarea para que Foker ejecute los checks y registre evidencia.
 
 ```sh
-pnpm exec foker task begin "Corregir el cálculo" --scope 'src/**' --profile default --json
-pnpm exec foker context --task <task_id> --anchor src/calculo.ts
+npx foker task begin "Corregir el cálculo" --scope 'src/**' --profile default --json
+npx foker context --task <task_id> --anchor src/calculo.ts
 # Realiza los cambios dentro del alcance indicado.
-pnpm exec foker task submit <task_id> --summary "Cálculo corregido"
+npx foker task submit <task_id> --summary "Cálculo corregido"
 ```
 
 Una tarea solo está terminada cuando `submit` devuelve `COMPLETED` o cuando Foker solicita la
@@ -57,13 +58,15 @@ lanza `FKR-INT-003` y se puede compilar desde el código fuente (`pnpm build:nat
 Requisitos: Node.js 22.14 o superior y Git. No hace falta ninguna clave de API: Foker no llama a LLMs;
 el agente anfitrión (Claude Code, OpenCode, Antigravity o Codex) usa su propia sesión.
 
-Instálalo como dependencia de desarrollo del proyecto, porque los archivos que genera `foker sync`
-invocan `npx --no-install foker`:
+Instálalo como dependencia de desarrollo **desde la raíz del proyecto**, porque los archivos que
+genera `foker sync` invocan `npx --no-install foker`. La guía usa npm para evitar que una
+configuración global de otro gestor (como Yarn) interfiera; si el proyecto ya usa pnpm, sustituye
+`npm install -D` por `pnpm add -D` y `npx foker` por `pnpm exec foker`:
 
 ```sh
-pnpm add -D @foker/cli@beta     # o: npm install -D @foker/cli@beta
-pnpm exec foker --version       # 0.1.0-beta.0   (con npm: npx foker --version)
-pnpm exec foker doctor          # comprueba Node, addon nativo, git e integraciones
+npm install -D @foker/cli@beta
+npx foker --version             # 0.1.0-beta.0
+npx foker doctor                # comprueba Node, addon nativo, git e integraciones
 ```
 
 El paquete se llama `@foker/cli`, no `foker`: npm rechazó ese nombre por parecerse a `faker` y `bower`.
@@ -75,15 +78,15 @@ Instalar la CLI trae solo el addon nativo de tu plataforma. Si `doctor` indica q
 En un repositorio existente (dentro de él, con la CLI instalada):
 
 ```sh
-pnpm exec foker init --targets claude-code    # config, reglas y archivos del anfitrión; --dry-run para revisar
-pnpm exec foker trust                         # muestra los comandos y pide confirmación (terminal interactiva)
-pnpm exec foker map                           # construye el Project Map
-pnpm exec foker doctor                        # diagnóstico final
+npx foker init --targets claude-code    # config, reglas y archivos del anfitrión; --dry-run para revisar
+npx foker trust                         # muestra los comandos y pide confirmación (terminal interactiva)
+npx foker map                           # construye el Project Map
+npx foker doctor                        # diagnóstico final
 ```
 
 `--targets` acepta `claude-code`, `opencode`, `antigravity` y `codex`, separados por comas; sin él usa los
 detectados. Tras `init`, abre el proyecto en el agente: este llama a Foker por MCP (`foker mcp`) y por los
-archivos generados. Si cambias la configuración, ejecuta `pnpm exec foker sync`.
+archivos generados. Si cambias la configuración, ejecuta `npx foker sync`.
 
 Para un proyecto nuevo con la plantilla `nextjs-turbo`:
 
@@ -95,11 +98,11 @@ cd mi-proyecto && pnpm install
 Flujo de una tarea desde la CLI (el agente usa las mismas operaciones por MCP):
 
 ```sh
-pnpm exec foker task begin "Corregir el cálculo" --scope 'src/**' --json    # devuelve el task_id
-pnpm exec foker context --task <task_id> --anchor src/calculo.ts            # contexto mínimo para el agente
+npx foker task begin "Corregir el cálculo" --scope 'src/**' --json    # devuelve el task_id
+npx foker context --task <task_id> --anchor src/calculo.ts            # contexto mínimo para el agente
 # ...el agente edita dentro del alcance...
-pnpm exec foker task submit <task_id> --summary "Cálculo corregido"         # ejecuta los checks
-pnpm exec foker check-security                                              # reglas defensivas estáticas
+npx foker task submit <task_id> --summary "Cálculo corregido"         # ejecuta los checks
+npx foker check-security                                              # reglas defensivas estáticas
 ```
 
 Una tarea solo termina cuando pasan los checks; las aprobaciones humanas (`foker task approve`) exigen

@@ -7,16 +7,18 @@ de tu suscripción del anfitrión (Claude Code, Codex/ChatGPT o Antigravity). Fo
 ## Instalación
 
 La beta `0.1.0-beta.0` está en npm como `@foker/cli` (el comando es `foker`; npm rechazó el nombre
-`foker` por parecerse a `faker` y `bower`). Instálala como dependencia de desarrollo del proyecto:
+`foker` por parecerse a `faker` y `bower`). Instálala como dependencia de desarrollo desde la raíz
+del proyecto, no desde tu directorio personal:
 
 ```sh
-pnpm add -D @foker/cli@beta     # o: npm install -D @foker/cli@beta
-pnpm exec foker --version       # con npm: npx foker --version
-pnpm exec foker doctor
+npm install -D @foker/cli@beta
+npx foker --version
+npx foker doctor
 ```
 
-Los comandos de esta guía usan `pnpm exec foker`. Para desarrollar Foker en sí, sigue
-[development.md](development.md); la CLI compilada está en `packages/cli/dist/bin.js`.
+Los comandos de esta guía usan `npx foker`. Si tu proyecto ya usa pnpm, usa `pnpm add -D` y
+`pnpm exec foker` en su lugar. Para desarrollar Foker en sí, sigue [development.md](development.md);
+la CLI compilada está en `packages/cli/dist/bin.js`.
 
 ## Instalación local desde el código fuente
 
