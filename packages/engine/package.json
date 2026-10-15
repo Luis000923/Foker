@@ -1,6 +1,6 @@
 {
   "name": "@foker/engine",
-  "version": "0.1.0-beta.0",
+  "version": "0.1.1",
   "description": "Foker engine: configuration, tasks, gates, validation, skills, audit, and deterministic Caveman payload compression.",
   "license": "Apache-2.0",
   "author": "Luis (@Luis000923)",

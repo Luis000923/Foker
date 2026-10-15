@@ -1,6 +1,6 @@
 {
   "name": "@foker/integrations",
-  "version": "0.1.0-beta.0",
+  "version": "0.1.1",
   "description": "Foker integrations: config generators for Claude Code, OpenCode, Antigravity, and Codex, plus upstream skill and design-token integrations.",
   "license": "Apache-2.0",
   "author": "Luis (@Luis000923)",

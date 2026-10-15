@@ -1,6 +1,6 @@
 {
   "name": "@foker/policy",
-  "version": "0.1.0-beta.0",
+  "version": "0.1.1",
   "description": "Foker policy: protected paths, approvals, secrets, workspace trust, and static ASVS L2 subset security audit.",
   "license": "Apache-2.0",
   "author": "Luis (@Luis000923)",
