@@ -6,7 +6,7 @@ de tu suscripción del anfitrión (Claude Code, Codex/ChatGPT o Antigravity). Fo
 
 ## Instalación
 
-La versión `0.1.1` está en npm como `@foker/cli` (el comando es `foker`; npm rechazó el nombre
+La versión `0.1.2` está en npm como `@foker/cli` (el comando es `foker`; npm rechazó el nombre
 `foker` por parecerse a `faker` y `bower`). Instálala como dependencia de desarrollo desde la raíz
 del proyecto, no desde tu directorio personal:
 

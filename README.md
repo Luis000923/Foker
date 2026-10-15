@@ -8,7 +8,7 @@ Foker es infraestructura determinista para que agentes de IA (Claude Code, OpenC
 Antigravity, Codex u otro cliente MCP) desarrollen software en monorepos TypeScript con menos
 contexto y más seguridad.
 
-> **Estado**: beta `0.1.1`, publicada en npm como [`@foker/cli`](https://www.npmjs.com/package/@foker/cli)
+> **Estado**: beta `0.1.2`, publicada en npm como [`@foker/cli`](https://www.npmjs.com/package/@foker/cli)
 > (el comando se llama `foker`). Las cifras de ahorro de tokens aún no están medidas con un
 > benchmark; no las des por ciertas.
 
@@ -65,7 +65,7 @@ configuración global de otro gestor (como Yarn) interfiera; si el proyecto ya u
 
 ```sh
 npm install -D @foker/cli
-npx foker --version             # 0.1.1
+npx foker --version             # 0.1.2
 npx foker doctor                # comprueba Node, addon nativo, git e integraciones
 ```
 

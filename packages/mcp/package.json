@@ -1,6 +1,6 @@
 {
   "name": "@foker/mcp",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Foker Model Context Protocol (MCP) stdio server.",
   "license": "Apache-2.0",
   "author": "Luis (@Luis000923)",
