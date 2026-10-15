@@ -6,6 +6,8 @@ import { type Command, flag } from '../types.js';
 const DANGEROUS = [/\bgit\s+push\b/, /\bgit\s+reset\s+--hard\b/, /\bgit\s+clean\b/, /\bgit\s+checkout\s+--\s+\./];
 const WRITE_OPS = /(>|\brm\b|\bmv\b|\bcp\b|\btee\b|\bsed\s+-i|\btruncate\b|\bchmod\b|\bln\b)/;
 
+const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 interface Decision {
   allowed: boolean;
   reason?: string;
@@ -39,8 +41,14 @@ export function evaluateCommand(command: string, protectedPaths: string[]): Deci
   for (const segment of command.split(/&&|\|\||;|\||\n/)) {
     // `2>&1`, `>/dev/null` y `2>/dev/null` descartan salida; no escriben en el proyecto.
     const text = segment.replace(/\d*>&\d+/g, ' ').replace(/\d*>>?\s*\/dev\/null/g, ' ');
-    if (WRITE_OPS.test(text) && literals.some((l) => text.includes(l)))
-      return { allowed: false, reason: `El comando modifica una ruta protegida de Foker: ${segment.trim()}` };
+    if (!WRITE_OPS.test(text)) continue;
+    // La ruta debe aparecer como token completo: «.git» no casa con «.github» ni «.gitignore».
+    const hit = literals.find((l) => new RegExp(`(^|[\\s'"=/])${escapeRegExp(l)}(?=$|[\\s'"/;|&<>)])`).test(text));
+    if (hit)
+      return {
+        allowed: false,
+        reason: `El comando modifica la ruta protegida «${hit}» (regla protected_paths); tramo: ${segment.trim()}`,
+      };
   }
   return { allowed: true };
 }

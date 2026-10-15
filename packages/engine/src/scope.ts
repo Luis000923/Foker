@@ -47,8 +47,8 @@ function literalDirectory(glob: string): string[] {
   return literal;
 }
 /**
- * Admite archivos nuevos solo cuando su directorio ya existe, o cuando se crea un único
- * nivel nuevo bajo uno existente (andamiaje: «src/**» en un repo sin src/); no sigue symlinks.
+ * Admite archivos nuevos solo cuando su directorio ya existe, o cuando todo el árbol
+ * de primer nivel es nuevo (andamiaje: «src/components/**» en un repo sin src/); no sigue symlinks.
  */
 export async function nonexistentScopePaths(root: string, scope: string[], files: string[]): Promise<string[]> {
   for (const glob of scope) {
@@ -71,7 +71,7 @@ export async function nonexistentScopePaths(root: string, scope: string[], files
     const parent = glob.endsWith('/') ? glob.slice(0, -1) : posix.dirname(glob);
     const literal = literalDirectory(glob);
     const [top] = literal;
-    if (literal.length === 1 && top && !top.startsWith('.') && top !== 'node_modules' && !directories.includes(top))
+    if (literal.length >= 1 && top && !top.startsWith('.') && top !== 'node_modules' && !directories.includes(top))
       return false;
     return !directories.some(
       (directory) =>

@@ -412,7 +412,13 @@ function serverFactory(options: FokerServerOptions) {
           };
         } else {
           if (!definition.input(args))
-            throw new FokerError('FKR-INP-001', 'Argumentos no válidos para la herramienta.');
+            throw new FokerError(
+              'FKR-INP-001',
+              `Argumentos no válidos para ${definition.tool.name}: ${(definition.input.errors ?? [])
+                .slice(0, 5)
+                .map((e) => `${e.instancePath || '(raíz)'} ${e.message ?? 'inválido'}`)
+                .join('; ')}`,
+            );
           await assertPrivateState(root);
           const output = await dispatch(request.params.name, args, ctx);
           if (!definition.output(output.data)) throw new FokerError('FKR-INT-001', 'Salida inválida del motor.');

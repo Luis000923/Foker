@@ -32,6 +32,8 @@ async function sensitiveGlobs(root: string, configPath?: string): Promise<string
     return [...new Set([...DEFAULT_POLICY.protected_paths, ...DEFAULT_POLICY.secret_globs])];
   }
 }
+/** Cachés que generan los propios checks (tsc --incremental, eslint --cache); no son cambios de la tarea. */
+const GENERATED = /(\.tsbuildinfo|^\.eslintcache)$/;
 /**
  * Recorre archivos regulares sin seguir enlaces; excluye estado interno y, con git disponible
  * (ADR-037), los ignorados salvo los que casan con rutas protegidas o globs de secretos.
@@ -49,6 +51,7 @@ export async function treeSnapshot(
     for (const entry of await readdir(join(root, directory), { withFileTypes: true })) {
       if (['.git', '.foker', 'node_modules'].includes(entry.name)) continue;
       const path = directory ? `${directory}/${entry.name}` : entry.name;
+      if (GENERATED.test(entry.name) && !matchGlobs(path, globs)) continue;
       if (entry.isDirectory()) {
         await walk(path, hidden || !!ignored?.directories.has(path));
       } else if (entry.isFile() || entry.isSymbolicLink()) {
