@@ -1,5 +1,9 @@
 # Foker
 
+<p align="center">
+  <img src="assets/foker-logo.png" width="520" alt="Foker — infraestructura determinista para agentes de IA">
+</p>
+
 Foker es infraestructura determinista para que agentes de IA (Claude Code, OpenCode, Google
 Antigravity, Codex u otro cliente MCP) desarrollen software en monorepos TypeScript con menos
 contexto y más seguridad.
@@ -7,6 +11,38 @@ contexto y más seguridad.
 > **Estado**: beta `0.1.0-beta.0`, publicada en npm como [`@foker/cli`](https://www.npmjs.com/package/@foker/cli)
 > (el comando se llama `foker`). Las cifras de ahorro de tokens aún no están medidas con un
 > benchmark; no las des por ciertas.
+
+## Empieza aquí
+
+Instala Foker en el proyecto que quieres gestionar; no necesita claves de API de IA. Después
+inicialízalo, revisa los comandos que autorizarás y crea el mapa del proyecto:
+
+```sh
+pnpm add -D @foker/cli@beta
+pnpm exec foker init --targets codex
+pnpm exec foker trust
+pnpm exec foker map
+pnpm exec foker sync --target codex
+pnpm exec foker doctor
+```
+
+Abre luego el proyecto en tu agente anfitrión. Para realizar una tarea, el flujo es siempre:
+
+1. Crear una tarea con un alcance pequeño y explícito.
+2. Pedir a Foker el contexto mínimo de esa tarea.
+3. Modificar solo los archivos incluidos en el alcance.
+4. Enviar la tarea para que Foker ejecute los checks y registre evidencia.
+
+```sh
+pnpm exec foker task begin "Corregir el cálculo" --scope 'src/**' --profile default --json
+pnpm exec foker context --task <task_id> --anchor src/calculo.ts
+# Realiza los cambios dentro del alcance indicado.
+pnpm exec foker task submit <task_id> --summary "Cálculo corregido"
+```
+
+Una tarea solo está terminada cuando `submit` devuelve `COMPLETED` o cuando Foker solicita la
+aprobación humana correspondiente. Consulta [Primeros pasos](docs/getting-started.md) para el
+flujo completo y [Agentes](docs/agents.md) para las instrucciones que debe seguir el agente.
 
 ## Plataformas soportadas
 
