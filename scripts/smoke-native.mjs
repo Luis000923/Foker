@@ -14,14 +14,14 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { corePkgDir, PLATFORMS, pack, prepareNative, run } from './native-pack.mjs';
+import { BUILD_PLATFORMS, corePkgDir, pack, prepareNative, run } from './native-pack.mjs';
 
-export { PLATFORMS } from './native-pack.mjs';
+export { BUILD_PLATFORMS, PLATFORMS } from './native-pack.mjs';
 
 /** @param {string} target @param {string} binariesDir */
 function smoke(target, binariesDir) {
-  const platform = PLATFORMS[/** @type {keyof typeof PLATFORMS} */ (target)];
-  if (!platform) throw new Error(`target desconocido: ${target}. Válidos: ${Object.keys(PLATFORMS).join(', ')}`);
+  const platform = BUILD_PLATFORMS[/** @type {keyof typeof BUILD_PLATFORMS} */ (target)];
+  if (!platform) throw new Error(`target desconocido: ${target}. Válidos: ${Object.keys(BUILD_PLATFORMS).join(', ')}`);
 
   if (!existsSync(join(corePkgDir, 'dist', 'index.js')))
     throw new Error('falta packages/core/dist: ejecuta pnpm build');

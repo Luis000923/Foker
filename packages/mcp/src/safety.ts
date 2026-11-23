@@ -18,13 +18,41 @@ export class TokenBucket {
     return 0;
   }
 }
-/** Redacta valores y claves, sin serializar primero: las expresiones multilínea deben seguir funcionando. */
+/** Objetos integrados sin propiedades enumerables útiles: se conservan tal cual (o con texto redactado). */
+function sanitizeBuiltin(value: object, visit: (v: unknown) => unknown): { value: unknown } | undefined {
+  if (value instanceof Date || ArrayBuffer.isView(value) || value instanceof ArrayBuffer) return { value };
+  if (value instanceof RegExp) return { value: new RegExp(redactSecrets(value.source), value.flags) };
+  if (value instanceof Map) return { value: new Map([...value].map(([k, v]) => [visit(k), visit(v)])) };
+  if (value instanceof Set) return { value: new Set([...value].map(visit)) };
+  if (value instanceof Error) {
+    const copy = new Error(redactSecrets(value.message));
+    copy.name = value.name;
+    if (value.stack) copy.stack = redactSecrets(value.stack);
+    return { value: copy };
+  }
+  return undefined;
+}
+
+/** Redacta valores y claves, sin serializar primero: las expresiones multilínea deben seguir funcionando.
+ * Conserva `Date`, `RegExp`, `Map`, `Set`, `Error` y vistas de `ArrayBuffer`; un ciclo se sustituye por `'[Circular]'`. */
 export function sanitize<T>(value: T): T {
-  if (typeof value === 'string') return redactSecrets(value) as T;
-  if (Array.isArray(value)) return value.map(sanitize) as T;
-  if (value && typeof value === 'object')
-    return Object.fromEntries(Object.entries(value).map(([k, v]) => [redactSecrets(k), sanitize(v)])) as T;
-  return value;
+  const ancestors = new WeakSet<object>();
+  const visit = (node: unknown): unknown => {
+    if (typeof node === 'string') return redactSecrets(node);
+    if (!node || typeof node !== 'object') return node;
+    if (ancestors.has(node)) return '[Circular]';
+    ancestors.add(node);
+    try {
+      if (Array.isArray(node)) return node.map(visit);
+      const builtin = sanitizeBuiltin(node, visit);
+      if (builtin) return builtin.value;
+      return Object.fromEntries(Object.entries(node).map(([k, v]) => [redactSecrets(k), visit(v)]));
+    } finally {
+      // Solo la rama actual: una referencia compartida (no cíclica) se copia en cada aparición.
+      ancestors.delete(node);
+    }
+  };
+  return visit(value) as T;
 }
 const truncation = { code: 'FKR-MCP-101', message: 'Salida truncada al límite de 80.000 caracteres.' };
 /** Reduce datos conservando objetos requeridos y valores de contrato; el validador comprueba el resultado final. */

@@ -9,6 +9,8 @@ export { loadConfig, resolveConfig } from './config.js';
 export { gatherContextInputs } from './context.js';
 export { renderTokensCss } from './design/tokens.js';
 export * from './findings/index.js';
+export { drainGitWarnings, GIT_UNAVAILABLE_WARNING } from './git.js';
+export * from './requirements/index.js';
 export {
   assertUnprotectedScope,
   deriveScopePaths,

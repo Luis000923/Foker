@@ -155,6 +155,25 @@ pub fn normalize_lexical_with(input: &str, rules: PathRules) -> Result<String, P
     Ok(parts.join("/"))
 }
 
+/// `true` si el error equivale a «esa ruta no existe».
+///
+/// Además de `NotFound`: en Windows, un nombre que el sistema de archivos no puede representar
+/// (por ejemplo un glob con `*` o `?`, como `src/**` en un `--scope`) falla con `ERROR_INVALID_NAME`
+/// (123) en lugar de `NotFound`. Ese nombre no puede existir en disco, así que se trata igual.
+fn is_missing(error: &io::Error) -> bool {
+    if error.kind() == io::ErrorKind::NotFound {
+        return true;
+    }
+    #[cfg(windows)]
+    {
+        const ERROR_INVALID_NAME: i32 = 123;
+        if error.raw_os_error() == Some(ERROR_INVALID_NAME) {
+            return true;
+        }
+    }
+    false
+}
+
 fn io_error(path: &Path, error: &io::Error) -> PathError {
     PathError::Io {
         path: path.display().to_string(),
@@ -217,7 +236,7 @@ pub fn normalize_path_with(
         let candidate = current.join(segment);
         let meta = match fs::symlink_metadata(&candidate) {
             Ok(meta) => meta,
-            Err(e) if e.kind() == io::ErrorKind::NotFound => {
+            Err(e) if is_missing(&e) => {
                 out.extend(segments[i..].iter().map(|s| (*s).to_owned()));
                 return Ok(out.join("/"));
             }
@@ -235,4 +254,37 @@ pub fn normalize_path_with(
         current = next;
     }
     Ok(out.join("/"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn un_glob_inexistente_es_una_ruta_valida() {
+        // En Windows `*` no es un nombre de archivo válido: antes fallaba con `os error 123`.
+        let root = tempfile::tempdir().unwrap();
+        assert_eq!(normalize_path(root.path(), "src/**").unwrap(), "src/**");
+        assert_eq!(
+            normalize_path(root.path(), "packages/*/src/**/*.ts").unwrap(),
+            "packages/*/src/**/*.ts"
+        );
+        assert_eq!(normalize_path(root.path(), "a/b?.ts").unwrap(), "a/b?.ts");
+    }
+
+    #[test]
+    fn un_glob_bajo_un_directorio_existente_conserva_la_grafia_del_disco() {
+        let root = tempfile::tempdir().unwrap();
+        fs::create_dir(root.path().join("src")).unwrap();
+        assert_eq!(normalize_path(root.path(), "src/**").unwrap(), "src/**");
+    }
+
+    #[test]
+    fn los_saltos_al_padre_siguen_rechazados() {
+        let root = tempfile::tempdir().unwrap();
+        assert!(matches!(
+            normalize_path(root.path(), "../fuera/**"),
+            Err(PathError::Escapes(_))
+        ));
+    }
 }

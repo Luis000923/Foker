@@ -10,6 +10,7 @@ export function renderTokensCss(tokens: DesignTokens): string {
   const { typography: t } = tokens;
   const base = [
     `  --font-sans: ${t.font_sans};`,
+    `  --font-heading: ${t.font_heading ?? 'var(--font-sans)'};`,
     `  --font-mono: ${t.font_mono};`,
     ...vars('text', t.scale),
     ...vars('leading', Object.fromEntries(Object.entries(t.line_height).map(([k, v]) => [k, String(v)]))),
@@ -18,7 +19,7 @@ export function renderTokensCss(tokens: DesignTokens): string {
   ];
   const dark = scheme(tokens.colors.dark).map((l) => `  ${l}`);
   return [
-    `/* Generado por foker init desde el preset "${tokens.name}". Edita foker/design-tokens.json y regenera. */`,
+    `/* Generado por Foker desde "${tokens.name}". Edita foker/design-tokens.json (o las respuestas de foker spec) y regenera. */`,
     ':root {',
     ...base,
     ...scheme(tokens.colors.light),

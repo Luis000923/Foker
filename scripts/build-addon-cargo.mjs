@@ -10,15 +10,15 @@ import { copyFileSync, mkdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { corePkgDir, PLATFORMS, root } from './native-pack.mjs';
+import { BUILD_PLATFORMS, corePkgDir, root } from './native-pack.mjs';
 
 /** Nombre del artefacto cdylib de `foker-napi` según el sistema del target. */
 const LIBRARIES = { windows: 'foker_napi.dll', darwin: 'libfoker_napi.dylib', linux: 'libfoker_napi.so' };
 
 /** @param {string} target @param {string} outDir */
 export function buildAddon(target, outDir) {
-  const platform = PLATFORMS[/** @type {keyof typeof PLATFORMS} */ (target)];
-  if (!platform) throw new Error(`target desconocido: ${target}. Válidos: ${Object.keys(PLATFORMS).join(', ')}`);
+  const platform = BUILD_PLATFORMS[/** @type {keyof typeof BUILD_PLATFORMS} */ (target)];
+  if (!platform) throw new Error(`target desconocido: ${target}. Válidos: ${Object.keys(BUILD_PLATFORMS).join(', ')}`);
   const library =
     LIBRARIES[
       /** @type {keyof typeof LIBRARIES} */ (

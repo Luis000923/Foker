@@ -8,6 +8,11 @@ export const contextCommand: Command = {
   maxArgs: 1,
   flags: [
     flag('anchor', 'string[]', 'Ruta o símbolo (repetible)'),
+    flag(
+      'spec',
+      'string[]',
+      'Sección de REQUIREMENTS.md a inyectar (repetible o por comas): summary, routes, data, design…',
+    ),
     ...['intent', 'budget', 'skill', 'task', 'format'].map((name) => flag(name, 'string', name)),
     flag('explain', 'boolean', 'Explica selección'),
   ],
@@ -26,8 +31,15 @@ export const contextCommand: Command = {
       throw new FokerError('FKR-INP-001', '--intent inválido.');
     const anchors = ctx.flags['anchor'] as string[];
     const skill = ctx.flags['skill'] ? String(ctx.flags['skill']) : (record?.skill ?? undefined);
+    const specSections = (ctx.flags['spec'] as string[]).flatMap((value) =>
+      value
+        .split(',')
+        .map((id) => id.trim())
+        .filter(Boolean),
+    );
     const inputs = await gatherContextInputs(ctx.cwd, {
       ...(skill ? { skill } : {}),
+      ...(specSections.length ? { specSections } : {}),
       ...(ctx.flags['config'] ? { configPath: String(ctx.flags['config']) } : {}),
     });
     const loaded = await loadConfig(ctx.cwd, ctx.flags['config'] ? { configPath: String(ctx.flags['config']) } : {});

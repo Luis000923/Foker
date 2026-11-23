@@ -14,16 +14,20 @@
     "typecheck": "tsc -p tsconfig.json",
     "lint": "biome check .",
     "format": "biome format --write .",
+    "test": "pnpm run test:rust && pnpm run test:ts",
+    "test:rust": "cargo test --workspace",
+    "test:ts": "vitest run",
     "clean": "node scripts/clean.mjs",
     "pack:local": "node scripts/pack-local.mjs",
     "check:deps": "node scripts/check-deps.mjs",
     "build:native": "pnpm --filter @foker/core run build:native",
-    "verify": "cargo fmt --all --check && cargo clippy --workspace --all-targets -q -- -D warnings && pnpm lint && pnpm typecheck && pnpm check:deps && pnpm --filter @foker/schemas run generate:check && pnpm build:native"
+    "verify": "cargo fmt --all --check && cargo clippy --workspace --all-targets -q -- -D warnings && pnpm lint && pnpm typecheck && pnpm check:deps && pnpm --filter @foker/schemas run generate:check && pnpm build:native && pnpm test"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",
     "@types/node": "22.20.5",
-    "typescript": "7.0.2"
+    "typescript": "7.0.2",
+    "vitest": "5.0.3"
   },
   "optionalDependencies": {
     "@napi-rs/cross-toolchain-x64-target-aarch64": "1.0.3",

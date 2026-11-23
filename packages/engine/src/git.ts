@@ -1,13 +1,82 @@
 import { execFile } from 'node:child_process';
+import { stat } from 'node:fs/promises';
 import { posix } from 'node:path';
 import { promisify } from 'node:util';
+import { FokerError } from '@foker/core';
 
 const exec = promisify(execFile);
-export async function gitRead(root: string, args: string[]): Promise<string | null> {
+/** Salidas con las que Git informa un resultado negativo esperado: 128 = no es repositorio, revisión o ruta inexistente; 1 = sin coincidencias. */
+export const EXPECTED_GIT_EXIT_CODES: ReadonlySet<number> = new Set([1, 128]);
+
+/** `true` si el fallo es una respuesta de Git; `false` si es del entorno (binario ausente, timeout, buffer). */
+export function isExpectedGitFailure(error: unknown): boolean {
+  const { code, killed, signal } = (error ?? {}) as { code?: unknown; killed?: boolean; signal?: unknown };
+  return typeof code === 'number' && EXPECTED_GIT_EXIT_CODES.has(code) && !killed && !signal;
+}
+
+/** Aviso visible cuando `git` no está en el PATH (p. ej. Windows sin Git instalado). */
+export const GIT_UNAVAILABLE_WARNING =
+  'git no está instalado o no está en el PATH: se omiten los cambios locales (dirty_files) y las comparaciones con git; los gates usan instantáneas de hashes. Instala Git y reinicia el terminal.';
+
+const pendingWarnings = new Set<string>();
+
+/** Devuelve y vacía los avisos acumulados desde la última llamada (los emiten la CLI y el servidor MCP). */
+export function drainGitWarnings(): string[] {
+  const warnings = [...pendingWarnings];
+  pendingWarnings.clear();
+  return warnings;
+}
+
+export interface GitLimits {
+  timeoutMs: number;
+  maxBufferBytes: number;
+}
+const DEFAULT_LIMITS: GitLimits = { timeoutMs: 5000, maxBufferBytes: 16 * 1024 * 1024 };
+
+/**
+ * Ejecuta Git de solo lectura.
+ * - Salida 1 o 128 (resultado negativo de Git): `null`.
+ * - `git` ausente (ENOENT con el directorio existente): modo degradado explícito: `null` y un aviso en
+ *   `drainGitWarnings()`. Foker funciona sin git (los gates usan instantáneas de hashes).
+ * - Timeout, `maxBuffer` y el resto de fallos del entorno: se propagan como `FKR-MAP-001`.
+ */
+export async function gitRead(
+  root: string,
+  args: string[],
+  limits: GitLimits = DEFAULT_LIMITS,
+): Promise<string | null> {
   try {
-    return (await exec('git', args, { cwd: root, timeout: 5000, maxBuffer: 16 * 1024 * 1024 })).stdout;
-  } catch {
-    return null;
+    return (await exec('git', args, { cwd: root, timeout: limits.timeoutMs, maxBuffer: limits.maxBufferBytes })).stdout;
+  } catch (error) {
+    if (isExpectedGitFailure(error)) return null;
+    const { code, killed } = (error ?? {}) as { code?: unknown; killed?: boolean };
+    if (code === 'ENOENT') {
+      // Node informa ENOENT igual si falta el binario o el cwd: solo lo primero es «git no disponible».
+      if (
+        await stat(root).then(
+          () => true,
+          () => false,
+        )
+      ) {
+        pendingWarnings.add(GIT_UNAVAILABLE_WARNING);
+        return null;
+      }
+      throw new FokerError(
+        'FKR-MAP-001',
+        `git ${args[0] ?? ''} falló: el directorio de trabajo no existe (ENOENT): ${root}`,
+        {
+          cause: error,
+        },
+      );
+    }
+    // maxBuffer también mata al proceso (killed = true): se comprueba antes que el timeout.
+    const reason =
+      code === 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER'
+        ? `salida mayor de ${limits.maxBufferBytes} bytes`
+        : killed || code === 'ETIMEDOUT'
+          ? `timeout de ${limits.timeoutMs} ms`
+          : `${String(code ?? 'error')}: ${error instanceof Error ? error.message : String(error)}`;
+    throw new FokerError('FKR-MAP-001', `git ${args[0] ?? ''} falló: ${reason}`, { cause: error });
   }
 }
 /** Exclusiones procedentes exclusivamente de los .gitignore del árbol. */

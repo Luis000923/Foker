@@ -26,6 +26,7 @@ const files = {
   'benchmark-result': 'benchmark-result.schema.json',
   'benchmark-manifest': 'benchmark-manifest.schema.json',
   'mcp-tools': 'mcp-tools.json',
+  'requirements-answers': 'requirements-answers.schema.json',
 };
 
 /** Nombres TypeScript de cada documento y de los $defs que chocarían con globales (File, Symbol, Event…). */
@@ -56,6 +57,7 @@ const TYPE_NAMES = {
   'benchmark-manifest': { '': 'BenchmarkManifest' },
   common: {},
   'mcp-tools': {},
+  'requirements-answers': { '': 'RequirementsAnswers' },
 };
 
 const pascal = (/** @type {string} */ key) => key.replace(/(^|[-_])([a-z])/g, (_, __, c) => c.toUpperCase());
@@ -116,6 +118,7 @@ const root = {
     cliOutput: ref('cli-output'),
     benchmarkResult: ref('benchmark-result'),
     benchmarkManifest: ref('benchmark-manifest'),
+    requirementsAnswers: ref('requirements-answers'),
     ...Object.fromEntries(
       mcp.tools.flatMap((/** @type {{name: string}} */ tool, /** @type {number} */ i) => [
         [`${tool.name}_input`, ref('mcp-tools', `#/tools/${i}/inputSchema`)],
