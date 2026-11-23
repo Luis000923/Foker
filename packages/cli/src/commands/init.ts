@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { lstat, mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
+import { lstat, readdir, readFile } from 'node:fs/promises';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -9,6 +9,7 @@ import {
   renderTokensCss,
   resolveConfig,
   resolveSkillNames,
+  writeFileAtomic,
 } from '@foker/engine';
 import { detectHosts, HOST_IDS } from '@foker/integrations';
 import {
@@ -21,6 +22,7 @@ import {
 } from '@foker/schemas';
 import { parse, stringify } from 'yaml';
 import { type Command, flag } from '../types.js';
+import { collectSpec, specFlags, specTarget, writeSpec } from './spec.js';
 import { runSync } from './sync.js';
 
 /** Plantillas disponibles (FOKER-SPEC §5.3). */
@@ -201,6 +203,8 @@ export const initCommand: Command = {
       `Anfitriones separados por comas (${HOST_IDS.join(', ')}); por defecto los detectados o todos`,
     ),
     flag('force', 'boolean', 'Sobrescribe archivos de la plantilla o config/reglas; conserva archivos ajenos'),
+    ...specFlags,
+    flag('skip-spec', 'boolean', 'No ejecuta el asistente de requisitos (REQUIREMENTS.md)'),
   ],
   async run(ctx) {
     const root = resolve(ctx.cwd, ctx.args[0] ?? '.');
@@ -280,25 +284,41 @@ export const initCommand: Command = {
     const rulesPath = join(root, 'foker/rules.md');
     const writeRules = force || !existsSync(rulesPath);
 
+    // Asistente de requisitos ANTES de escribir nada: Ctrl+C durante la entrevista no deja un init a medias.
+    const requirements = ctx.flags['skip-spec']
+      ? undefined
+      : await collectSpec(ctx, root, specTarget(root, name, Boolean(template)));
+    const specFiles = new Map((requirements?.files ?? []).map((file) => [file.path, file]));
+    for (const file of templateFiles) {
+      const replacement = specFiles.get(file.path);
+      if (replacement) {
+        file.content = replacement.content;
+        specFiles.delete(file.path);
+      }
+      // README nuevo de la plantilla: enlaza el documento maestro de requisitos.
+      if (file.path === 'README.md' && requirements?.files.length && !file.overwrite)
+        file.content = `${file.content.trimEnd()}\n\nRequisitos del producto: [REQUIREMENTS.md](REQUIREMENTS.md).\n`;
+    }
     const files = template
       ? [...new Set([...templateFiles.map((file) => file.path), ...(needsIgnore ? ['.gitignore'] : [])])]
       : ['foker.config.yaml', ...(writeRules ? ['foker/rules.md'] : []), ...(needsIgnore ? ['.gitignore'] : [])];
+    files.push(...specFiles.keys());
     if (!dryRun) {
-      for (const file of templateFiles) {
-        await mkdir(dirname(join(root, file.path)), { recursive: true });
-        await writeFile(join(root, file.path), file.content, 'utf8');
-      }
-      await writeFile(configPath, configText, 'utf8');
-      if (writeRules && !template) {
-        await mkdir(join(root, 'foker'), { recursive: true });
-        await writeFile(rulesPath, RULES_TEMPLATE, 'utf8');
-      }
+      for (const file of templateFiles) await writeFileAtomic(root, file.path, file.content);
+      await writeFileAtomic(root, 'foker.config.yaml', configText);
+      if (writeRules && !template) await writeFileAtomic(root, 'foker/rules.md', RULES_TEMPLATE);
       if (needsIgnore)
-        await writeFile(gitignorePath, `${gitignore}${gitignore && !gitignore.endsWith('\n') ? '\n' : ''}.foker/\n`);
+        await writeFileAtomic(
+          root,
+          '.gitignore',
+          `${gitignore}${gitignore && !gitignore.endsWith('\n') ? '\n' : ''}.foker/\n`,
+        );
+      await writeSpec(root, [...specFiles.values()]);
     }
-    const warnings: { code: string; message: string }[] = templateFiles
+    const warnings: { code: string; message: string; hint?: string }[] = templateFiles
       .filter((file) => file.overwrite)
       .map((file) => ({ code: 'FKR-INP-001', message: `Se sobrescribe ${file.path}` }));
+    warnings.push(...(requirements?.warnings ?? []));
     const skills = skillNames.length ? await installSkills(root, skillNames, { dryRun }) : undefined;
     for (const name of skills?.missing ?? [])
       warnings.push({ code: 'FKR-SKL-001', message: `Skill resuelta pero inexistente: ${name}` });

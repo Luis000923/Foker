@@ -26,6 +26,13 @@
           "maxLength": 200,
           "pattern": "^[A-Za-z0-9 ,'\"-]+$"
         },
+        "font_heading": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "pattern": "^[A-Za-z0-9 ,'\"-]+$",
+          "description": "Familia de encabezados; si falta, se usa font_sans."
+        },
         "font_mono": {
           "type": "string",
           "minLength": 1,
@@ -141,6 +148,26 @@
             "danger": {
               "type": "string",
               "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "surface": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "secondary": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "secondary_foreground": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "accent": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "accent_foreground": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
             }
           }
         },
@@ -187,6 +214,26 @@
               "pattern": "^#[0-9a-fA-F]{6}$"
             },
             "danger": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "surface": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "secondary": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "secondary_foreground": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "accent": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "accent_foreground": {
               "type": "string",
               "pattern": "^#[0-9a-fA-F]{6}$"
             }

@@ -368,3 +368,4 @@ código va por `foker map`. El servidor MCP lo aplica al `output_tail` de los ch
 skills de forma estable y devuelve una huella SHA-256 para detectar cambios que rompan el caché.
 
 `shrinkToolCatalog` (ADR-040, derivado de caveman, Apache-2.0) comprime catálogos de herramientas MCP/OpenAI: quita metadatos de esquema y reduce descripciones largas conservando las frases con restricciones. Con pérdida; no conserva `cache_control`.
+- `foker context --spec <id>` añade secciones de `REQUIREMENTS.md` a las reglas, marcadas como datos de producto ([asistente de requisitos](requirements.md)).

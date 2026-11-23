@@ -43,6 +43,17 @@ Inicializa Foker en un repositorio (o crea uno desde plantilla) y ejecuta sync
 | --from-spec | string | "" | Lee nombre, descripción y plantilla del frontmatter de foker.md |
 | --targets | string | "" | Anfitriones separados por comas (claude-code, opencode, antigravity, codex); por defecto los detectados o todos |
 | --force | boolean | false | Sobrescribe archivos de la plantilla o config/reglas; conserva archivos ajenos |
+| --answers | string | "" | Respuestas del asistente de requisitos (JSON o YAML); evita preguntas |
+| --skip-spec | boolean | false | No ejecuta el asistente de requisitos (REQUIREMENTS.md) |
+
+## foker spec
+
+Asistente de requisitos: genera REQUIREMENTS.md y Design Tokens desde una entrevista o --answers
+
+| Flag | Tipo | Default | Descripción |
+|---|---|---|---|
+| --answers | string | "" | Respuestas del asistente de requisitos (JSON o YAML); evita preguntas |
+| --force | boolean | false | Sobrescribe REQUIREMENTS.md y tokens existentes (con copia en .foker/backups/) |
 
 ## foker map
 
@@ -63,6 +74,7 @@ Construye un Context Pack
 | Flag | Tipo | Default | Descripción |
 |---|---|---|---|
 | --anchor | string[] | [] | Ruta o símbolo (repetible) |
+| --spec | string[] | [] | Sección de REQUIREMENTS.md a inyectar (repetible o por comas): summary, routes, data, design… |
 | --intent | string | "" | intent |
 | --budget | string | "" | budget |
 | --skill | string | "" | skill |
@@ -257,11 +269,11 @@ Instala las skills que exige architecture en foker.md (copia, sin enlaces simbó
 
 ## foker check-security
 
-Reglas defensivas OWASP ASVS Nivel 2 (15 reglas estáticas FKR-SEC-NNN)
+Alias de validate --profile security (controles estáticos automatizables; no certifica ASVS)
 
 | Flag | Tipo | Default | Descripción |
 |---|---|---|---|
-| --strict | boolean | false | Los avisos también fallan |
+
 
 ## foker sync
 
@@ -294,7 +306,7 @@ Diagnóstico: Node, addon, git, configuración, trust, sync, reglas, otros MCP y
 
 ## Datos de context
 
-`foker context "<tarea>"` imprime Markdown por defecto. `--json` o `--format json` entrega el sobre CLI con `data` conforme a `context-pack.schema.json` (snake_case). Las anclas de archivo entran en L3; `--explain` incluye razones y descartados. Lee reglas, skill y cambios de git; abre el motor en solo lectura y no guarda el mapa. `--budget` admite 1000–200000 tokens. `--task` queda pendiente de FKR-045. Un presupuesto insuficiente para contexto obligatorio produce FKR-CTX-001 y exit 1.
+`foker context "<tarea>"` imprime Markdown por defecto. `--json` o `--format json` entrega el sobre CLI con `data` conforme a `context-pack.schema.json` (snake_case). Las anclas de archivo entran en L3; `--explain` incluye razones y descartados. Lee reglas, skill y cambios de git; abre el motor en solo lectura y no guarda el mapa. `--budget` admite 1000–200000 tokens. `--task` queda pendiente de FKR-045. Un presupuesto insuficiente para contexto obligatorio produce FKR-CTX-001 y exit 1. `--spec <id>` (repetible o por comas) añade a las reglas solo esas secciones de REQUIREMENTS.md, marcadas como datos de producto.
 
 ## Datos de map
 
@@ -307,3 +319,7 @@ Diagnóstico: Node, addon, git, configuración, trust, sync, reglas, otros MCP y
 ## Servidor MCP
 
 `foker mcp --root <ruta>` atiende stdio con protocolos 2026-07-28 y 2025-11-25. stdout se reserva al protocolo incluso con --json; logs JSON Lines en stderr. Herramientas, recursos, límites y configuración de anfitriones: [docs/mcp.md](mcp.md).
+
+## Asistente de requisitos
+
+`foker init` (salvo `--skip-spec`) y `foker spec` entrevistan en 4 bloques con defaults (Enter acepta) y escriben de forma atómica REQUIREMENTS.md, foker/requirements.answers.json, foker/design-tokens.json y tokens.css. Sin TTY nunca preguntan: usan `--answers <json|yaml>` o lo omiten con un aviso (exit 0). Un archivo existente distinto exige confirmación o `--force` (copia en .foker/backups/). Ctrl+C no escribe nada. Formato y secciones: [docs/requirements.md](requirements.md).

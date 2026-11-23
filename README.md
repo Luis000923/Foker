@@ -88,6 +88,12 @@ npx foker doctor                        # diagnóstico final
 detectados. Tras `init`, abre el proyecto en el agente: este llama a Foker por MCP (`foker mcp`) y por los
 archivos generados. Si cambias la configuración, ejecuta `npx foker sync`.
 
+`init` abre después un asistente corto (4 bloques, Enter acepta los defaults) que genera
+`REQUIREMENTS.md` con rutas, modelo de datos, Design Tokens con contraste WCAG AA y un backlog listo
+para `foker task begin`. En CI o sin TTY no pregunta: pasa `--answers respuestas.json` o lo omite con un
+aviso; `--skip-spec` lo desactiva. Para un repo ya inicializado: `npx foker spec`. Detalle:
+[asistente de requisitos](docs/requirements.md).
+
 Para un proyecto nuevo con la plantilla `nextjs-turbo`:
 
 ```sh
@@ -127,6 +133,7 @@ los archivos que genera `foker sync`.
 | Comando | Función |
 |---|---|
 | `foker init` | Inicializa Foker en un repo o crea uno desde la plantilla `nextjs-turbo` |
+| `foker spec` | Asistente de requisitos: `REQUIREMENTS.md`, respuestas y Design Tokens |
 | `foker map` | Construye o refresca el Project Map |
 | `foker context "<tarea>"` | Construye un Context Pack |
 | `foker mcp` | Arranca el servidor MCP stdio |
@@ -149,7 +156,7 @@ Detalle completo: [referencia CLI](docs/cli.md).
 - [Agentes](docs/agents.md), [tareas](docs/tasks.md) y [skills](docs/skills.md)
 - [MCP](docs/mcp.md)
 - [Integraciones](docs/integrations/README.md)
-- [Plantilla nextjs-turbo](docs/templates.md)
+- [Plantilla nextjs-turbo](docs/templates.md) y [asistente de requisitos](docs/requirements.md)
 - [Seguridad](docs/security.md), [hallazgos y secretos](docs/findings-secrets.md) y [divulgación](SECURITY.md)
 - [Decisiones de arquitectura (ADR)](docs/adr/README.md)
 - [Contribuir](CONTRIBUTING.md) y [desarrollo](docs/development.md)

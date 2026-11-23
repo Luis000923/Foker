@@ -7,12 +7,14 @@ import { pendingCommands } from './commands/pending.js';
 import { policyCheckCommand } from './commands/policy.js';
 import { checkSecurityCommand } from './commands/security.js';
 import { skillCommands, skillInstallCommand } from './commands/skills.js';
+import { specCommand } from './commands/spec.js';
 import { syncCommand } from './commands/sync.js';
 import { taskCommands, validateCommand } from './commands/tasks.js';
 import { trustCommand } from './commands/trust.js';
 import { flag } from './types.js';
 export const commands = [
   initCommand,
+  specCommand,
   mapCommand,
   contextCommand,
   mcpCommand,

@@ -45,3 +45,4 @@ Copia de `spec/adr/`. Una decisión nueva o modificada exige un ADR nuevo con n�
 | [ADR-039](ADR-039-integracion-proyectos-upstream.md) | Integración de proyectos upstream sobre la topología existente | Aceptada |
 | [ADR-040](ADR-040-compresor-catalogo-herramientas.md) | Compresor de catálogos de herramientas derivado de caveman | Aceptada |
 | [ADR-041](ADR-041-perfil-security-y-contrato-design-system.md) | Perfil canónico de seguridad y contrato `design_system` | Aceptada |
+| [ADR-042](ADR-042-asistente-de-requisitos.md) | Asistente de requisitos y extensión aditiva de Design Tokens | Propuesta |

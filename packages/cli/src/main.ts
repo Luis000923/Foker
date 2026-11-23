@@ -10,6 +10,7 @@ export interface IO {
   stderr(text: string): void;
   isTTY: boolean;
   confirm?: (message: string) => Promise<boolean>;
+  prompt?: (message: string) => Promise<string>;
   trustBaseDir?: string;
   stdin?: () => Promise<string>;
 }
@@ -105,6 +106,7 @@ export async function main(argv: string[], env: NodeJS.ProcessEnv, io: IO): Prom
       result = await command.run({
         env,
         ...(io.confirm ? { confirm: io.confirm } : {}),
+        ...(io.prompt ? { prompt: io.prompt } : {}),
         ...(io.trustBaseDir ? { trustBaseDir: io.trustBaseDir } : {}),
         ...(io.stdin ? { stdin: io.stdin } : {}),
         display: io.stderr,
