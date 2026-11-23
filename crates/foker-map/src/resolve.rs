@@ -227,6 +227,11 @@ impl ResolverSet {
         workspace: &Workspace,
         config: &MapConfig,
     ) -> Result<Self, GlobError> {
+        // En Windows `canonicalize` devuelve `\\?\C:\…`: oxc_resolver devuelve rutas normales, así que
+        // `to_id` no podía quitar el prefijo del root y ningún import relativo generaba arista.
+        // Además, unir ids con `/` a una ruta verbatim no es válido (os error 123).
+        let root = simplify_verbatim(root);
+        let root = root.as_path();
         let tsconfig_globs = GlobMatcher::new(&config.tsconfig, false)?;
         let sources: BTreeSet<String> = discovery.sources.iter().map(|c| c.id.clone()).collect();
         let aliases = workspace_aliases(root, workspace, &sources);
