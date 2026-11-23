@@ -1,4 +1,5 @@
 import { contextCommand } from './commands/context.js';
+import { checkDepsCommand } from './commands/deps.js';
 import { doctorCommand } from './commands/doctor.js';
 import { initCommand } from './commands/init.js';
 import { mapCommand } from './commands/map.js';
@@ -24,6 +25,7 @@ export const commands = [
   ...skillCommands,
   skillInstallCommand,
   checkSecurityCommand,
+  checkDepsCommand,
   syncCommand,
   policyCheckCommand,
   doctorCommand,

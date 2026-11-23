@@ -20,7 +20,9 @@ export const OSV_BATCH_URL = 'https://api.osv.dev/v1/querybatch';
 export const OSV_VULN_URL = 'https://api.osv.dev/v1/vulns/';
 const MAX_BATCH = 1000;
 const MAX_VULN_DETAILS = 200;
-const MAX_REGISTRY_LOOKUPS = 200;
+const MAX_REGISTRY_LOOKUPS = 300;
+const MAX_COOLDOWN_LOOKUPS = 50;
+const CONCURRENCY = 8;
 
 interface CacheEntry {
   at: string;
@@ -212,22 +214,36 @@ interface RegistryInfo {
 async function registry(options: IntelOptions, packages: LockPackage[]): Promise<DependencyFinding[]> {
   const base = (options.policy.allowed_registries[0] ?? 'https://registry.npmjs.org').replace(/\/$/, '');
   const findings: DependencyFinding[] = [];
-  for (const p of packages.slice(0, MAX_REGISTRY_LOOKUPS)) {
-    const key = `npm:${p.name}@${p.version}`;
-    let info = options.cache.get(key) as RegistryInfo | undefined;
-    if (!info) {
-      const doc = obj(await request(options, `${base}/${p.name.replace('/', '%2f')}`));
-      const version = obj(obj(doc['versions'])[p.version]);
-      const deprecated = sanitize(version['deprecated']);
-      const published = sanitize(obj(doc['time'])[p.version], 40);
-      info = {
-        found: Object.keys(version).length > 0,
-        provenance: Boolean(obj(obj(version['dist'])['attestations'])['provenance']),
-        ...(deprecated ? { deprecated } : {}),
-        ...(published && !Number.isNaN(Date.parse(published)) ? { published } : {}),
-      };
-      options.cache.set(key, info);
-    }
+  const selected = packages.slice(0, MAX_REGISTRY_LOOKUPS);
+  // El packument completo (con `time`) puede pesar MB: solo se pide para el enfriamiento en deltas pequeños.
+  const withTime = options.policy.min_release_age_hours > 0 && selected.length <= MAX_COOLDOWN_LOOKUPS;
+  const lookup = async (p: LockPackage): Promise<RegistryInfo> => {
+    const key = `npm:${p.name}@${p.version}${withTime ? ':t' : ''}`;
+    const cached = options.cache.get(key) as RegistryInfo | undefined;
+    if (cached) return cached;
+    const encoded = p.name.replace('/', '%2f');
+    let version: Record<string, unknown>;
+    let published: string | undefined;
+    if (withTime) {
+      const doc = obj(await request(options, `${base}/${encoded}`));
+      version = obj(obj(doc['versions'])[p.version]);
+      published = sanitize(obj(doc['time'])[p.version], 40);
+    } else version = obj(await request(options, `${base}/${encoded}/${encodeURIComponent(p.version)}`));
+    const deprecated = sanitize(version['deprecated']);
+    const info: RegistryInfo = {
+      found: Object.keys(version).length > 0,
+      provenance: Boolean(obj(obj(version['dist'])['attestations'])['provenance']),
+      ...(deprecated ? { deprecated } : {}),
+      ...(published && !Number.isNaN(Date.parse(published)) ? { published } : {}),
+    };
+    options.cache.set(key, info);
+    return info;
+  };
+  const infos: RegistryInfo[] = [];
+  for (let i = 0; i < selected.length; i += CONCURRENCY)
+    infos.push(...(await Promise.all(selected.slice(i, i + CONCURRENCY).map(lookup))));
+  for (const [index, p] of selected.entries()) {
+    const info = infos[index] as RegistryInfo;
     const base2 = { packageName: p.name, version: p.version, file: options.lockfilePath };
     if (!info.found) {
       findings.push({

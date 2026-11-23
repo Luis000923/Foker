@@ -101,6 +101,28 @@ diagnostics?: Diagnostics
  * Avisos no fatales, p. ej. salida truncada a 80.000 caracteres (FOKER-SPEC §10.5).
  */
 export type Diagnostics = Diagnostic[]
+export type FokerCheckDepsOutput = ({
+status: ("PASS" | "WARN" | "FAIL")
+/**
+ * packages, added, updated, removed, blocking, waived.
+ */
+summary: {
+[k: string]: number | undefined
+}
+/**
+ * @maxItems 200
+ */
+findings: {
+rule: string
+severity: ("critical" | "high" | "medium" | "low" | "info")
+blocking?: boolean
+file?: string
+package?: string
+message: string
+}[]
+truncated?: boolean
+diagnostics?: Diagnostics
+} | McpToolError)
 export type FokerContextOutput = ((McpContextPack | ContextPack) | McpToolError)
 export type FokerImpactInput = ({
 [k: string]: unknown | undefined
@@ -228,6 +250,8 @@ dependencyAuditReport?: DependencyAuditReport
 dependencyWaivers?: DependencyWaiversFile
 foker_check_input?: FokerCheckInput
 foker_check_output?: FokerCheckOutput
+foker_check_deps_input?: FokerCheckDepsInput
+foker_check_deps_output?: FokerCheckDepsOutput
 foker_context_input?: FokerContextInput
 foker_context_output?: FokerContextOutput
 foker_impact_input?: FokerImpactInput
@@ -1424,6 +1448,17 @@ code: ErrorCode
 message: string
 recoverable: boolean
 retry_after_ms?: number
+}
+export interface FokerCheckDepsInput {
+/**
+ * Ref de git: audita solo el delta frente a él.
+ */
+diff_base?: string
+/**
+ * Bloquea desde severidad medium.
+ */
+strict?: boolean
+max_findings?: number
 }
 export interface FokerContextInput {
 task: string

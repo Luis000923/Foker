@@ -535,6 +535,6 @@ export async function checkDependencies(
 }
 
 /** El hallazgo bloquea con el umbral `failOn`. */
-export function isBlocking(finding: DependencyFinding, failOn: ResolvedDependencyPolicy['fail_on']): boolean {
+export function isBlocking(finding: DependencyFinding, failOn: DependencySeverity): boolean {
   return !finding.waived && DEPENDENCY_SEVERITY_RANK[finding.severity] >= DEPENDENCY_SEVERITY_RANK[failOn];
 }
