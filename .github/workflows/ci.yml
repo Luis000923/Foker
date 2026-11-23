@@ -59,6 +59,9 @@ jobs:
         run: pnpm typecheck
       - name: Regla de dependencias (REQ-REPO-001)
         run: pnpm check:deps
+      # T12: CVEs conocidos en dependencias JS (registro npm). Bloquea high y critical.
+      - name: Auditoría de dependencias JS (pnpm audit)
+        run: pnpm audit --audit-level high
       - name: Artefactos generados desde los esquemas al día
         run: pnpm --filter @foker/schemas run generate:check
 
@@ -102,3 +105,6 @@ jobs:
         run: node scripts/build-addon-cargo.mjs x86_64-pc-windows-msvc packages/core
       - name: Build TypeScript
         run: pnpm build
+      # T11/T12: reglas deterministas FKR-DEP-001..008 sobre el propio repo, en cada sistema operativo.
+      - name: Seguridad de dependencias de terceros (foker check-deps --offline)
+        run: node packages/cli/dist/bin.js check-deps --offline
