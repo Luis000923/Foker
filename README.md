@@ -50,7 +50,7 @@ flujo completo y [Agentes](docs/agents.md) para las instrucciones que debe segui
 Foker funciona en **macOS** (Intel y Apple Silicon), **Linux** (x64 y ARM64, glibc) y **Windows**
 (x64). El núcleo nativo llega como un paquete por plataforma (`@foker/core-<plataforma>`) instalado
 como `optionalDependencies`: cada sistema descarga solo el suyo y nada se descarga en tiempo de
-ejecución. Alpine (musl), FreeBSD y Windows ARM64 no tienen binario en la beta; ahí `@foker/core`
+ejecución. Alpine (musl), FreeBSD y Windows ARM64 no tienen binario publicado en la beta (Windows ARM64 se compila y se prueba en CI, pero aún no se publica); ahí `@foker/core`
 lanza `FKR-INT-003` y se puede compilar desde el código fuente (`pnpm build:native`, requiere Rust).
 
 ## Instalación

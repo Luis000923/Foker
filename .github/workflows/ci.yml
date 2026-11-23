@@ -102,3 +102,8 @@ jobs:
         run: node scripts/build-addon-cargo.mjs x86_64-pc-windows-msvc packages/core
       - name: Build TypeScript
         run: pnpm build
+      # Un comando por paso: sin `&&` ni sintaxis de shell, igual en bash y en PowerShell.
+      - name: Tests de Rust
+        run: pnpm test:rust
+      - name: Tests de TypeScript
+        run: pnpm test:ts

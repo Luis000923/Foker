@@ -15,7 +15,8 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-/** Target Rust → sufijo de plataforma de napi-rs (`<binaryName>.<sufijo>.node`). */
+/** Target Rust → sufijo de plataforma de napi-rs (`<binaryName>.<sufijo>.node`). Solo plataformas PUBLICADAS:
+ * de aquí salen los tarballs de release y las `optionalDependencies` de `@foker/core`. */
 export const PLATFORMS = {
   'x86_64-unknown-linux-gnu': 'linux-x64-gnu',
   'aarch64-unknown-linux-gnu': 'linux-arm64-gnu',
@@ -24,6 +25,15 @@ export const PLATFORMS = {
   'x86_64-pc-windows-msvc': 'win32-x64-msvc',
 };
 
+/** Se compilan y se prueban en `release.yml` pero aún no se publican (ADR-014: Windows ARM64 no está en la beta).
+ * Publicarlos exige crear antes el paquete en npm; hasta entonces no entran en `PLATFORMS`. */
+export const UNPUBLISHED_PLATFORMS = {
+  'aarch64-pc-windows-msvc': 'win32-arm64-msvc',
+};
+
+/** Todo lo que CI sabe compilar y probar: publicadas + sin publicar. */
+export const BUILD_PLATFORMS = { ...PLATFORMS, ...UNPUBLISHED_PLATFORMS };
+
 /** Campos `os`/`cpu`/`libc` de cada paquete de plataforma; npm instala solo el que casa con el host. */
 const PLATFORM_FIELDS = {
   'linux-x64-gnu': { os: ['linux'], cpu: ['x64'], libc: ['glibc'] },
@@ -31,6 +41,7 @@ const PLATFORM_FIELDS = {
   'darwin-x64': { os: ['darwin'], cpu: ['x64'] },
   'darwin-arm64': { os: ['darwin'], cpu: ['arm64'] },
   'win32-x64-msvc': { os: ['win32'], cpu: ['x64'] },
+  'win32-arm64-msvc': { os: ['win32'], cpu: ['arm64'] },
 };
 
 export const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
