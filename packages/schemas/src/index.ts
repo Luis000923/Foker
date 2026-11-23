@@ -6,7 +6,10 @@ export {
   type McpToolDefinition,
   mcpApiVersion,
   mcpTools,
+  mcpWireTools,
   type ToolAnnotations,
+  WIRE_OUTPUT_DEPTH,
+  wireSchema,
 } from './bundle.js';
 export { designPreset, designPresetNames } from './design.js';
 export { type ErrorCodeInfo, errorCode, errorCodes, type Recoverability } from './errors.js';

@@ -112,6 +112,139 @@ fn complete_range(source: &str, symbol: &foker_map::model::MapSymbol) -> Option<
         lines[..end].iter().map(|l| l.len() + 1).sum::<usize>() + symbol.range.end.col as usize;
     source.get(start_offset..end_offset).map(String::from)
 }
+/// Líneas mínimas de una cabecera de licencia para sustituirla (una línea SPDX no compensa).
+const LICENSE_MIN_LINES: usize = 3;
+
+/// Sustituye una cabecera inicial de licencia (comentario de bloque o `//` consecutivos que
+/// mencionan licencia o copyright) por una marca explícita con el número de líneas omitidas.
+/// Conserva shebang y todo lo demás byte a byte; sin cabecera devuelve el texto intacto.
+pub fn strip_license_header(text: &str) -> String {
+    let lines: Vec<&str> = text.split('\n').collect();
+    let start = usize::from(lines.first().is_some_and(|l| l.starts_with("#!")));
+    let first = lines.get(start).map_or("", |l| l.trim_start());
+    let end = if first.starts_with("/*") {
+        lines[start..]
+            .iter()
+            .position(|l| l.contains("*/"))
+            .map(|offset| start + offset + 1)
+    } else if first.starts_with("//") {
+        Some(
+            start
+                + lines[start..]
+                    .iter()
+                    .take_while(|l| l.trim_start().starts_with("//"))
+                    .count(),
+        )
+    } else {
+        None
+    };
+    let Some(end) = end else {
+        return text.to_owned();
+    };
+    let block = lines[start..end].join("\n").to_lowercase();
+    let is_license = [
+        "license",
+        "licencia",
+        "copyright",
+        "spdx-license-identifier",
+    ]
+    .iter()
+    .any(|marker| block.contains(marker));
+    if !is_license || end - start < LICENSE_MIN_LINES {
+        return text.to_owned();
+    }
+    let mut out: Vec<String> = lines[..start].iter().map(|l| (*l).to_owned()).collect();
+    out.push(format!(
+        "// foker: cabecera de licencia omitida ({} líneas)",
+        end - start
+    ));
+    out.extend(lines[end..].iter().map(|l| (*l).to_owned()));
+    out.join("\n")
+}
+
+/// Máximo de caracteres de una firma de tipo L1 (el mismo tope que las firmas del mapa).
+pub const L1_TYPE_MAX_CHARS: usize = foker_map::parse::MAX_SIGNATURE_CHARS;
+
+/// Firma L1 de un tipo: quita comentarios fuera de literales, colapsa espacios y, si supera
+/// [`L1_TYPE_MAX_CHARS`], corta tras el último `;` o `,` de nivel de miembro con una marca `…`.
+/// Nunca corta dentro de un literal ni a mitad de un miembro.
+pub fn compact_type(source: &str) -> String {
+    let chars: Vec<char> = source.chars().collect();
+    let mut out = String::with_capacity(source.len());
+    // Posiciones (en `out`) de separadores de miembro con su profundidad de llaves.
+    let mut cuts: Vec<(usize, usize)> = Vec::new();
+    let mut depth = 0usize;
+    let mut quote: Option<char> = None;
+    let mut space = false;
+    let mut i = 0;
+    let push_space = |out: &mut String, space: &mut bool| {
+        if *space && !out.is_empty() && !out.ends_with([' ', '(', '[', '<']) {
+            out.push(' ');
+        }
+        *space = false;
+    };
+    while i < chars.len() {
+        let c = chars[i];
+        if let Some(q) = quote {
+            out.push(c);
+            if c == '\\' && i + 1 < chars.len() {
+                out.push(chars[i + 1]);
+                i += 2;
+                continue;
+            }
+            if c == q {
+                quote = None;
+            }
+            i += 1;
+            continue;
+        }
+        if c == '/' && chars.get(i + 1) == Some(&'*') {
+            let end = (i + 2..chars.len().saturating_sub(1))
+                .find(|&j| chars[j] == '*' && chars[j + 1] == '/')
+                .map_or(chars.len(), |j| j + 2);
+            i = end;
+            space = true;
+            continue;
+        }
+        if c == '/' && chars.get(i + 1) == Some(&'/') {
+            while i < chars.len() && chars[i] != '\n' {
+                i += 1;
+            }
+            space = true;
+            continue;
+        }
+        if c.is_whitespace() {
+            space = true;
+            i += 1;
+            continue;
+        }
+        if matches!(c, '}' | ')' | ']' | '>' | ';' | ',') {
+            space = space && matches!(c, '}');
+        }
+        push_space(&mut out, &mut space);
+        match c {
+            '\'' | '"' | '`' => quote = Some(c),
+            '{' => depth += 1,
+            '}' => depth = depth.saturating_sub(1),
+            ';' | ',' if depth == 1 => cuts.push((out.len() + 1, depth)),
+            _ => {}
+        }
+        out.push(c);
+        i += 1;
+    }
+    if out.chars().count() <= L1_TYPE_MAX_CHARS {
+        return out;
+    }
+    let limit = out
+        .char_indices()
+        .nth(L1_TYPE_MAX_CHARS)
+        .map_or(out.len(), |(index, _)| index);
+    match cuts.iter().rev().find(|(at, _)| *at <= limit) {
+        Some((at, _)) => format!("{} … }}", out[..*at].trim_end()),
+        None => format!("{}…", &out[..limit]),
+    }
+}
+
 /// Contenido de un archivo por nivel; no reinterpreta AST ni sintetiza tipos.
 pub fn file_body(
     state: &MapState,
@@ -188,10 +321,30 @@ pub fn file_body_indexed(
     id: &str,
     level: RenderLevel,
 ) -> Result<String, ContextError> {
+    file_body_only(index, root, id, level, None)
+}
+/// Como [`file_body_indexed`]; en L1/L2, `only` limita las firmas a esos símbolos (los que usa
+/// un ancla) y antepone una marca con los omitidos. Sin intersección no filtra.
+pub fn file_body_only(
+    index: &RenderIndex<'_>,
+    root: &Path,
+    id: &str,
+    level: RenderLevel,
+    only: Option<&BTreeSet<String>>,
+) -> Result<String, ContextError> {
     if level == RenderLevel::L3 {
-        return read(root, id);
+        return read(root, id).map(|text| strip_license_header(&text));
     }
-    let symbols = index.symbols.get(id).cloned().unwrap_or_default();
+    let mut symbols = index.symbols.get(id).cloned().unwrap_or_default();
+    let mut omitted = 0;
+    if level != RenderLevel::L0
+        && let Some(only) = only
+        && symbols.iter().any(|s| only.contains(&s.id))
+    {
+        let total = symbols.len();
+        symbols.retain(|s| only.contains(&s.id));
+        omitted = total - symbols.len();
+    }
     if level == RenderLevel::L0 {
         return Ok(format!("{id}: {}", {
             let mut seen = BTreeSet::new();
@@ -203,7 +356,7 @@ pub fn file_body_indexed(
                 .join(", ")
         }));
     }
-    let needs_source = level == RenderLevel::L2
+    let needs_source = matches!(level, RenderLevel::L2 | RenderLevel::L1)
         && symbols.iter().any(|s| {
             matches!(
                 s.kind,
@@ -223,17 +376,31 @@ pub fn file_body_indexed(
         }
     }
     let mut body = Vec::new();
+    if omitted > 0 {
+        body.push(format!(
+            "// foker: {omitted} símbolos que el ancla no usa omitidos"
+        ));
+    }
     for symbol in symbols {
         if level == RenderLevel::L2
             && let Some(doc) = &symbol.doc
         {
             body.push(doc.replace("\r\n", "\n"));
         }
-        let signature = if level == RenderLevel::L2
-            && matches!(
-                symbol.kind,
-                SymbolKind::Interface | SymbolKind::TypeAlias | SymbolKind::Enum
-            ) {
+        let is_type = matches!(
+            symbol.kind,
+            SymbolKind::Interface | SymbolKind::TypeAlias | SymbolKind::Enum
+        );
+        if level == RenderLevel::L1 && is_type {
+            // L1 es firma: el contrato del tipo sin comentarios, cortado en un límite de miembro.
+            let text = source_by_file
+                .get(symbol.file())
+                .and_then(|s| complete_range(s, symbol))
+                .unwrap_or_else(|| symbol.signature.clone());
+            body.push(compact_type(&text));
+            continue;
+        }
+        let signature = if level == RenderLevel::L2 && is_type {
             source_by_file
                 .get(symbol.file())
                 .and_then(|s| complete_range(s, symbol))
@@ -294,6 +461,20 @@ pub fn file(file: &PackFile, body: &str, explain: bool) -> String {
     }
     result
 }
+/// Referencia a una entrada idéntica a la ya entregada en la tarea (contexto diferencial).
+pub fn unchanged(file: &PackFile) -> String {
+    match file.level {
+        RenderLevel::L3 | RenderLevel::L2 => format!(
+            "<foker:file id=\"{}\" level=\"{}\" unchanged=\"{}\"/>\n",
+            attribute(&file.id),
+            file.level.as_str(),
+            file.hash
+        ),
+        RenderLevel::L1 | RenderLevel::L0 => {
+            format!("{}: sin cambios ({})\n", header(&file.id), file.hash)
+        }
+    }
+}
 /// Un envoltorio por archivo L3/L2 y uno por nivel L1/L0 en cada sección.
 pub fn files_section(
     id: &str,
@@ -352,9 +533,15 @@ pub fn fixed(inputs: &ContextInputs, req: &NormalizedRequest, intent: Intent) ->
             )
         })
         .unwrap_or_default();
+    let requirements = inputs
+        .requirements
+        .as_ref()
+        .map(|r| repository(&r.id, &r.body.replace("\r\n", "\n")))
+        .unwrap_or_default();
     vec![
         SectionText::new("rules", "mandatory", "static", &rules),
         SectionText::new("skill", "mandatory", "static", &skill),
+        SectionText::new("requirements", "mandatory", "task", &requirements),
         SectionText::new("task_scope", "mandatory", "session", &scope),
         SectionText::new(
             "request",

@@ -147,6 +147,10 @@ export interface ContextParams {
   bm25K1?: number
   /** Interno: bm25_b. */
   bm25B?: number
+  /** Interno: corte de related no vecino respecto al mejor opcional. */
+  relatedMinRelative?: number
+  /** Interno: franquicia de related antes del corte relativo. */
+  relatedFreeFraction?: number
 }
 
 /** Contrato de contexto: ContextRequest. */
@@ -173,6 +177,18 @@ export interface ContextRequest {
   taskScope?: ContextTaskScope
   /** Campo dirty_files. */
   dirtyFiles?: Array<string>
+  /** Entradas ya entregadas en la tarea (id → hash de PackFile); activa el contexto diferencial. */
+  delivered?: Record<string, string>
+  /** Secciones de requisitos elegidas para la tarea. */
+  requirements?: ContextRequirements
+}
+
+/** Contrato de contexto: ContextRequirements. */
+export interface ContextRequirements {
+  /** Documento de origen (REQUIREMENTS.md o foker.md). */
+  id: string
+  /** Secciones elegidas, en orden del documento. */
+  body: string
 }
 
 /** Contrato de contexto: ContextSkill. */
@@ -358,12 +374,16 @@ export interface PackFile {
   reasons: Array<string>
   /** Campo note. */
   note?: string
+  /** Huella corta de la entrada renderizada. */
+  hash: string
+  /** Entrada idéntica a una ya entregada en la tarea; va como referencia. */
+  unchanged?: boolean
 }
 
 /** Contrato de contexto: PackSection. */
 export interface PackSection {
   /** Campo id. */
-  id: 'rules' | 'core' | 'skill' | 'task_scope' | 'related' | 'targets' | 'request'
+  id: 'rules' | 'core' | 'skill' | 'requirements' | 'task_scope' | 'related' | 'targets' | 'request'
   /** Campo class. */
   class: 'mandatory' | 'optional'
   /** Campo stability. */

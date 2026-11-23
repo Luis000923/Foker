@@ -75,9 +75,64 @@ fn pick_export_target(value: &Value) -> Option<&str> {
     }
 }
 
+/// Extensiones de código fuente que el mapa indexa (las declaraciones `.d.ts` no cuentan).
+fn is_source_target(target: &str) -> bool {
+    let declaration = [".d.ts", ".d.mts", ".d.cts"]
+        .iter()
+        .any(|ext| target.ends_with(ext));
+    !declaration
+        && [".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".mjs", ".cjs"]
+            .iter()
+            .any(|ext| target.ends_with(ext))
+}
+
+/// En un paquete del workspace, un destino de `exports` que es código fuente existente gana a
+/// uno compilado fuera del mapa (`types` → `dist/*.d.ts`, ignorado o sin build): así las aristas entre paquetes
+/// llegan al código real. Orden determinista: [`CONDITIONS`] primero y luego el resto de claves
+/// en orden lexicográfico (p. ej. condiciones propias como `@scope/source`).
+fn pick_source_target<'a>(
+    package_path: &str,
+    sources: &BTreeSet<String>,
+    value: &'a Value,
+) -> Option<&'a str> {
+    let exists = |target: &str| {
+        let relative = target.trim_start_matches("./");
+        let id = if package_path == "." {
+            relative.to_owned()
+        } else {
+            format!("{package_path}/{relative}")
+        };
+        is_source_target(target) && sources.contains(&id)
+    };
+    match value {
+        Value::String(s) => exists(s).then_some(s.as_str()),
+        Value::Object(map) => {
+            let mut keys: Vec<&String> = map.keys().collect();
+            keys.sort();
+            CONDITIONS
+                .iter()
+                .filter_map(|c| map.get(*c))
+                .chain(
+                    keys.into_iter()
+                        .filter(|k| !CONDITIONS.contains(&k.as_str()))
+                        .filter_map(|k| map.get(k)),
+                )
+                .find_map(|v| pick_source_target(package_path, sources, v))
+        }
+        Value::Array(items) => items
+            .iter()
+            .find_map(|v| pick_source_target(package_path, sources, v)),
+        _ => None,
+    }
+}
+
 /// Alias de los paquetes del workspace: subrutas exactas de `exports` primero y, al final, el
 /// nombre del paquete apuntando a su directorio (lo resuelve `main`/`types`/`index`).
-fn workspace_aliases(root: &Path, workspace: &Workspace) -> Vec<(String, Vec<AliasValue>)> {
+fn workspace_aliases(
+    root: &Path,
+    workspace: &Workspace,
+    sources: &BTreeSet<String>,
+) -> Vec<(String, Vec<AliasValue>)> {
     let mut exact = Vec::new();
     let mut dirs = Vec::new();
     for package in &workspace.packages {
@@ -97,7 +152,9 @@ fn workspace_aliases(root: &Path, workspace: &Workspace) -> Vec<(String, Vec<Ali
                 if key.contains('*') {
                     continue;
                 }
-                let Some(target) = pick_export_target(value) else {
+                let Some(target) = pick_source_target(&package.path, sources, value)
+                    .or_else(|| pick_export_target(value))
+                else {
                     continue;
                 };
                 let specifier = format!("{}{}$", package.name, key.trim_start_matches('.'));
@@ -171,7 +228,9 @@ impl ResolverSet {
         config: &MapConfig,
     ) -> Result<Self, GlobError> {
         let tsconfig_globs = GlobMatcher::new(&config.tsconfig, false)?;
-        let fallback = Resolver::new(base_options(workspace_aliases(root, workspace)));
+        let sources: BTreeSet<String> = discovery.sources.iter().map(|c| c.id.clone()).collect();
+        let aliases = workspace_aliases(root, workspace, &sources);
+        let fallback = Resolver::new(base_options(aliases.clone()));
         let mut scoped: Vec<(String, Resolver)> = discovery
             .manifests
             .iter()
@@ -184,7 +243,7 @@ impl ResolverSet {
                 let dir =
                     m.id.rsplit_once('/')
                         .map_or(String::new(), |(d, _)| d.to_owned());
-                let mut options = base_options(workspace_aliases(root, workspace));
+                let mut options = base_options(aliases.clone());
                 options.tsconfig = Some(TsconfigDiscovery::Manual(TsconfigOptions {
                     config_file: simplify_verbatim(&m.path),
                     references: TsconfigReferences::Auto,
@@ -201,7 +260,7 @@ impl ResolverSet {
             root: root.to_path_buf(),
             scoped,
             fallback,
-            sources: discovery.sources.iter().map(|c| c.id.clone()).collect(),
+            sources,
         })
     }
 

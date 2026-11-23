@@ -122,4 +122,84 @@ export function mcpTools(): McpToolDefinition[] {
   }));
 }
 
+/** Anotaciones que no cambian cómo se construye ni se valida una llamada. */
+const WIRE_DROPPED = new Set(['title', 'description', 'examples', '$comment', 'deprecated', '$schema', '$defs']);
+/** Palabras clave que, relajadas, restringirían más (`not`, condicionales): se eliminan. */
+const WIRE_UNSAFE = new Set(['not', 'if', 'then', 'else', 'contains', 'dependentSchemas', 'unevaluatedProperties']);
+/** Subesquemas que se relajan recursivamente. */
+const WIRE_LISTS = new Set(['anyOf', 'oneOf', 'allOf', 'prefixItems']);
+
+function relaxed(node: unknown): JsonSchema {
+  if (node === null || typeof node !== 'object' || Array.isArray(node)) return {};
+  const obj = node as JsonSchema;
+  if (obj['type'] !== undefined) return { type: obj['type'] };
+  if (obj['properties'] || obj['additionalProperties'] !== undefined) return { type: 'object' };
+  if (obj['items'] || obj['prefixItems']) return { type: 'array' };
+  if (Array.isArray(obj['enum']) || obj['const'] !== undefined)
+    return { ...(obj['enum'] ? { enum: obj['enum'] } : { const: obj['const'] }) };
+  return {};
+}
+
+/**
+ * Versión de transporte de un esquema para `tools/list` (se carga en cada turno del agente):
+ * sin anotaciones y, por debajo de `depth` niveles de propiedades, cada subesquema queda en su
+ * `type`. El resultado acepta todo lo que acepta el original (solo quita restricciones); el
+ * servidor sigue validando contra el esquema completo.
+ */
+export function wireSchema(schema: JsonSchema, depth: number): JsonSchema {
+  const walk = (node: unknown, level: number): unknown => {
+    if (Array.isArray(node)) return node.map((n) => walk(n, level));
+    if (node === null || typeof node !== 'object') return node;
+    if (level > depth) return relaxed(node);
+    const out: JsonSchema = {};
+    for (const [key, value] of Object.entries(node as JsonSchema)) {
+      if (WIRE_DROPPED.has(key) || WIRE_UNSAFE.has(key)) continue;
+      if (key === 'properties' || key === 'patternProperties') {
+        out[key] = Object.fromEntries(
+          Object.entries(value as JsonSchema).map(([name, sub]) => [name, walk(sub, level + 1)]),
+        );
+      } else if (key === 'items' || key === 'additionalProperties') {
+        out[key] = typeof value === 'boolean' ? value : walk(value, level + 1);
+      } else if (WIRE_LISTS.has(key)) {
+        // Relajadas, varias ramas de oneOf podrían coincidir a la vez: anyOf conserva el superconjunto.
+        const target = key === 'oneOf' ? 'anyOf' : key;
+        const subs = (value as unknown[]).map((sub) => walk(sub, level));
+        out[target] =
+          target === 'anyOf' && Array.isArray(out['anyOf']) ? [...(out['anyOf'] as unknown[]), ...subs] : subs;
+      } else {
+        out[key] = value;
+      }
+    }
+    return out;
+  };
+  return walk(schema, 0) as JsonSchema;
+}
+
+/** Quita `title`, `$schema`, `$comment` y `examples` sin tocar ninguna restricción. */
+function withoutMetadata(schema: JsonSchema): JsonSchema {
+  const walk = (node: unknown, inMap: boolean): unknown => {
+    if (Array.isArray(node)) return node.map((n) => walk(n, false));
+    if (node === null || typeof node !== 'object') return node;
+    return Object.fromEntries(
+      Object.entries(node as JsonSchema)
+        .filter(([key]) => inMap || !['title', '$schema', '$comment', 'examples'].includes(key))
+        .map(([key, value]) => [key, walk(value, !inMap && SCHEMA_MAPS.has(key))]),
+    );
+  };
+  return walk(schema, false) as JsonSchema;
+}
+
+/** Profundidad de propiedades que conserva `outputSchema` en `tools/list`. */
+export const WIRE_OUTPUT_DEPTH = 2;
+
+/** Herramientas tal como se publican en `tools/list`: compactas, sin `timeoutS`. */
+export function mcpWireTools(): Omit<McpToolDefinition, 'timeoutS'>[] {
+  return mcpTools().map(({ timeoutS: _, ...tool }) => ({
+    ...tool,
+    // La entrada guía cómo construir la llamada: solo se quitan metadatos sin efecto.
+    inputSchema: withoutMetadata(tool.inputSchema),
+    outputSchema: wireSchema(tool.outputSchema, WIRE_OUTPUT_DEPTH),
+  }));
+}
+
 export { SCHEMA_BASE_URL };

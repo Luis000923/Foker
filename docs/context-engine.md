@@ -368,3 +368,34 @@ código va por `foker map`. El servidor MCP lo aplica al `output_tail` de los ch
 skills de forma estable y devuelve una huella SHA-256 para detectar cambios que rompan el caché.
 
 `shrinkToolCatalog` (ADR-040, derivado de caveman, Apache-2.0) comprime catálogos de herramientas MCP/OpenAI: quita metadatos de esquema y reduce descripciones largas conservando las frases con restricciones. Con pérdida; no conserva `cache_control`.
+
+## Reducción de tokens sin pérdida · sesión 2
+
+Medición reproducible en [benchmarks/tokens.md](benchmarks/tokens.md) (`pnpm bench:tokens`).
+
+- **Prioridad ancla > vecinos directos > ranking.** Los candidatos con razón `DEPENDENCY_OF`,
+  `DEPENDENT_OF` o `TEST_OF` de un ancla entran primero en related y no sufren el corte relativo.
+  El resto exige `score ≥ related_min_relative (0,35) × mejor opcional`, salvo mientras related
+  cueste menos que `related_free_fraction (0,15)` del presupuesto: un proyecto pequeño entra entero.
+  El presupuesto es un techo, no un objetivo. Valores elegidos con barrido sobre los escenarios del
+  benchmark: 0,5 ya perdía símbolos oro en exploración; 0,4 los conservaba.
+- **Firmas de dependencias limitadas al contrato usado.** En L1/L2, un archivo del que un ancla usa
+  símbolos (`uses_symbol`) muestra solo esos símbolos y una marca
+  `// foker: N símbolos que el ancla no usa omitidos`.
+- **Tipos L1 desde la fuente.** Interfaces, alias y enums se renderizan sin comentarios (fuera de
+  literales) y, si superan 400 caracteres, se cortan tras el último `;`/`,` de nivel de miembro con
+  `… }`: nunca a mitad de un miembro.
+- **Cabeceras de licencia.** En L3, un bloque inicial de ≥3 líneas que menciona licencia o
+  copyright se sustituye por `// foker: cabecera de licencia omitida (N líneas)`.
+- **Contexto diferencial.** Cada `PackFile` lleva `hash` (16 hex de BLAKE3 de su entrada renderizada).
+  `ContextInputs.delivered` (id → hash) sustituye entradas idénticas por una referencia
+  `unchanged`; el resultado sigue siendo determinista. Ver [mcp.md](mcp.md).
+- **Requisitos segmentados.** La sección `requirements` incluye solo las secciones `##` de
+  `REQUIREMENTS.md` (o, si no existe, `foker.md`) que comparten términos con la tarea, hasta 1500
+  tokens; sin coincidencias, solo el índice de títulos.
+- **Aristas entre paquetes.** En un paquete del workspace, un destino de `exports` que es código
+  fuente del mapa gana a uno compilado fuera de él (`types` → `dist/*.d.ts`): antes, sin build o con
+  `dist/` ignorado, se perdían todas las aristas entre paquetes.
+- **Persistencia.** `foker map` sin cambios no reescribe `.foker/project-map.json` ni la caché de
+  parseo limpia, e informa `unchanged: true`.
+

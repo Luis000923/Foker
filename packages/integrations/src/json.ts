@@ -59,6 +59,35 @@ export function deleteAt(root: JsonObject, path: readonly string[]): void {
 }
 
 /** Formato estable: 2 espacios y salto de línea final. */
+/** Ancho de línea de los formateadores habituales (Biome y Prettier, por defecto). */
+const LINE_WIDTH = 80;
+
+/**
+ * JSON con sangría 2 como lo dejan Biome y Prettier por defecto: los objetos se expanden y un
+ * array de primitivos va en una línea si cabe en 80 columnas. Así `foker sync` no genera archivos
+ * que el formateador del propio proyecto rechaza.
+ */
 export function formatJson(value: Json): string {
-  return `${JSON.stringify(value, null, 2)}\n`;
+  const render = (node: Json, indent: number, used: number): string => {
+    if (node === null || typeof node !== 'object') return JSON.stringify(node);
+    const pad = ' '.repeat(indent + 2);
+    if (Array.isArray(node)) {
+      if (node.length === 0) return '[]';
+      if (node.every((item) => item === null || typeof item !== 'object')) {
+        const inline = `[${node.map((item) => JSON.stringify(item)).join(', ')}]`;
+        // +1 por la coma que puede seguir al valor.
+        if (used + inline.length + 1 <= LINE_WIDTH) return inline;
+      }
+      const items = node.map((item) => `${pad}${render(item, indent + 2, pad.length)}`);
+      return `[\n${items.join(',\n')}\n${' '.repeat(indent)}]`;
+    }
+    const entries = Object.entries(node);
+    if (entries.length === 0) return '{}';
+    const lines = entries.map(([key, item]) => {
+      const head = `${pad}${JSON.stringify(key)}: `;
+      return `${head}${render(item, indent + 2, head.length)}`;
+    });
+    return `{\n${lines.join(',\n')}\n${' '.repeat(indent)}}`;
+  };
+  return `${render(value, 0, 0)}\n`;
 }

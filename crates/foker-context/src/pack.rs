@@ -103,6 +103,14 @@ pub struct TaskScopeInput {
     /// Checks descritos; nunca se ejecutan aquí.
     pub checks: Vec<String>,
 }
+/// Secciones de requisitos (REQUIREMENTS.md o foker.md) ya elegidas para la tarea.
+#[derive(Debug, Clone, Serialize)]
+pub struct RequirementsInput {
+    /// Id del documento de origen.
+    pub id: String,
+    /// Secciones elegidas, en orden del documento.
+    pub body: String,
+}
 /// Datos externos al mapa suministrados por TypeScript.
 #[derive(Debug, Clone, Serialize)]
 pub struct ContextInputs {
@@ -112,10 +120,17 @@ pub struct ContextInputs {
     pub skill: Option<SkillInput>,
     /// Alcance.
     pub task_scope: Option<TaskScopeInput>,
+    /// Requisitos relevantes para la tarea.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub requirements: Option<RequirementsInput>,
     /// Ids modificados.
     pub dirty_files: Vec<String>,
     /// Tamaño del núcleo (15 por defecto).
     pub core_files: usize,
+    /// Entradas ya entregadas en esta tarea (id → [`PackFile::hash`]). Una entrada idéntica se
+    /// sustituye por una referencia `unchanged`; vacío desactiva el contexto diferencial.
+    #[serde(skip_serializing_if = "std::collections::BTreeMap::is_empty")]
+    pub delivered: std::collections::BTreeMap<String, String>,
 }
 impl Default for ContextInputs {
     fn default() -> Self {
@@ -123,8 +138,10 @@ impl Default for ContextInputs {
             rules: None,
             skill: None,
             task_scope: None,
+            requirements: None,
             dirty_files: Vec::new(),
             core_files: crate::ContextParams::default().core_files,
+            delivered: std::collections::BTreeMap::new(),
         }
     }
 }
@@ -167,6 +184,14 @@ pub struct PackFile {
     /// Nota de degradación.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub note: Option<String>,
+    /// Huella corta (blake3, 16 hex) de la entrada completa; identifica entregas repetidas.
+    pub hash: String,
+    /// La entrada es idéntica a una ya entregada en la tarea y va como referencia.
+    #[serde(skip_serializing_if = "is_false")]
+    pub unchanged: bool,
+}
+fn is_false(value: &bool) -> bool {
+    !*value
 }
 /// Sección renderizada.
 #[derive(Debug, Clone, Serialize)]

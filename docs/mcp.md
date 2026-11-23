@@ -31,6 +31,21 @@ recurso de tarea permiten consultarlo. En `foker_check` y `foker_task_submit`,
 `output_tail` es opcional: se omite en checks `pass` y se devuelve sin ANSI para
 los demás estados. Los findings se conservan. La CLI humana mantiene la salida completa.
 
+### Coste por turno y contexto diferencial
+
+- `tools/list` publica una versión compacta de los esquemas (`mcpWireTools()`): la entrada solo pierde
+  `title`, `$schema`, `$comment` y `examples`; `outputSchema` pierde anotaciones y, por debajo de 2
+  niveles de propiedades, cada subesquema queda en su `type` (`oneOf` → `anyOf`, sin `not`/`if`).
+  Es un superconjunto del contrato: el servidor sigue validando entrada y salida contra el esquema
+  completo. Coste medido: 25 039 → 8 351 tokens por turno ([benchmark](benchmarks/tokens.md)).
+- Los validadores Ajv de cada herramienta se compilan en su primera llamada; el motor del mapa se
+  abre una vez por conexión y configuración efectiva y cada llamada solo lo refresca.
+- `foker_context` con `task_id` recuerda, en memoria y por conexión, la huella (`hash`) de cada
+  entrada entregada. En la siguiente llamada de la misma tarea, una entrada idéntica llega como
+  `<foker:file id="…" level="…" unchanged="<hash>"/>` (o `id: sin cambios (<hash>)` en L0/L1) y
+  `unchanged_files` cuenta cuántas. `full: true` reenvía todo. No se persiste en disco: una sesión
+  nueva o un contexto compactado no debe recibir referencias a contenido que ya no tiene.
+
 ## Recursos
 
 | URI | Contenido | ttlMs |

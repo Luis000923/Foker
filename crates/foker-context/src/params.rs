@@ -53,6 +53,12 @@ pub struct ContextParams {
     /// Corte relativo del core respecto de su mejor PageRank global.
     #[serde(skip_serializing_if = "corte_core_predeterminado")]
     pub core_min_relative: f64,
+    /// Corte de related respecto al mejor opcional; los vecinos directos de un ancla lo evitan.
+    #[serde(skip_serializing_if = "corte_related_predeterminado")]
+    pub related_min_relative: f64,
+    /// Fracción del presupuesto que related ocupa antes de aplicar `related_min_relative`.
+    #[serde(skip_serializing_if = "franquicia_related_predeterminada")]
+    pub related_free_fraction: f64,
     /// Parámetro w_anchor (default 1.0).
     pub w_anchor: f64,
     /// Parámetro mention_factor (default 0.8).
@@ -120,6 +126,8 @@ impl Default for ContextParams {
             related_limits: [64, 64, 96, 64, 64, 96],
             outline_limits: [0; 6],
             core_min_relative: 0.1,
+            related_min_relative: 0.35,
+            related_free_fraction: 0.15,
             w_anchor: 1.0,
             mention_factor: 0.8,
             w_lex: 0.6,
@@ -176,6 +184,8 @@ impl ContextParams {
             self.related_max_fraction,
             self.sufficiency_fraction,
             self.core_min_relative,
+            self.related_min_relative,
+            self.related_free_fraction,
             self.bm25_min_relative,
             self.relevance_fraction,
             self.w_anchor,
@@ -206,6 +216,8 @@ impl ContextParams {
                 self.related_max_fraction,
                 self.sufficiency_fraction,
                 self.core_min_relative,
+                self.related_min_relative,
+                self.related_free_fraction,
                 self.bm25_min_relative,
                 self.relevance_fraction,
                 self.anchor_fraction,
@@ -299,6 +311,12 @@ fn limites_related_predeterminados(value: &[usize; 6]) -> bool {
 }
 fn limites_outline_predeterminados(value: &[usize; 6]) -> bool {
     *value == ContextParams::default().outline_limits
+}
+fn franquicia_related_predeterminada(value: &f64) -> bool {
+    *value == ContextParams::default().related_free_fraction
+}
+fn corte_related_predeterminado(value: &f64) -> bool {
+    *value == ContextParams::default().related_min_relative
 }
 fn corte_core_predeterminado(value: &f64) -> bool {
     *value == ContextParams::default().core_min_relative

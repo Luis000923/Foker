@@ -15,9 +15,25 @@ export function redact(
     .filter(([key, value]) => !allowlist.includes(key) && redactableEnv(key, value))
     .map(([, value]) => value as string)
     .sort((a, b) => b.length - a.length);
-  for (const secret of secrets) text = text.split(secret).join('[REDACTED:env]');
+  for (const secret of secrets) {
+    if (secret.length >= WHOLE_WORD_BELOW) text = text.split(secret).join('[REDACTED:env]');
+    // Un valor corto (`code`, `1000`) dentro de otra palabra (`opencode`) no es el secreto:
+    // solo se redacta como palabra completa.
+    else
+      text = text.replace(
+        new RegExp(`(?<![\\p{L}\\p{N}_])${escapeRegExp(secret)}(?![\\p{L}\\p{N}_])`, 'gu'),
+        '[REDACTED:env]',
+      );
+  }
   return redactSecrets(text);
 }
+/** Por debajo de esta longitud, un valor de entorno se redacta solo como palabra completa. */
+export const WHOLE_WORD_BELOW = 8;
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+/** Literales que nunca son secretos aunque una variable los contenga. */
+const NON_SECRET_VALUES = new Set(['true', 'false', 'yes', 'no', 'on', 'off', 'null', 'undefined']);
 /** Variables de entorno de metadatos del shell y de npm/pnpm que no son secretos y aparecen en la salida. */
 export const NON_SECRET_ENV = new Set([
   'PWD',
@@ -41,6 +57,26 @@ export const NON_SECRET_ENV = new Set([
   'npm_package_name',
   'npm_package_version',
   'npm_package_json',
+  // Sesión de escritorio, editor y locale: valores cortos que aparecen en salidas de herramientas.
+  'EDITOR',
+  'VISUAL',
+  'GIT_EDITOR',
+  'PAGER',
+  'LANG',
+  'LC_ALL',
+  'DISPLAY',
+  'WAYLAND_DISPLAY',
+  'DESKTOP_SESSION',
+  'XDG_SESSION_TYPE',
+  'XDG_SESSION_DESKTOP',
+  'XDG_CURRENT_DESKTOP',
+  'KDE_FULL_SESSION',
+  'KDE_SESSION_VERSION',
+  'KDE_SESSION_UID',
+  'COLUMNS',
+  'LINES',
+  'CI',
+  'NODE_ENV',
 ]);
 
 /**
@@ -49,7 +85,12 @@ export const NON_SECRET_ENV = new Set([
  * puede ser numérico o empezar por `/`.
  */
 export function redactableEnv(key: string, value: string | undefined): value is string {
-  return Boolean(value) && (value as string).length >= 4 && !NON_SECRET_ENV.has(key);
+  return (
+    Boolean(value) &&
+    (value as string).length >= 4 &&
+    !NON_SECRET_ENV.has(key) &&
+    !NON_SECRET_VALUES.has((value as string).toLowerCase())
+  );
 }
 const affectedMarker = '$' + '{affected_packages}';
 

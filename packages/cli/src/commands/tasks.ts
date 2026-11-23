@@ -11,6 +11,7 @@ import {
 } from '@foker/engine';
 import type { ProjectMap } from '@foker/schemas';
 import { type Command, type Context, flag } from '../types.js';
+import { formatValidation } from './report.js';
 
 const list = (value: boolean | string | string[] | undefined) =>
   String(value ?? '')
@@ -44,7 +45,12 @@ export const validateCommand: Command = {
       ...(ctx.flags['packages'] ? { packages: list(ctx.flags['packages']) } : {}),
       changed: Boolean(ctx.flags['changed']),
     });
-    return { data, warnings: [], exitCode: exit(data.status), human: `validate: ${data.status}\n` };
+    return {
+      data,
+      warnings: [],
+      exitCode: exit(data.status),
+      human: formatValidation(String(ctx.flags['label'] || 'validate'), data),
+    };
   },
 };
 const flags = [
@@ -97,7 +103,11 @@ export const taskCommands: Command[] = [
       const engine = await openEngine(ctx.cwd, { ...loaded.mapConfig, readOnly: true });
       await engine.refresh();
       const project = JSON.parse(await engine.exportMapJson()) as ProjectMap;
-      assertUnprotectedScope(scope, loaded.policy.protected_paths, Object.keys(project.files));
+      assertUnprotectedScope(
+        scope,
+        loaded.policy.protected_paths,
+        project.files.map((f) => f.id),
+      );
       data = await new TaskStore(ctx.cwd, {
         actor: `cli:${userInfo().username}`,
         maxActive: loaded.policy.tasks.max_active ?? 5,

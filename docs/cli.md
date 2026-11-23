@@ -304,6 +304,8 @@ Diagnóstico: Node, addon, git, configuración, trust, sync, reglas, otros MCP y
 
 `task begin` recibe una descripción y `--scope` repetible. status devuelve un TaskRecord (sin id, lista); list devuelve la lista. submit devuelve `{task_id, state, attempt, gates, evidence, next_action}`: REJECTED describe el intento aunque la FSM haya preparado RUNNING para reintentar. REJECTED/FAILED salen con 1; AWAITING_APPROVAL/BLOCKED con 6; COMPLETED con 0. verify reejecuta y compara la última evidencia sin modificar la tarea. approve/reject/unblock exigen TTY y confirmación, excepto con --ci explícito y CI=true; --yes solo no permite aprobación no interactiva. unblock admite --scope para fijar el nuevo alcance. validate usa el perfil default por defecto; --checks y --packages son listas separadas por comas. --changed calcula paquetes afectados; escribe logs en .foker/runs/adhoc/ sin tocar tareas. Ambos requieren trust para ejecutar checks.
 
+Salida humana de `validate` y `check-security`: en éxito, una línea (`validate: pass (3/3 checks, 1.5s)`); en fallo, una línea por check que falla y, debajo, hasta 20 hallazgos `archivo:línea:col regla mensaje` (`tsc`, Biome y ESLint se reconocen también sin `parser` declarado). Sin hallazgos con ubicación se muestran las últimas 15 líneas útiles de la salida, sin ANSI, adornos, marcos de pila de dependencias ni repeticiones. `--json` conserva el resultado completo.
+
 ## Servidor MCP
 
 `foker mcp --root <ruta>` atiende stdio con protocolos 2026-07-28 y 2025-11-25. stdout se reserva al protocolo incluso con --json; logs JSON Lines en stderr. Herramientas, recursos, límites y configuración de anfitriones: [docs/mcp.md](mcp.md).

@@ -31,6 +31,7 @@ import {
   type FokerTaskBeginInput,
   mcpApiVersion,
   mcpTools,
+  mcpWireTools,
   type ProjectMap,
   type TaskRecord,
   validator,
@@ -58,13 +59,29 @@ export interface FokerServerOptions {
   stderr?: (line: string) => void;
 }
 const definitions = mcpTools().sort((a, b) => a.name.localeCompare(b.name));
-const validators = definitions.map((tool) => ({
-  tool,
-  input: ajv().compile(tool.inputSchema),
-  output: ajv().compile(tool.outputSchema),
-}));
-const validatePack = validator('context-pack');
-const validateToolError = validator('mcp-tools#/$defs/mcpToolError');
+/** `tools/list` se carga en cada turno del agente: se publica la versión compacta. */
+const wireDefinitions = mcpWireTools().sort((a, b) => a.name.localeCompare(b.name));
+type Compiled = {
+  tool: (typeof definitions)[number];
+  input: ReturnType<typeof validator>;
+  output: ReturnType<typeof validator>;
+};
+const compiled = new Map<string, Compiled>();
+/** Compila los validadores de una herramienta al primer uso (el arranque no paga Ajv). */
+function validatorsFor(name: string): Compiled | undefined {
+  let entry = compiled.get(name);
+  if (!entry) {
+    const tool = definitions.find((t) => t.name === name);
+    if (!tool) return undefined;
+    entry = { tool, input: ajv().compile(tool.inputSchema), output: ajv().compile(tool.outputSchema) };
+    compiled.set(name, entry);
+  }
+  return entry;
+}
+const validatePack = (data: unknown) => validator('context-pack')(data);
+const validateToolError = (data: unknown) => validator('mcp-tools#/$defs/mcpToolError')(data);
+/** Nombres exportados por archivo en `foker://map/outline`. */
+const OUTLINE_NAMES = 12;
 const cache = (ttlMs: number) => ({ ttlMs, cacheScope: 'private' as const });
 const resources = [
   { name: 'rules', uri: 'foker://rules', mimeType: 'text/markdown', ...cache(60000) },
@@ -151,11 +168,30 @@ function serverFactory(options: FokerServerOptions) {
       `mcp:${(ctx.mcpReq.envelope as Record<string, { name?: string }> | undefined)?.[CLIENT_INFO_META_KEY]?.name || server.server.getClientVersion()?.name || 'unknown'}`;
     const store = (ctx: ServerContext) => new TaskStore(root, { actor: actor(ctx), clock });
     const executionOptions = options.trustBaseDir ? { trustBaseDir: options.trustBaseDir } : {};
+    // Un motor por configuración efectiva durante la conexión: el refresco sin cambios es la ruta
+    // rápida (huella del descubrimiento) y no relee ni reparsea el árbol en cada llamada.
+    let cachedEngine: { key: string; engine: Promise<Engine> } | undefined;
     async function map(): Promise<{ engine: Engine; loaded: Awaited<ReturnType<typeof loadConfig>> }> {
       const loaded = await loadConfig(root);
-      const engine = await openEngine(root, { ...loaded.mapConfig, readOnly: true });
-      await engine.refresh();
-      return { engine, loaded };
+      const key = JSON.stringify(loaded.mapConfig);
+      if (cachedEngine?.key !== key)
+        cachedEngine = { key, engine: openEngine(root, { ...loaded.mapConfig, readOnly: true }) };
+      const pending = cachedEngine;
+      try {
+        const engine = await pending.engine;
+        await engine.refresh();
+        return { engine, loaded };
+      } catch (error) {
+        if (cachedEngine === pending) cachedEngine = undefined;
+        throw error;
+      }
+    }
+    /** Contexto diferencial: por task_id, huella de cada entrada ya entregada en esta conexión. */
+    const delivered = new Map<string, Record<string, string>>();
+    function remember(taskId: string, pack: ContextPack) {
+      const known = delivered.get(taskId) ?? {};
+      for (const file of pack.files) if (file.hash) known[file.id] = file.hash;
+      delivered.set(taskId, known);
     }
     async function buildPack(
       engine: Engine,
@@ -165,7 +201,10 @@ function serverFactory(options: FokerServerOptions) {
     ): Promise<ContextPack & { rendered: string }> {
       normalizePath(root, 'foker/rules.md');
       if (input.skill) normalizePath(root, `foker/skills/${input.skill}`);
-      const gathered = await gatherContextInputs(root, input.skill ? { skill: input.skill } : {});
+      const gathered = await gatherContextInputs(root, {
+        task: input.task,
+        ...(input.skill ? { skill: input.skill } : {}),
+      });
       const pack = await engine.buildContext({
         task: input.task,
         ...gathered,
@@ -183,6 +222,9 @@ function serverFactory(options: FokerServerOptions) {
               },
             }
           : {}),
+        ...(task && input.full !== true && delivered.has(task.task_id)
+          ? { delivered: delivered.get(task.task_id) ?? {} }
+          : {}),
         coreFiles: loaded.config.context.core_files,
         budgetTokens:
           input.budget_tokens ?? Math.min(20000, Math.max(1000, loaded.config.context.default_budget_tokens)),
@@ -190,13 +232,16 @@ function serverFactory(options: FokerServerOptions) {
       });
       const data = { ...JSON.parse(pack.json), rendered: pack.rendered };
       if (!validatePack(data)) throw new FokerError('FKR-INT-001', 'ContextPack inválido del motor.');
+      if (task) remember(task.task_id, data as ContextPack);
       return data as ContextPack & { rendered: string };
     }
     function taskContext(pack: ContextPack & { rendered: string }) {
+      const unchanged = pack.files.filter((f) => f.unchanged).length;
       return {
         pack_hash: pack.pack_hash,
         budget: { used: pack.budget.used, limit: pack.budget.limit },
         rendered: pack.rendered,
+        ...(unchanged ? { unchanged_files: unchanged } : {}),
       };
     }
     async function dispatch(
@@ -251,7 +296,8 @@ function serverFactory(options: FokerServerOptions) {
         ]);
         const project = JSON.parse(await engine.exportMapJson()) as ProjectMap;
         const { context, ...taskInput } = input;
-        const files = Object.keys(project.files);
+        // `files` es un array de MapFile: sus ids, no los índices.
+        const files = project.files.map((f) => f.id);
         const contextInput: FokerContextInput = {
           task: input.description,
           ...(input.skill ? { skill: input.skill } : {}),
@@ -385,11 +431,11 @@ function serverFactory(options: FokerServerOptions) {
     }
 
     server.server.setRequestHandler('tools/list', async () => ({
-      tools: definitions.map(({ timeoutS: _, ...tool }) => tool as Tool),
+      tools: wireDefinitions as Tool[],
     }));
     server.server.setRequestHandler('tools/call', async (request, ctx): Promise<CallToolResult> => {
       const started = clock();
-      const definition = validators.find(({ tool }) => tool.name === request.params.name);
+      const definition = validatorsFor(request.params.name);
       if (!definition) throw new ProtocolError(ProtocolErrorCode.InvalidParams, 'Herramienta desconocida');
       const args = request.params.arguments ?? {};
       let code: string | null = null;
@@ -487,10 +533,15 @@ function serverFactory(options: FokerServerOptions) {
         else if (uri === 'foker://map/outline') {
           const { engine } = await map();
           const project = JSON.parse(await engine.exportMapJson()) as ProjectMap;
-          text = Object.entries(project.files)
-            .sort(([a, x], [b, y]) => y.rank.global - x.rank.global || a.localeCompare(b))
+          text = [...project.files]
+            .sort((x, y) => y.rank.global - x.rank.global || x.id.localeCompare(y.id))
             .slice(0, 50)
-            .map(([id]) => `${id}: ${(engine.fileInfo(id)?.exports ?? []).join(', ')}`)
+            .map(({ id }) => {
+              // Nivel 0 ultra-compacto: nombres (no ids), sin repetir, como mucho OUTLINE_NAMES.
+              const names = [...new Set((engine.fileInfo(id)?.exports ?? []).map((e) => e.split('#').pop() ?? e))];
+              const extra = names.length > OUTLINE_NAMES ? ` +${names.length - OUTLINE_NAMES}` : '';
+              return `${id}: ${names.slice(0, OUTLINE_NAMES).join(', ')}${extra}`;
+            })
             .join('\n');
         } else if (/^foker:\/\/skills\/[a-z0-9]+(?:-[a-z0-9]+)*$/.test(uri))
           text = (await loadSkill(root, uri.slice('foker://skills/'.length))).markdown;

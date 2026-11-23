@@ -497,6 +497,14 @@ sufficiency_fraction?: number
  */
 core_min_relative?: number
 /**
+ * Interno Rust: fracción del presupuesto que related ocupa antes de aplicar related_min_relative. Solo si difiere del default.
+ */
+related_free_fraction?: number
+/**
+ * Interno Rust: corte de related respecto al mejor opcional; los vecinos directos de un ancla lo evitan. Solo si difiere del default.
+ */
+related_min_relative?: number
+/**
  * Interno Rust: máximos por fix, test, refactor, add, modify, explain (ADR-031).
  *
  * @minItems 6
@@ -513,7 +521,7 @@ outline_limits?: [number, number, number, number, number, number]
 }
 }
 export interface PackSection {
-id: ("rules" | "core" | "skill" | "task_scope" | "related" | "targets" | "request")
+id: ("rules" | "core" | "skill" | "requirements" | "task_scope" | "related" | "targets" | "request")
 class: ("mandatory" | "optional")
 stability: ("static" | "session" | "task")
 tokens: number
@@ -538,6 +546,14 @@ reasons: [Reason, ...(Reason)[]]
  * Aviso, p. ej. contenido completo omitido por presupuesto.
  */
 note?: string
+/**
+ * Huella corta (16 hex de blake3) de la entrada renderizada; identifica entregas repetidas en una tarea.
+ */
+hash?: string
+/**
+ * Entrada idéntica a una ya entregada en la misma tarea; va como referencia (contexto diferencial).
+ */
+unchanged?: true
 }
 export interface ExcludedFile {
 id: FileId
@@ -1299,6 +1315,10 @@ skill?: string
 task_id?: TaskId
 dirty_files?: boolean
 explain?: boolean
+/**
+ * Con task_id, reenvía también lo ya entregado en esta conexión (desactiva el contexto diferencial).
+ */
+full?: boolean
 }
 export interface McpContextPack {
 pack_version: (1 | 2)
@@ -1306,6 +1326,10 @@ pack_hash: Hash
 budget: McpContextBudget
 rendered: string
 diagnostics: Diagnostics
+/**
+ * Entradas enviadas como referencia porque ya se entregaron idénticas en esta tarea.
+ */
+unchanged_files?: number
 }
 export interface McpContextBudget {
 used: number

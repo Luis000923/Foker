@@ -9,6 +9,7 @@ export { loadConfig, resolveConfig } from './config.js';
 export { gatherContextInputs } from './context.js';
 export { renderTokensCss } from './design/tokens.js';
 export * from './findings/index.js';
+export { gatherRequirements, REQUIREMENTS_FILES, selectRequirements, splitSections } from './requirements.js';
 export {
   assertUnprotectedScope,
   deriveScopePaths,
