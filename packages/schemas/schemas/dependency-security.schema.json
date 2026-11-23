@@ -1,0 +1,161 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://foker.dev/schemas/dependency-security/v1.json",
+  "title": "Informe de seguridad de dependencias de terceros",
+  "description": "Salida de `foker check-deps` y del check integrado `dependency-security` (reglas FKR-DEP-001..012). Separado de `static-security` (FKR-SEC-*).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "status", "mode", "generated_at", "summary", "diff", "findings"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "status": { "enum": ["PASS", "WARN", "FAIL"] },
+    "mode": { "enum": ["offline", "hybrid"] },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "fail_on": { "$ref": "#/$defs/severity" },
+    "lockfiles": { "type": "array", "items": { "type": "string" } },
+    "summary": { "$ref": "#/$defs/summary" },
+    "diff": { "type": "array", "items": { "$ref": "#/$defs/diffEntry" } },
+    "findings": { "type": "array", "items": { "$ref": "#/$defs/finding" } }
+  },
+  "$defs": {
+    "severity": { "enum": ["critical", "high", "medium", "low", "info"] },
+    "ruleId": { "type": "string", "pattern": "^FKR-DEP-0(0[1-9]|1[0-2])$" },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["packages", "added", "updated", "removed", "findings", "blocking", "waived"],
+      "properties": {
+        "packages": { "type": "integer", "minimum": 0 },
+        "added": { "type": "integer", "minimum": 0 },
+        "updated": { "type": "integer", "minimum": 0 },
+        "removed": { "type": "integer", "minimum": 0 },
+        "findings": { "type": "integer", "minimum": 0 },
+        "blocking": { "type": "integer", "minimum": 0 },
+        "waived": { "type": "integer", "minimum": 0 },
+        "by_severity": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "critical": { "type": "integer", "minimum": 0 },
+            "high": { "type": "integer", "minimum": 0 },
+            "medium": { "type": "integer", "minimum": 0 },
+            "low": { "type": "integer", "minimum": 0 },
+            "info": { "type": "integer", "minimum": 0 }
+          }
+        }
+      }
+    },
+    "policy": {
+      "description": "Política de `policy.dependency_security` en foker.config.yaml. Todo es opcional; los valores por defecto viven en @foker/schemas (DEFAULT_DEPENDENCY_POLICY).",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean", "default": true },
+        "mode": { "enum": ["offline", "hybrid"], "default": "offline" },
+        "fail_on": { "enum": ["critical", "high", "medium", "low"], "default": "high" },
+        "allowed_registries": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^https://[^\\s]+$" },
+          "default": ["https://registry.npmjs.org"]
+        },
+        "allowed_licenses": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "denied_licenses": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "require_ignore_scripts": { "type": "boolean", "default": true },
+        "require_integrity_hash": { "type": "boolean", "default": true },
+        "block_floating_versions": { "type": "boolean", "default": true },
+        "require_provenance": {
+          "description": "Si es true, FKR-DEP-010 informa paquetes sin attestations de procedencia (modo hybrid).",
+          "type": "boolean",
+          "default": false
+        },
+        "min_release_age_hours": { "type": "integer", "minimum": 0, "maximum": 8760, "default": 72 },
+        "banned_packages": {
+          "description": "Nombres (`pkg`) o versiones exactas (`pkg@1.2.3`) prohibidos (FKR-DEP-007).",
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "internal_packages": {
+          "description": "Nombres internos adicionales para FKR-DEP-006 (además de los paquetes del workspace).",
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "critical_packages": {
+          "description": "Paquetes donde una versión mayor duplicada es un hallazgo FKR-DEP-008.",
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "override_justifications": {
+          "description": "Clave de overrides/resolutions → motivo (FKR-DEP-008).",
+          "type": "object",
+          "additionalProperties": { "type": "string", "minLength": 10, "maxLength": 1000 }
+        },
+        "on_network_error": { "enum": ["warn", "fail-closed"], "default": "warn" },
+        "cache_ttl_hours": { "type": "integer", "minimum": 0, "maximum": 168, "default": 6 },
+        "network_timeout_ms": { "type": "integer", "minimum": 500, "maximum": 60000, "default": 8000 }
+      }
+    },
+    "waiver": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "ruleId", "packageName", "versionRange", "reason", "approvedBy", "expiresAt"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[A-Za-z0-9._-]{1,64}$" },
+        "ruleId": { "$ref": "#/$defs/ruleId" },
+        "packageName": { "type": "string", "minLength": 1, "maxLength": 214 },
+        "versionRange": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "reason": { "type": "string", "minLength": 10, "maxLength": 2000 },
+        "approvedBy": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "expiresAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "waivers": {
+      "description": "Contenido de `.foker/dep-waivers.json` (ruta protegida: la edita una persona).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["waivers"],
+      "properties": {
+        "schema_version": { "const": 1 },
+        "waivers": { "type": "array", "maxItems": 1000, "items": { "$ref": "#/$defs/waiver" } }
+      }
+    },
+    "diffEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "ecosystem", "changeType", "direct"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "ecosystem": { "enum": ["npm", "cargo"] },
+        "changeType": { "enum": ["added", "updated", "removed"] },
+        "direct": { "type": "boolean" },
+        "fromVersion": { "type": "string" },
+        "toVersion": { "type": "string" },
+        "resolvedUrl": { "type": "string" },
+        "integrity": { "type": "string" },
+        "hasLifecycleScripts": { "type": "boolean" },
+        "lifecycleScripts": { "type": "array", "items": { "type": "string" } },
+        "license": { "type": "string" }
+      }
+    },
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ruleId", "severity", "message", "remediation"],
+      "properties": {
+        "ruleId": { "$ref": "#/$defs/ruleId" },
+        "severity": { "$ref": "#/$defs/severity" },
+        "packageName": { "type": "string" },
+        "version": { "type": "string" },
+        "file": { "type": "string" },
+        "message": { "type": "string", "minLength": 1 },
+        "remediation": { "type": "string" },
+        "evidence": { "type": "string" },
+        "waived": { "type": "boolean" },
+        "waiverId": { "type": "string" }
+      }
+    }
+  }
+}

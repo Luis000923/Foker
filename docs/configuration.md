@@ -80,7 +80,7 @@ Los defaults de objetos resumen la configuración efectiva sin archivo. `<nombre
 | validation.checks.<nombre> (variante 1).cwd | string | Sin default | Directorio relativo al root. Opcional. Patrón: ^(?!/)[^\\\u0000]+$. Longitud mínima: 1. Longitud máxima: 512. |
 | validation.checks.<nombre> (variante 1).parser | "tsc" / "eslint" / "vitest" / "generic" | "generic" | Parser de hallazgos de la salida. Opcional. Valores: ["tsc","eslint","vitest","generic"]. |
 | validation.checks.<nombre> (variante 2) | object | {"timeout_s":300,"network":false,"parser":"generic"} | Verificador integrado de Foker. Opcional. |
-| validation.checks.<nombre> (variante 2).builtin | "secret-scan" / "static-security" | Sin default | Obligatoria si existe el objeto padre. Valores: ["secret-scan","static-security"]. |
+| validation.checks.<nombre> (variante 2).builtin | "secret-scan" / "static-security" / "dependency-security" | Sin default | Obligatoria si existe el objeto padre. Valores: ["secret-scan","static-security","dependency-security"]. |
 | validation.checks.<nombre> (variante 2).timeout_s | integer | 300 | Opcional. Mínimo: 1. Máximo: 3600. |
 
 ## policy
@@ -97,6 +97,32 @@ Los defaults de objetos resumen la configuración efectiva sin archivo. `<nombre
 | policy.approval_required.paths[] | string | Sin default | Glob relativo al root con separador /. Opcional. Patrón: ^(?!/)[^\\\u0000]+$. Longitud mínima: 1. Longitud máxima: 512. |
 | policy.approval_required.dependency_changes | boolean | true | Solicita aprobación para cambios de dependencias o lockfiles. Opcional. |
 | policy.approval_required.file_deletions_outside_scope | boolean | true | Solicita aprobación para borrados fuera de alcance. Opcional. |
+| policy.dependency_security | object | Sin default | Seguridad de dependencias de terceros (FKR-DEP-*), independiente de static-security. Opcional. |
+| policy.dependency_security.enabled | boolean | true | Opcional. |
+| policy.dependency_security.mode | "offline" / "hybrid" | "offline" | Opcional. Valores: ["offline","hybrid"]. |
+| policy.dependency_security.fail_on | "critical" / "high" / "medium" / "low" | "high" | Opcional. Valores: ["critical","high","medium","low"]. |
+| policy.dependency_security.allowed_registries | array | ["https://registry.npmjs.org"] | Opcional. |
+| policy.dependency_security.allowed_registries[] | string | Sin default | Opcional. Patrón: ^https://[^\s]+$. |
+| policy.dependency_security.allowed_licenses | array | Sin default | Opcional. |
+| policy.dependency_security.allowed_licenses[] | string | Sin default | Opcional. Longitud mínima: 1. |
+| policy.dependency_security.denied_licenses | array | Sin default | Opcional. |
+| policy.dependency_security.denied_licenses[] | string | Sin default | Opcional. Longitud mínima: 1. |
+| policy.dependency_security.require_ignore_scripts | boolean | true | Opcional. |
+| policy.dependency_security.require_integrity_hash | boolean | true | Opcional. |
+| policy.dependency_security.block_floating_versions | boolean | true | Opcional. |
+| policy.dependency_security.require_provenance | boolean | false | Si es true, FKR-DEP-010 informa paquetes sin attestations de procedencia (modo hybrid). Opcional. |
+| policy.dependency_security.min_release_age_hours | integer | 72 | Opcional. Mínimo: 0. Máximo: 8760. |
+| policy.dependency_security.banned_packages | array | Sin default | Nombres (`pkg`) o versiones exactas (`pkg@1.2.3`) prohibidos (FKR-DEP-007). Opcional. |
+| policy.dependency_security.banned_packages[] | string | Sin default | Opcional. Longitud mínima: 1. |
+| policy.dependency_security.internal_packages | array | Sin default | Nombres internos adicionales para FKR-DEP-006 (además de los paquetes del workspace). Opcional. |
+| policy.dependency_security.internal_packages[] | string | Sin default | Opcional. Longitud mínima: 1. |
+| policy.dependency_security.critical_packages | array | Sin default | Paquetes donde una versión mayor duplicada es un hallazgo FKR-DEP-008. Opcional. |
+| policy.dependency_security.critical_packages[] | string | Sin default | Opcional. Longitud mínima: 1. |
+| policy.dependency_security.override_justifications | object | Sin default | Clave de overrides/resolutions → motivo (FKR-DEP-008). Opcional. |
+| policy.dependency_security.override_justifications.<nombre> | string | Sin default | Opcional. Longitud mínima: 10. Longitud máxima: 1000. |
+| policy.dependency_security.on_network_error | "warn" / "fail-closed" | "warn" | Opcional. Valores: ["warn","fail-closed"]. |
+| policy.dependency_security.cache_ttl_hours | integer | 6 | Opcional. Mínimo: 0. Máximo: 168. |
+| policy.dependency_security.network_timeout_ms | integer | 8000 | Opcional. Mínimo: 500. Máximo: 60000. |
 | policy.env_allowlist | array | ["PATH","HOME","USERPROFILE","SystemRoot","TEMP","TMP","LANG","LC_ALL","CI","NODE_OPTIONS","NODE_ENV"] | Únicas variables heredadas por checks; la lista del proyecto reemplaza el default. Opcional. |
 | policy.env_allowlist[] | string | Sin default | Opcional. Patrón: ^[A-Za-z_][A-Za-z0-9_]*$. |
 | policy.tasks | object | {"max_attempts_default":3,"max_active":5} | Opcional. |

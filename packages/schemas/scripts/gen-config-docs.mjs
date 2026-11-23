@@ -8,6 +8,7 @@ const root = new URL('../../../', import.meta.url);
 const read = (path) => readFileSync(new URL(path, root), 'utf8');
 const schema = JSON.parse(read('packages/schemas/schemas/foker-config.schema.json'));
 const common = JSON.parse(read('packages/schemas/schemas/common.schema.json'));
+const dependencySecurity = JSON.parse(read('packages/schemas/schemas/dependency-security.schema.json'));
 
 // Ejecutar solo la resolución pura. Las operaciones de disco, validación y hash no se usan.
 // No se importa engine desde schemas: este script de desarrollo queda fuera del grafo de paquetes.
@@ -44,7 +45,7 @@ defaults.map = {
 function deref(node) {
   if (!node.$ref) return node;
   const [file, fragment] = node.$ref.split('#');
-  const document = file ? common : schema;
+  const document = !file ? schema : file.includes('dependency-security') ? dependencySecurity : common;
   const target = fragment
     .split('/')
     .slice(1)

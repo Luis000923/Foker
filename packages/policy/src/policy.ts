@@ -58,6 +58,8 @@ export function effectivePolicy(defaults: PolicyConfig = DEFAULT_POLICY, project
     },
     env_allowlist: project.env_allowlist ?? defaults.env_allowlist ?? [],
     tasks: { ...defaults.tasks, ...project.tasks },
+    // FKR-DEP: foker.config.yaml es ruta protegida; la política de dependencias del proyecto se respeta tal cual.
+    ...(project.dependency_security ? { dependency_security: project.dependency_security } : {}),
   };
   const overrides: NonNullable<PolicyConfig['overrides']> = [];
   for (const override of project.overrides ?? []) {

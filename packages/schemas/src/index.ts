@@ -31,3 +31,12 @@ export {
   validate,
   validator,
 } from './validate.js';
+export {
+  DEFAULT_DEPENDENCY_POLICY,
+  DEPENDENCY_SEVERITY_RANK,
+  type ResolvedDependencyPolicy,
+  resolveDependencyPolicy,
+  validateDependencyPolicy,
+  validateDependencyReport,
+  validateDependencyWaivers,
+} from './dependency-security.js';
