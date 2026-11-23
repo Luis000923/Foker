@@ -79,6 +79,19 @@ impl Default for MapConfig {
     }
 }
 
+/// Mayor entero representable sin pérdida en un `f64` de JavaScript (`Number.MAX_SAFE_INTEGER`).
+pub const MAX_SAFE_INTEGER: f64 = 9_007_199_254_740_991.0;
+
+/// Convierte un número de JavaScript en un límite de bytes. Rechaza valores no finitos, fuera de
+/// `1..=MAX_SAFE_INTEGER` y decimales: `v as u64` truncaría `1.5` a `1` sin avisar.
+pub fn checked_byte_limit(v: f64) -> Option<u64> {
+    if v.is_finite() && v.fract() == 0.0 && (1.0..=MAX_SAFE_INTEGER).contains(&v) {
+        Some(v as u64)
+    } else {
+        None
+    }
+}
+
 /// Globs de secretos de la política por defecto (FOKER-SPEC §11.3).
 pub fn default_secret_globs() -> Vec<String> {
     [
@@ -94,4 +107,39 @@ pub fn default_secret_globs() -> Vec<String> {
     .into_iter()
     .map(String::from)
     .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn checked_byte_limit_rechaza_decimales() {
+        assert_eq!(checked_byte_limit(1.5), None);
+        assert_eq!(checked_byte_limit(1024.0001), None);
+    }
+
+    #[test]
+    fn checked_byte_limit_rechaza_no_finitos_y_fuera_de_rango() {
+        for v in [
+            f64::NAN,
+            f64::INFINITY,
+            f64::NEG_INFINITY,
+            0.0,
+            -1.0,
+            MAX_SAFE_INTEGER + 2.0,
+        ] {
+            assert_eq!(checked_byte_limit(v), None, "{v}");
+        }
+    }
+
+    #[test]
+    fn checked_byte_limit_acepta_enteros() {
+        assert_eq!(checked_byte_limit(1.0), Some(1));
+        assert_eq!(checked_byte_limit(2048.0), Some(2048));
+        assert_eq!(
+            checked_byte_limit(MAX_SAFE_INTEGER),
+            Some(9_007_199_254_740_991)
+        );
+    }
 }

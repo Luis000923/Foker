@@ -23,10 +23,12 @@ export async function main(argv: string[], env: NodeJS.ProcessEnv, io: IO): Prom
       .flatMap((f) => [`--${f.name}`, ...(f.short ? [`-${f.short}`] : [])]),
   );
   let firstPositional: string | undefined;
+  // `--` sin nada detrás no separa ningún posicional: es un error de uso explícito, no un `undefined` implícito.
+  const danglingSeparator = argv.at(-1) === '--';
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i] as string;
     if (arg === '--') {
-      firstPositional = argv[i + 1];
+      if (i + 1 < argv.length) firstPositional = argv[i + 1];
       break;
     }
     if (!arg.startsWith('-')) {
@@ -45,6 +47,8 @@ export async function main(argv: string[], env: NodeJS.ProcessEnv, io: IO): Prom
   const errors: Message[] = [];
   let human: string | undefined;
   try {
+    if (danglingSeparator)
+      throw new FokerError('FKR-INP-001', 'El separador -- debe ir seguido de al menos un argumento posicional.');
     const options: NonNullable<ParseArgsConfig['options']> = {};
     for (const f of [...globalFlags, ...commands.flatMap((c) => c.flags)]) {
       options[f.name] = {

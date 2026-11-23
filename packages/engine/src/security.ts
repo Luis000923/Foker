@@ -1,4 +1,4 @@
-import { lstat, readdir, readFile } from 'node:fs/promises';
+import { lstat, readdir, readFile, realpath } from 'node:fs/promises';
 import { isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { FokerError } from '@foker/core';
 import { scanSecurity } from '@foker/policy';
@@ -14,8 +14,16 @@ export interface SecurityReport {
   findings: Finding[];
 }
 
+/** `child` está dentro de `parent` (o es él). `..config` es un nombre válido, no un salto al padre. */
+export function isInside(parent: string, child: string): boolean {
+  const inside = relative(parent, child);
+  return !(inside === '..' || inside.startsWith(`..${sep}`) || isAbsolute(inside));
+}
+
 /** Recorre `root` (o `subdir`) sin seguir enlaces y aplica las reglas de `@foker/policy`. */
-export async function checkSecurity(root: string, subdir = '.'): Promise<SecurityReport> {
+export async function checkSecurity(projectRoot: string, subdir = '.'): Promise<SecurityReport> {
+  // Resuelve enlaces antes de comparar: un `subdir` symlink no puede escapar de `root`.
+  const root = await realpath(projectRoot);
   const files: { path: string; content: string }[] = [];
   async function walk(dir: string): Promise<void> {
     for (const entry of (await readdir(dir, { withFileTypes: true })).sort((a, b) => a.name.localeCompare(b.name))) {
@@ -32,10 +40,10 @@ export async function checkSecurity(root: string, subdir = '.'): Promise<Securit
       }
     }
   }
-  const start = resolve(root, subdir);
-  const inside = relative(root, start);
-  if (inside.startsWith('..') || isAbsolute(inside))
-    throw new FokerError('FKR-INP-001', 'La ruta debe estar dentro del proyecto');
+  const start = await realpath(resolve(root, subdir)).catch((error: NodeJS.ErrnoException) => {
+    throw new FokerError('FKR-INP-001', `Ruta inaccesible: ${subdir} (${error.code ?? 'error'})`);
+  });
+  if (!isInside(root, start)) throw new FokerError('FKR-INP-001', 'La ruta debe estar dentro del proyecto');
   await walk(start);
   return { scanned: files.length, findings: scanSecurity(files) };
 }

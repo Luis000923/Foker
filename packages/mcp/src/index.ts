@@ -72,16 +72,19 @@ const resources = [
   { name: 'skills', uri: 'foker://skills/{name}', mimeType: 'text/markdown', ...cache(60000) },
   { name: 'tasks', uri: 'foker://tasks/{task_id}', mimeType: 'application/json', ...cache(0) },
 ];
-function protocolFailure(error: FokerError) {
-  return new ProtocolError(
-    error.code === 'FKR-CFG-002' ? ProtocolErrorCode.InvalidParams : ProtocolErrorCode.InternalError,
-    error.code,
-    {
-      code: error.code,
-      message: error.code === 'FKR-CFG-002' ? error.message : 'Error interno de Foker.',
-      recoverable: false,
-    },
-  );
+/** Códigos cuyo mensaje es diagnóstico para el cliente y no filtra detalles internos. El resto se oculta. */
+export const CLIENT_SAFE_CODES: ReadonlySet<string> = new Set(['FKR-CFG-002', 'FKR-POL-001']);
+const PROTOCOL_CODES: Readonly<Record<string, ProtocolErrorCode>> = {
+  'FKR-CFG-002': ProtocolErrorCode.InvalidParams,
+  'FKR-POL-001': ProtocolErrorCode.InvalidRequest,
+};
+export function protocolFailure(error: FokerError) {
+  const exposed = CLIENT_SAFE_CODES.has(error.code);
+  return new ProtocolError(PROTOCOL_CODES[error.code] ?? ProtocolErrorCode.InternalError, error.code, {
+    code: error.code,
+    message: exposed ? sanitize(error.message) : 'Error interno de Foker.',
+    recoverable: false,
+  });
 }
 async function checkedRoot(root: string) {
   try {
@@ -387,6 +390,14 @@ function serverFactory(options: FokerServerOptions) {
     server.server.setRequestHandler('tools/list', async () => ({
       tools: definitions.map(({ timeoutS: _, ...tool }) => tool as Tool),
     }));
+    // Un fallo de auditoría (p. ej. FKR-POL-001 por symlink) llega al cliente con su diagnóstico, no como error opaco.
+    const auditOrFail = async (...entry: Parameters<Audit['append']>) => {
+      try {
+        await audit.append(...entry);
+      } catch (error) {
+        throw protocolFailure(FokerError.fromNative(error));
+      }
+    };
     server.server.setRequestHandler('tools/call', async (request, ctx): Promise<CallToolResult> => {
       const started = clock();
       const definition = validators.find(({ tool }) => tool.name === request.params.name);
@@ -437,7 +448,7 @@ function serverFactory(options: FokerServerOptions) {
         code = failure.code;
         if (code.startsWith('FKR-INT-') || code === 'FKR-CFG-002') {
           log(request.params.name, clock() - started, code);
-          await audit.append(actor(ctx), request.params.name, args, code);
+          await auditOrFail(actor(ctx), request.params.name, args, code);
           throw protocolFailure(failure);
         }
         const message = sanitize(failure.message);
@@ -456,7 +467,7 @@ function serverFactory(options: FokerServerOptions) {
             : {}),
         };
       }
-      await audit.append(
+      await auditOrFail(
         actor(ctx),
         request.params.name,
         args,
@@ -503,7 +514,10 @@ function serverFactory(options: FokerServerOptions) {
         return { contents: [{ uri, mimeType, text: sanitize(text), ...cache(ttlMs) }], ...cache(ttlMs) };
       } catch (error) {
         const failure = FokerError.fromNative(error);
-        if (failure.code.startsWith('FKR-INT-') && (error as NodeJS.ErrnoException).code !== 'ENOENT')
+        if (
+          CLIENT_SAFE_CODES.has(failure.code) ||
+          (failure.code.startsWith('FKR-INT-') && (error as NodeJS.ErrnoException).code !== 'ENOENT')
+        )
           throw protocolFailure(failure);
         throw new ProtocolError(ProtocolErrorCode.InvalidParams, 'Recurso no disponible', { code: failure.code });
       }
