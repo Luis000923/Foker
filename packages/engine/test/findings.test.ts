@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import { test } from 'node:test';
 import { parseFindings } from '@foker/engine';
+import { test } from 'vitest';
 
 test('el parser genérico reconoce Biome y descarta los resúmenes', () => {
   const output = [

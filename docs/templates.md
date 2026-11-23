@@ -50,3 +50,8 @@ y pendientes de ASVS 5.0: no afirma cumplimiento ni constituye certificación.
 tipografía, colores claro/oscuro, espaciado, radios) y `apps/web/app/tokens.css` (variables CSS con
 modo oscuro por `prefers-color-scheme` y `[data-theme]`). El preset sale de `design.preset` en
 `foker.md` (`neutral` por defecto; también `forest`). No hay servicios en ejecución.
+
+Si el [asistente de requisitos](requirements.md) se ejecuta (TTY o `--answers`), sus Design Tokens
+sustituyen al preset en esos dos archivos y añaden `--font-heading`, `--color-surface`,
+`--color-secondary` y `--color-accent` (claves opcionales de ADR-042). El `README.md` creado enlaza
+`REQUIREMENTS.md`.

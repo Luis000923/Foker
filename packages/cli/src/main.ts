@@ -2,6 +2,7 @@ import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 import { type ParseArgsConfig, parseArgs } from 'node:util';
 import { FokerError } from '@foker/core';
+import { drainGitWarnings } from '@foker/engine';
 import { errorCode } from '@foker/schemas';
 import { commands, globalFlags, help } from './registry.js';
 import type { Message, Result } from './types.js';
@@ -10,6 +11,7 @@ export interface IO {
   stderr(text: string): void;
   isTTY: boolean;
   confirm?: (message: string) => Promise<boolean>;
+  prompt?: (message: string) => Promise<string>;
   trustBaseDir?: string;
   stdin?: () => Promise<string>;
 }
@@ -23,10 +25,12 @@ export async function main(argv: string[], env: NodeJS.ProcessEnv, io: IO): Prom
       .flatMap((f) => [`--${f.name}`, ...(f.short ? [`-${f.short}`] : [])]),
   );
   let firstPositional: string | undefined;
+  // `--` sin nada detrás no separa ningún posicional: es un error de uso explícito, no un `undefined` implícito.
+  const danglingSeparator = argv.at(-1) === '--';
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i] as string;
     if (arg === '--') {
-      firstPositional = argv[i + 1];
+      if (i + 1 < argv.length) firstPositional = argv[i + 1];
       break;
     }
     if (!arg.startsWith('-')) {
@@ -45,6 +49,8 @@ export async function main(argv: string[], env: NodeJS.ProcessEnv, io: IO): Prom
   const errors: Message[] = [];
   let human: string | undefined;
   try {
+    if (danglingSeparator)
+      throw new FokerError('FKR-INP-001', 'El separador -- debe ir seguido de al menos un argumento posicional.');
     const options: NonNullable<ParseArgsConfig['options']> = {};
     for (const f of [...globalFlags, ...commands.flatMap((c) => c.flags)]) {
       options[f.name] = {
@@ -98,9 +104,11 @@ export async function main(argv: string[], env: NodeJS.ProcessEnv, io: IO): Prom
         const value = parsed.values[f.name] ?? f.default;
         flags[f.name] = Array.isArray(value) ? value.map(String) : value;
       }
+      drainGitWarnings(); // descarta avisos de ejecuciones previas en el mismo proceso
       result = await command.run({
         env,
         ...(io.confirm ? { confirm: io.confirm } : {}),
+        ...(io.prompt ? { prompt: io.prompt } : {}),
         ...(io.trustBaseDir ? { trustBaseDir: io.trustBaseDir } : {}),
         ...(io.stdin ? { stdin: io.stdin } : {}),
         display: io.stderr,
@@ -125,6 +133,9 @@ export async function main(argv: string[], env: NodeJS.ProcessEnv, io: IO): Prom
     errors.push({ code: failure.code, message: failure.message });
     if (debug && !mcpMode) io.stderr(`${failure.stack ?? failure.message}\n`);
   }
+  // Modo degradado: `git` ausente no rompe el comando, pero el aviso debe verse.
+  for (const message of drainGitWarnings())
+    result.warnings.push({ code: 'FKR-MAP-001', message, hint: 'foker doctor' });
   errors.push(...(result.errors ?? []));
   const duration = Math.max(0, Math.round(performance.now() - start));
   if (mcpMode && (errors.length || (!argv.includes('--help') && !argv.includes('-h') && !argv.includes('--version')))) {

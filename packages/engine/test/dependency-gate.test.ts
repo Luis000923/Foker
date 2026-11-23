@@ -3,8 +3,8 @@ import { execFileSync } from 'node:child_process';
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { test } from 'node:test';
 import { checkSecurity, loadConfig, SECURITY_RULES, submitTask, TaskStore, TrustStore } from '@foker/engine';
+import { test } from 'vitest';
 
 const SHA = `sha512-${Buffer.alloc(64, 2).toString('base64')}`;
 

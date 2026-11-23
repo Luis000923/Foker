@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import { test } from 'node:test';
 import { redact, redactableEnv } from '@foker/policy';
+import { test } from 'vitest';
 
 test('un valor corto no se redacta dentro de otra palabra', () => {
   const env = { TOOL_MODE: 'code', PORT_X: '1000' };

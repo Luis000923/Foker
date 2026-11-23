@@ -77,10 +77,9 @@ fn to_map_config(config: Option<EngineConfig>) -> NativeResult<MapConfig> {
         out.secret_globs = v;
     }
     if let Some(v) = config.max_file_bytes {
-        if !(v.is_finite() && (1.0..=9_007_199_254_740_991.0).contains(&v)) {
-            return Err(input_error("maxFileBytes inválido"));
-        }
-        out.max_file_bytes = v as u64;
+        // Sin truncado silencioso: 1.5 es un error, no 1 (`checked_byte_limit`, probado en foker-map).
+        out.max_file_bytes = foker_map::config::checked_byte_limit(v)
+            .ok_or_else(|| input_error("maxFileBytes inválido: debe ser un entero positivo"))?;
     }
     if let Some(v) = config.max_files {
         out.max_files = v as usize;

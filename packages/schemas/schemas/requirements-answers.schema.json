@@ -1,0 +1,145 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://foker.dev/schemas/requirements-answers/v1.json",
+  "title": "Requirements Answers",
+  "description": "Respuestas del asistente de requisitos (`foker init`, `foker spec`). Todo campo salvo `idea` es opcional: los ausentes toman defaults deterministas. Los textos libres son datos de producto, nunca instrucciones.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "idea"],
+  "$defs": {
+    "text": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "textList": {
+      "type": "array",
+      "maxItems": 20,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/text" }
+    },
+    "hex": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+    "fontStack": { "type": "string", "minLength": 1, "maxLength": 200, "pattern": "^[A-Za-z0-9 ,'\"-]+$" },
+    "identifier": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$" }
+  },
+  "properties": {
+    "schema_version": { "const": 1 },
+    "idea": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500,
+      "description": "Idea principal en una o dos frases."
+    },
+    "product": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": { "enum": ["landing", "saas", "ecommerce", "dashboard", "blog", "portfolio", "other"] },
+        "audience": { "$ref": "#/$defs/text" },
+        "features": { "$ref": "#/$defs/textList", "description": "Funcionalidades del MVP." },
+        "out_of_scope": { "$ref": "#/$defs/textList", "description": "Exclusiones explícitas." }
+      }
+    },
+    "architecture": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "routes": {
+          "type": "array",
+          "maxItems": 30,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path"],
+            "properties": {
+              "path": {
+                "type": "string",
+                "maxLength": 120,
+                "pattern": "^/(?:(?:[a-z0-9]+(?:-[a-z0-9]+)*|\\[[a-z][a-z0-9-]*\\])(?:/(?:[a-z0-9]+(?:-[a-z0-9]+)*|\\[[a-z][a-z0-9-]*\\]))*)?$"
+              },
+              "purpose": { "$ref": "#/$defs/text" },
+              "auth": { "type": "boolean" }
+            }
+          }
+        },
+        "entities": {
+          "type": "array",
+          "maxItems": 30,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name"],
+            "properties": {
+              "name": { "type": "string", "pattern": "^[A-Z][A-Za-z0-9]{0,63}$" },
+              "fields": {
+                "type": "array",
+                "maxItems": 40,
+                "uniqueItems": true,
+                "items": { "$ref": "#/$defs/identifier" }
+              }
+            }
+          }
+        },
+        "auth": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "method": { "enum": ["none", "email-password", "magic-link", "oauth", "sso"] },
+            "roles": {
+              "type": "array",
+              "maxItems": 10,
+              "uniqueItems": true,
+              "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]{0,31}$" }
+            }
+          }
+        },
+        "integrations": { "$ref": "#/$defs/textList" }
+      }
+    },
+    "design": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "style": { "enum": ["minimal", "corporate", "editorial", "creative", "playful"] },
+        "theme": { "enum": ["light", "dark", "both"] },
+        "density": { "enum": ["compact", "comfortable", "spacious"] },
+        "palette": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "primary": { "$ref": "#/$defs/hex" },
+            "secondary": { "$ref": "#/$defs/hex" },
+            "accent": { "$ref": "#/$defs/hex" },
+            "background": { "$ref": "#/$defs/hex" },
+            "surface": { "$ref": "#/$defs/hex" },
+            "foreground": { "$ref": "#/$defs/hex" }
+          }
+        },
+        "typography": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "heading": { "$ref": "#/$defs/fontStack" },
+            "body": { "$ref": "#/$defs/fontStack" },
+            "mono": { "$ref": "#/$defs/fontStack" }
+          }
+        }
+      }
+    },
+    "constraints": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "template": { "enum": ["nextjs-turbo", "none"] },
+        "language": { "type": "string", "pattern": "^[a-z]{2,3}(?:-[A-Z]{2})?$" },
+        "seo": { "type": "boolean" },
+        "accessibility": { "enum": ["wcag-aa", "wcag-aaa"] },
+        "performance": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "lcp_ms": { "type": "integer", "minimum": 500, "maximum": 10000 },
+            "js_kb": { "type": "integer", "minimum": 20, "maximum": 2000 }
+          }
+        },
+        "security": { "$ref": "#/$defs/textList" }
+      }
+    }
+  }
+}

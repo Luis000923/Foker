@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { test } from 'node:test';
 import {
   auditDependencies,
   checkDependencies,
@@ -16,6 +15,7 @@ import {
   unsafeSpec,
 } from '@foker/policy';
 import { validateDependencyReport } from '@foker/schemas';
+import { test } from 'vitest';
 
 const SHA = `sha512-${Buffer.alloc(64, 1).toString('base64')}`;
 const NOW = Date.parse('2026-11-23T12:00:00Z');

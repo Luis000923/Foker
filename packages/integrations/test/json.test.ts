@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import { test } from 'node:test';
 import { formatJson } from '@foker/integrations';
+import { test } from 'vitest';
 
 test('arrays de primitivos en línea si caben; objetos expandidos', () => {
   const text = formatJson({ mcpServers: { foker: { command: 'npx', args: ['--no-install', 'foker', 'mcp'] } } });

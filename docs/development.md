@@ -76,5 +76,5 @@ Reglas del crate `foker-napi`:
 - Las funciones `#[napi]` escriben `napi::Result<T, FokerCode>` de forma literal; la macro no expande alias.
 
 Las demás plataformas se compilan en CI (`release.yml`): Linux con `--use-napi-cross` (glibc ≥ 2.17),
-macOS y Windows en sus runners. `node scripts/smoke-native.mjs <target> <dir>` empaqueta `@foker/core`
+macOS y Windows (x64 y ARM64) en sus runners. Windows ARM64 se compila y se prueba, pero no se publica en la beta (ADR-014): por eso `PLATFORMS` en `scripts/native-pack.mjs` solo lista las plataformas publicadas y `BUILD_PLATFORMS` añade las que solo se compilan. `node scripts/smoke-native.mjs <target> <dir>` empaqueta `@foker/core`
 y su paquete de plataforma con `npm pack`, los instala en un directorio limpio y ejecuta `versionInfo()`.

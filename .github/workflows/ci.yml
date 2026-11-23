@@ -108,3 +108,8 @@ jobs:
       # T11/T12: reglas deterministas FKR-DEP-001..008 sobre el propio repo, en cada sistema operativo.
       - name: Seguridad de dependencias de terceros (foker check-deps --offline)
         run: node packages/cli/dist/bin.js check-deps --offline
+      # Un comando por paso: sin `&&` ni sintaxis de shell, igual en bash y en PowerShell.
+      - name: Tests de Rust
+        run: pnpm test:rust
+      - name: Tests de TypeScript
+        run: pnpm test:ts

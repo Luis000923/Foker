@@ -44,6 +44,10 @@ Decisiones de implementación que la especificación no fija:
   status y diff de HEAD, pero la comparación de hashes del árbol decide el cambio real.
   Sin HEAD (incluido un repo git vacío) `git_head` es null. Un fallo de git en begin usa
   el recorrido completo; en submit se conserva el modo del baseline.
+- **Sin `git` en el PATH** (p. ej. Windows sin Git instalado) Foker no falla: `gitRead` devuelve `null`
+  y la CLI (`warnings`, código `FKR-MAP-001`) y el servidor MCP (`_meta.diagnostics`) muestran un aviso;
+  los gates usan instantáneas de hashes. Timeout, `maxBuffer` y un directorio de trabajo inexistente sí
+  fallan con `FKR-MAP-001`. Salida 1 o 128 de Git (no es repositorio) sigue siendo `null` sin aviso.
 - El recorrido TS excluye node_modules, .git y .foker; no sigue enlaces simbólicos. Límite de
   50.000 archivos (FKR-MAP-003); los hashes binarios delegan en `@foker/core.hashBytes` → Rust
   BLAKE3.

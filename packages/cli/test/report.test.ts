@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import { test } from 'node:test';
 import { formatValidation, usefulTail } from '@foker/cli';
+import { test } from 'vitest';
 
 const check = (over: Record<string, unknown>) => ({
   check: 'lint',

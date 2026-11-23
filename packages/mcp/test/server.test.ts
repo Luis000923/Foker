@@ -3,9 +3,9 @@ import { type ChildProcess, execFileSync, spawn } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { after, before, test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { ajv } from '@foker/schemas';
+import { afterAll as after, beforeAll as before, test } from 'vitest';
 
 // El servidor se prueba tal como lo arranca el anfitrión: `foker mcp` sobre stdio.
 const bin = fileURLToPath(new URL('../../cli/dist/bin.js', import.meta.url));

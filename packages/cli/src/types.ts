@@ -13,6 +13,8 @@ export interface Message {
 export interface Context {
   env: NodeJS.ProcessEnv;
   confirm?: (message: string) => Promise<boolean>;
+  /** Pregunta con respuesta libre (solo TTY). Rechaza con FKR-INP-001 si el usuario interrumpe (Ctrl+C/EOF). */
+  prompt?: (message: string) => Promise<string>;
   trustBaseDir?: string;
   /** Lee stdin completo (hooks de anfitriones). */
   stdin?: () => Promise<string>;

@@ -10,6 +10,12 @@
       "@foker/*": ["./packages/*/src/index.ts"]
     }
   },
-  "include": ["packages/*/src/**/*.ts", "packages/*/test/**/*.ts", "scripts/**/*.ts", "scripts/**/*.mjs"],
+  "include": [
+    "packages/*/src/**/*.ts",
+    "packages/*/test/**/*.ts",
+    "scripts/**/*.ts",
+    "scripts/**/*.mjs",
+    "vitest.config.ts"
+  ],
   "exclude": ["**/node_modules/**", "**/dist/**"]
 }

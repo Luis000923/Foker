@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import { test } from 'node:test';
 import { ajv, mcpTools, mcpWireTools, wireSchema } from '@foker/schemas';
+import { test } from 'vitest';
 
 const tok = (value: unknown) => Math.ceil((Buffer.byteLength(JSON.stringify(value)) * 5) / 16);
 

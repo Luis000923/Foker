@@ -27,6 +27,7 @@ const files = {
   'benchmark-manifest': 'benchmark-manifest.schema.json',
   'mcp-tools': 'mcp-tools.json',
   'dependency-security': 'dependency-security.schema.json',
+  'requirements-answers': 'requirements-answers.schema.json',
 };
 
 /** Nombres TypeScript de cada documento y de los $defs que chocarían con globales (File, Symbol, Event…). */
@@ -68,6 +69,7 @@ const TYPE_NAMES = {
     ruleId: 'DependencyRuleId',
     summary: 'DependencyAuditSummary',
   },
+  'requirements-answers': { '': 'RequirementsAnswers' },
 };
 
 const pascal = (/** @type {string} */ key) => key.replace(/(^|[-_])([a-z])/g, (_, __, c) => c.toUpperCase());
@@ -130,6 +132,7 @@ const root = {
     benchmarkManifest: ref('benchmark-manifest'),
     dependencyAuditReport: ref('dependency-security'),
     dependencyWaivers: ref('dependency-security', '#/$defs/waivers'),
+    requirementsAnswers: ref('requirements-answers'),
     ...Object.fromEntries(
       mcp.tools.flatMap((/** @type {{name: string}} */ tool, /** @type {number} */ i) => [
         [`${tool.name}_input`, ref('mcp-tools', `#/tools/${i}/inputSchema`)],

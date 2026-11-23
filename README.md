@@ -56,7 +56,7 @@ flujo completo y [Agentes](docs/agents.md) para las instrucciones que debe segui
 Foker funciona en **macOS** (Intel y Apple Silicon), **Linux** (x64 y ARM64, glibc) y **Windows**
 (x64). El núcleo nativo llega como un paquete por plataforma (`@foker/core-<plataforma>`) instalado
 como `optionalDependencies`: cada sistema descarga solo el suyo y nada se descarga en tiempo de
-ejecución. Alpine (musl), FreeBSD y Windows ARM64 no tienen binario en la beta; ahí `@foker/core`
+ejecución. Alpine (musl), FreeBSD y Windows ARM64 no tienen binario publicado en la beta (Windows ARM64 se compila y se prueba en CI, pero aún no se publica); ahí `@foker/core`
 lanza `FKR-INT-003` y se puede compilar desde el código fuente (`pnpm build:native`, requiere Rust).
 
 ## Instalación
@@ -93,6 +93,12 @@ npx foker doctor                        # diagnóstico final
 `--targets` acepta `claude-code`, `opencode`, `antigravity` y `codex`, separados por comas; sin él usa los
 detectados. Tras `init`, abre el proyecto en el agente: este llama a Foker por MCP (`foker mcp`) y por los
 archivos generados. Si cambias la configuración, ejecuta `npx foker sync`.
+
+`init` abre después un asistente corto (4 bloques, Enter acepta los defaults) que genera
+`REQUIREMENTS.md` con rutas, modelo de datos, Design Tokens con contraste WCAG AA y un backlog listo
+para `foker task begin`. En CI o sin TTY no pregunta: pasa `--answers respuestas.json` o lo omite con un
+aviso; `--skip-spec` lo desactiva. Para un repo ya inicializado: `npx foker spec`. Detalle:
+[asistente de requisitos](docs/requirements.md).
 
 Para un proyecto nuevo con la plantilla `nextjs-turbo`:
 
@@ -133,6 +139,7 @@ los archivos que genera `foker sync`.
 | Comando | Función |
 |---|---|
 | `foker init` | Inicializa Foker en un repo o crea uno desde la plantilla `nextjs-turbo` |
+| `foker spec` | Asistente de requisitos: `REQUIREMENTS.md`, respuestas y Design Tokens |
 | `foker map` | Construye o refresca el Project Map |
 | `foker context "<tarea>"` | Construye un Context Pack |
 | `foker mcp` | Arranca el servidor MCP stdio |
@@ -155,7 +162,7 @@ Detalle completo: [referencia CLI](docs/cli.md).
 - [Agentes](docs/agents.md), [tareas](docs/tasks.md) y [skills](docs/skills.md)
 - [MCP](docs/mcp.md)
 - [Integraciones](docs/integrations/README.md)
-- [Plantilla nextjs-turbo](docs/templates.md)
+- [Plantilla nextjs-turbo](docs/templates.md) y [asistente de requisitos](docs/requirements.md)
 - [Seguridad](docs/security.md), [hallazgos y secretos](docs/findings-secrets.md) y [divulgación](SECURITY.md)
 - [Decisiones de arquitectura (ADR)](docs/adr/README.md)
 - [Contribuir](CONTRIBUTING.md) y [desarrollo](docs/development.md)

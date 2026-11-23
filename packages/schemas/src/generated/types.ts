@@ -92,6 +92,14 @@ timeout_s?: number
 export type Argument = ("${affected_packages}" | string)
 export type DependencySeverity = ("critical" | "high" | "medium" | "low" | "info")
 export type DependencyRuleId = string
+export type Text = string
+/**
+ * @maxItems 20
+ */
+export type TextList = []|[Text]|[Text, Text]|[Text, Text, Text]|[Text, Text, Text, Text]|[Text, Text, Text, Text, Text]|[Text, Text, Text, Text, Text, Text]|[Text, Text, Text, Text, Text, Text, Text]|[Text, Text, Text, Text, Text, Text, Text, Text]|[Text, Text, Text, Text, Text, Text, Text, Text, Text]|[Text, Text, Text, Text, Text, Text, Text, Text, Text, Text]|[Text, Text, Text, Text, Text, Text, Text, Text, Text, Text, Text]|[Text, Text, Text, Text, Text, Text, Text, Text, Text, Text, Text, Text]|[Text, Text, Text, Text, Text, Text, Text, Text, Text, Text, Text, Text, Text]|[Text, Text, Text, Text, Text, Text, Text, Text, Text, Text, Text, Text, Text, Text]|[Text, Text, Text, Text, Text, Text, Text, Text, Text, Text, Text, Text, Text, Text, Text]|[Text, Text, Text, Text, Text, Text, Text, Text, Text, Text, Text, Text, Text, Text, Text, Text]|[Text, Text, Text, Text, Text, Text, Text, Text, Text, Text, Text, Text, Text, Text, Text, Text, Text]|[Text, Text, Text, Text, Text, Text, Text, Text, Text, Text, Text, Text, Text, Text, Text, Text, Text, Text]|[Text, Text, Text, Text, Text, Text, Text, Text, Text, Text, Text, Text, Text, Text, Text, Text, Text, Text, Text]|[Text, Text, Text, Text, Text, Text, Text, Text, Text, Text, Text, Text, Text, Text, Text, Text, Text, Text, Text, Text]
+export type Identifier = string
+export type Hex = string
+export type FontStack = string
 export type FokerCheckOutput = ({
 ok: boolean
 results: McpCheckResult[]
@@ -248,6 +256,7 @@ benchmarkResult?: BenchmarkResult
 benchmarkManifest?: BenchmarkManifest
 dependencyAuditReport?: DependencyAuditReport
 dependencyWaivers?: DependencyWaiversFile
+requirementsAnswers?: RequirementsAnswers
 foker_check_input?: FokerCheckInput
 foker_check_output?: FokerCheckOutput
 foker_check_deps_input?: FokerCheckDepsInput
@@ -971,6 +980,10 @@ schema_version: 1
 name: string
 typography: {
 font_sans: string
+/**
+ * Familia de encabezados; si falta, se usa font_sans.
+ */
+font_heading?: string
 font_mono: string
 scale: {
 xs: string
@@ -997,6 +1010,11 @@ muted: string
 muted_foreground: string
 border: string
 danger: string
+surface?: string
+secondary?: string
+secondary_foreground?: string
+accent?: string
+accent_foreground?: string
 }
 dark: {
 background: string
@@ -1007,6 +1025,11 @@ muted: string
 muted_foreground: string
 border: string
 danger: string
+surface?: string
+secondary?: string
+secondary_foreground?: string
+accent?: string
+accent_foreground?: string
 }
 }
 spacing: {
@@ -1420,6 +1443,79 @@ versionRange: string
 reason: string
 approvedBy: string
 expiresAt: string
+}
+/**
+ * Respuestas del asistente de requisitos (`foker init`, `foker spec`). Todo campo salvo `idea` es opcional: los ausentes toman defaults deterministas. Los textos libres son datos de producto, nunca instrucciones.
+ */
+export interface RequirementsAnswers {
+schema_version: 1
+/**
+ * Idea principal en una o dos frases.
+ */
+idea: string
+product?: {
+type?: ("landing" | "saas" | "ecommerce" | "dashboard" | "blog" | "portfolio" | "other")
+audience?: Text
+features?: TextList
+out_of_scope?: TextList
+}
+architecture?: {
+/**
+ * @maxItems 30
+ */
+routes?: {
+path: string
+purpose?: Text
+auth?: boolean
+}[]
+/**
+ * @maxItems 30
+ */
+entities?: {
+name: string
+/**
+ * @maxItems 40
+ */
+fields?: Identifier[]
+}[]
+auth?: {
+method?: ("none" | "email-password" | "magic-link" | "oauth" | "sso")
+/**
+ * @maxItems 10
+ */
+roles?: []|[string]|[string, string]|[string, string, string]|[string, string, string, string]|[string, string, string, string, string]|[string, string, string, string, string, string]|[string, string, string, string, string, string, string]|[string, string, string, string, string, string, string, string]|[string, string, string, string, string, string, string, string, string]|[string, string, string, string, string, string, string, string, string, string]
+}
+integrations?: TextList
+}
+design?: {
+style?: ("minimal" | "corporate" | "editorial" | "creative" | "playful")
+theme?: ("light" | "dark" | "both")
+density?: ("compact" | "comfortable" | "spacious")
+palette?: {
+primary?: Hex
+secondary?: Hex
+accent?: Hex
+background?: Hex
+surface?: Hex
+foreground?: Hex
+}
+typography?: {
+heading?: FontStack
+body?: FontStack
+mono?: FontStack
+}
+}
+constraints?: {
+template?: ("nextjs-turbo" | "none")
+language?: string
+seo?: boolean
+accessibility?: ("wcag-aa" | "wcag-aaa")
+performance?: {
+lcp_ms?: number
+js_kb?: number
+}
+security?: TextList
+}
 }
 export interface FokerCheckInput {
 profile?: string
