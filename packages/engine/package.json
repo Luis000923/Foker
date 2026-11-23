@@ -2,8 +2,22 @@
   "name": "@foker/engine",
   "version": "0.1.2",
   "description": "Foker engine: configuration, tasks, gates, validation, skills, audit, and deterministic Caveman payload compression.",
+  "keywords": [
+    "foker",
+    "ai-agents",
+    "ai-coding",
+    "mcp",
+    "context-engineering",
+    "validation",
+    "typescript",
+    "monorepo"
+  ],
   "license": "Apache-2.0",
   "author": "Luis (@Luis000923)",
+  "homepage": "https://foker.pdsx.org/",
+  "bugs": {
+    "url": "https://github.com/Luis000923/Foker/issues"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Luis000923/Foker.git",

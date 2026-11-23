@@ -3,6 +3,7 @@
 Foker aporta contexto y validación; el bucle LLM pertenece al anfitrión. Necesita Node ≥ 22.14
 y el addon nativo de la plataforma. Ninguna clave API de IA es obligatoria: usa la sesión
 de tu suscripción del anfitrión (Claude Code, Codex/ChatGPT o Antigravity). Foker no llama a LLMs.
+Web del proyecto: [foker.pdsx.org](https://foker.pdsx.org/).
 
 ## Instalación
 

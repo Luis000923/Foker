@@ -8,6 +8,12 @@ Foker es infraestructura determinista para que agentes de IA (Claude Code, OpenC
 Antigravity, Codex u otro cliente MCP) desarrollen software en monorepos TypeScript con menos
 contexto y más seguridad.
 
+Web del proyecto: [foker.pdsx.org](https://foker.pdsx.org/).
+
+> **EN:** Foker is deterministic infrastructure for AI coding agents: AST project maps, minimal
+> context packs, an MCP server, Skills and automatic validation gates (security, secrets and
+> third-party dependencies) for TypeScript monorepos. Website: <https://foker.pdsx.org/>.
+
 > **Estado**: beta `0.1.2`, publicada en npm como [`@foker/cli`](https://www.npmjs.com/package/@foker/cli)
 > (el comando se llama `foker`). Las cifras de ahorro de tokens aún no están medidas con un
 > benchmark; no las des por ciertas.
