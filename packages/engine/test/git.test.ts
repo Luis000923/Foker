@@ -97,7 +97,8 @@ describe('gitRead', () => {
         expect((failure as FokerError).message).toContain('timeout de 300 ms');
         expect(drainGitWarnings()).toEqual([]);
       } finally {
-        await rm(repo, { recursive: true, force: true });
+        // En Windows el git matado por el timeout puede retener su cwd un instante (EBUSY): se reintenta.
+        await rm(repo, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
       }
     });
   });
