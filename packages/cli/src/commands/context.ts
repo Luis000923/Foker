@@ -27,6 +27,7 @@ export const contextCommand: Command = {
     const anchors = ctx.flags['anchor'] as string[];
     const skill = ctx.flags['skill'] ? String(ctx.flags['skill']) : (record?.skill ?? undefined);
     const inputs = await gatherContextInputs(ctx.cwd, {
+      task,
       ...(skill ? { skill } : {}),
       ...(ctx.flags['config'] ? { configPath: String(ctx.flags['config']) } : {}),
     });

@@ -7,6 +7,6 @@ export const checkSecurityCommand: Command = {
   maxArgs: 0,
   flags: [],
   async run(ctx) {
-    return validateCommand.run({ ...ctx, flags: { ...ctx.flags, profile: 'security' } });
+    return validateCommand.run({ ...ctx, flags: { ...ctx.flags, profile: 'security', label: 'check-security' } });
   },
 };

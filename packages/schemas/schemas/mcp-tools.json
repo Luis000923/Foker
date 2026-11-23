@@ -78,7 +78,7 @@
     {
       "name": "foker_context",
       "title": "Contexto para una tarea",
-      "description": "Pack de reglas, skill, dependencias y código objetivo. Usa anclas conocidas; explain=true añade razones. No releas objetivos salvo aviso de omisión.",
+      "description": "Pack de reglas, skill, dependencias y código objetivo. Usa anclas conocidas; explain=true añade razones. No releas objetivos salvo aviso de omisión. Con task_id, lo ya entregado llega como unchanged; full=true lo reenvía.",
       "inputSchema": {
         "title": "FokerContextInput",
         "type": "object",
@@ -114,6 +114,11 @@
             "default": true
           },
           "explain": {
+            "type": "boolean",
+            "default": false
+          },
+          "full": {
+            "description": "Con task_id, reenvía también lo ya entregado en esta conexión (desactiva el contexto diferencial).",
             "type": "boolean",
             "default": false
           }
@@ -903,6 +908,11 @@
         },
         "diagnostics": {
           "$ref": "#/$defs/diagnostics"
+        },
+        "unchanged_files": {
+          "description": "Entradas enviadas como referencia porque ya se entregaron idénticas en esta tarea.",
+          "type": "integer",
+          "minimum": 1
         }
       }
     },

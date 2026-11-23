@@ -6,6 +6,7 @@ export { claudeCode, claudeDenyRules } from './adapters/claude-code.js';
 export { codex } from './adapters/codex.js';
 export { opencode } from './adapters/opencode.js';
 export { agentsBlock, MCP_ARGS } from './content.js';
+export { formatJson } from './json.js';
 export { findBlock, removeBlock, upsertBlock } from './markdown.js';
 export { loadRoles, parseRole } from './roles.js';
 export {

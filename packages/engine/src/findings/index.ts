@@ -154,7 +154,39 @@ export function parseFindings(
             hasFrame = true;
           }
         }
-      } else if (/error/i.test(s) && findings.length < 50) add(s, 'generic/error');
+      } else {
+        // tsc sin parser declarado (p. ej. `typecheck` genérico): formato inequívoco con ubicación.
+        const tsc = s.match(/^(.+?)(?:\((\d+),(\d+)\):|:(\d+):(\d+)\s+-)\s*(error|warning)\s+(TS\d+):\s*(.+)$/);
+        if (tsc) {
+          add(
+            tsc[8] ?? '',
+            `tsc/${tsc[7]}`,
+            tsc[1],
+            Number(tsc[2] ?? tsc[4]),
+            Number(tsc[3] ?? tsc[5]),
+            tsc[6] as Finding['severity'],
+            tsc[7],
+          );
+          continue;
+        }
+        // Biome: `ruta[:línea:col] categoría ━━━` y, más abajo, `× mensaje` o `! mensaje`.
+        const biome = s.match(/^(\S+?)(?::(\d+):(\d+))?\s+(lint\/\S+|format|assist\/\S+|parse)(?:\s|$)/);
+        if (biome && /━/.test(s)) {
+          add(biome[4] ?? '', `biome/${biome[4]}`, biome[1], Number(biome[2]), Number(biome[3]));
+          pending = findings.at(-1);
+          hasFrame = false;
+          continue;
+        }
+        const detail = s.match(/^[×!]\s+(.+)$/);
+        if (detail && pending && !hasFrame) {
+          pending.message = detail[1] ?? pending.message;
+          hasFrame = true;
+          continue;
+        }
+        // Resúmenes del reporter: repiten lo ya contado y no son accionables.
+        if (/^(?:Found \d+ (?:errors?|warnings?)|× Some errors were emitted|Checked \d+ files?)/.test(s)) continue;
+        if (/error/i.test(s) && findings.length < 50) add(s, 'generic/error');
+      }
     }
   }
   findings.sort(

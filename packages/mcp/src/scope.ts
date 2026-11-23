@@ -9,6 +9,13 @@ export function scopeSuggestions(project: ProjectMap, protectedPaths: string[], 
     ...project.project.packages.map((pkg) => (pkg.path === '.' ? '**' : `${pkg.path}/**`)).sort(compare),
   ];
   return [...new Set(candidates)]
-    .filter((scope) => !protectedPathsInScope([scope], protectedPaths, Object.keys(project.files)).length)
+    .filter(
+      (scope) =>
+        !protectedPathsInScope(
+          [scope],
+          protectedPaths,
+          project.files.map((f) => f.id),
+        ).length,
+    )
     .slice(0, 5);
 }

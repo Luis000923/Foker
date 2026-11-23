@@ -112,6 +112,8 @@ pub struct MapEngine {
     state: Option<MapState>,
     fingerprint: Fingerprint,
     stale_files: usize,
+    /// `content_hash` del mapa en disco (cargado o guardado por este motor).
+    persisted_hash: Option<String>,
     /// Avisos de carga (p. ej. `FKR-MAP-005` si el mapa estaba corrupto).
     pub load_diagnostics: Vec<MapDiagnostic>,
 }
@@ -153,7 +155,9 @@ impl MapEngine {
                 None
             }
         };
+        let persisted_hash = map.as_ref().map(|m: &ProjectMap| m.content_hash.clone());
         Ok(MapEngine {
+            persisted_hash,
             cache: load_parse_cache(&root),
             root,
             config,
@@ -268,9 +272,11 @@ impl MapEngine {
             removed,
             diagnostics,
             duration_ms: elapsed_ms(started),
+            unchanged: previous
+                .as_ref()
+                .is_some_and(|m| m.content_hash == content_hash),
             content_hash,
             rebuilt,
-            unchanged: false,
         })
     }
 
@@ -331,15 +337,42 @@ impl MapEngine {
             path: crate::store::MAP_FILE.into(),
             message: "no hay mapa: ejecuta refresh antes de save".into(),
         })?;
+        // Sin cambios respecto al disco no se reescribe el mapa ni la caché limpia (REQ-MAP-003).
+        let on_disk = std::fs::metadata(self.root.join(crate::store::MAP_FILE))
+            .ok()
+            .filter(|meta| meta.is_file())
+            .map(|meta| meta.len());
+        if let Some(bytes) = on_disk
+            && self.persisted_hash.as_deref() == Some(map.content_hash.as_str())
+            && !self.cache.dirty
+        {
+            return Ok(SaveReport {
+                path: crate::store::MAP_FILE.to_owned(),
+                bytes,
+                content_hash: map.content_hash,
+            });
+        }
         let mut lock = MapLock::open(&self.root)?;
         let cache = &self.cache;
         let root = &self.root;
+        let skip_map =
+            on_disk.is_some() && self.persisted_hash.as_deref() == Some(map.content_hash.as_str());
         let report = lock.with_exclusive(crate::store::LOCK_TIMEOUT, || {
-            let report = save_map(root, &map);
+            let report = if skip_map {
+                Ok(SaveReport {
+                    path: crate::store::MAP_FILE.to_owned(),
+                    bytes: on_disk.unwrap_or_default(),
+                    content_hash: map.content_hash.clone(),
+                })
+            } else {
+                save_map(root, &map)
+            };
             // La caché solo acelera; un fallo al guardarla no invalida el mapa.
             let _ = save_parse_cache(root, cache);
             report
         })??;
+        self.persisted_hash = Some(report.content_hash.clone());
+        self.cache.dirty = false;
         Ok(report)
     }
 }

@@ -42,7 +42,7 @@ pub struct CachedParse {
 
 /// Caché de parseo por id de archivo. Es una función pura del contenido: reutilizarla no puede
 /// cambiar el resultado (REQ-MAP-001).
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ParseCache {
     /// Versión del extractor que produjo las entradas.
     pub extractor_version: u32,
@@ -50,7 +50,19 @@ pub struct ParseCache {
     pub grammars: BTreeMap<String, String>,
     /// Entradas.
     pub entries: BTreeMap<String, CachedParse>,
+    /// `true` si el último build cambió alguna entrada; no se serializa ni participa en `==`.
+    #[serde(skip)]
+    pub dirty: bool,
 }
+
+impl PartialEq for ParseCache {
+    fn eq(&self, other: &Self) -> bool {
+        self.extractor_version == other.extractor_version
+            && self.grammars == other.grammars
+            && self.entries == other.entries
+    }
+}
+impl Eq for ParseCache {}
 
 impl Default for ParseCache {
     fn default() -> Self {
@@ -65,6 +77,7 @@ impl ParseCache {
             extractor_version: EXTRACTOR_VERSION,
             grammars: grammar_versions(),
             entries: BTreeMap::new(),
+            dirty: true,
         }
     }
 
@@ -430,6 +443,8 @@ pub fn build(
         parsed.insert(candidate.id.clone(), entry.parsed.clone());
         entries.insert(candidate.id.clone(), entry);
     }
+    // Solo hay que persistir la caché si alguna entrada cambió (contenido, tamaño o mtime).
+    cache.dirty |= entries != cache.entries;
     cache.entries = entries;
 
     // Resolución en paralelo por archivo.

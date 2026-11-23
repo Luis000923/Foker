@@ -1,6 +1,5 @@
 import { resolve } from 'node:path';
 import { FokerError } from '@foker/engine';
-import { runStdio } from '@foker/mcp';
 import { type Command, flag } from '../types.js';
 
 export const mcpCommand: Command = {
@@ -9,6 +8,8 @@ export const mcpCommand: Command = {
   maxArgs: 0,
   flags: [flag('root', 'string', 'Raíz')],
   async run(ctx) {
+    // Import perezoso: el servidor MCP (SDK y validadores Ajv) solo se carga para `foker mcp`.
+    const { runStdio } = await import('@foker/mcp');
     try {
       await runStdio({
         root: resolve(ctx.cwd, String(ctx.flags['root'] || '.')),

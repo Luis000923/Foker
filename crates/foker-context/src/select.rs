@@ -43,8 +43,9 @@ fn render_candidate(
     level: RenderLevel,
     note: Option<String>,
     explain: bool,
+    only: Option<&BTreeSet<String>>,
 ) -> Result<RenderedFile, ContextError> {
-    let body = render::file_body_indexed(index, root, &candidate.id, level)?;
+    let body = render::file_body_only(index, root, &candidate.id, level, only)?;
     let mut file = PackFile {
         id: candidate.id.clone(),
         level,
@@ -52,6 +53,8 @@ fn render_candidate(
         score: candidate.score,
         reasons: candidate.reasons.clone(),
         note,
+        hash: String::new(),
+        unchanged: false,
     };
     let text = render::file(&file, &body, explain);
     file.tokens = estimate_tokens(&text);
@@ -72,6 +75,8 @@ fn render_complete_l2(
         score: candidate.score,
         reasons: candidate.reasons.clone(),
         note: None,
+        hash: String::new(),
+        unchanged: false,
     };
     let text = render::file(&file, &body, explain);
     file.tokens = estimate_tokens(&text);
@@ -104,6 +109,8 @@ fn focal_candidate(
             view.symbols.len(),
             view.omitted_lines
         )),
+        hash: String::new(),
+        unchanged: false,
     };
     let text = render::file(&file, &view.body, explain);
     file.tokens = estimate_tokens(&text);
@@ -144,6 +151,8 @@ fn related_focal_candidate(
         score: candidate.score,
         reasons: candidate.reasons.clone(),
         note: None,
+        hash: String::new(),
+        unchanged: false,
     };
     let text = render::file(&file, &body, request.explain);
     file.tokens = estimate_tokens(&text);
@@ -166,6 +175,7 @@ fn section(id: &str, files: &[RenderedFile]) -> SectionText {
     )
 }
 /// Reserva todas las anclas a L1 antes de subir niveles; corta la cola por suficiencia.
+#[allow(clippy::too_many_arguments)]
 pub fn select(
     state: &MapState,
     root: &Path,
@@ -174,6 +184,7 @@ pub fn select(
     request: &crate::NormalizedRequest,
     core_files: usize,
     params: &crate::ContextParams,
+    delivered: &BTreeMap<String, String>,
 ) -> Result<Selection, ContextError> {
     let budget = request.budget_tokens;
     let explain = request.explain;
@@ -189,8 +200,24 @@ pub fn select(
         .map(|s| (s.section.id.clone(), s.section.tokens))
         .collect();
     let fixed_cost = breakdown.iter().map(|(_, cost)| cost).sum::<usize>();
+    // Símbolos que usan las anclas: las firmas de una dependencia se limitan a ese contrato.
+    let anchor_ids: BTreeSet<&str> = ranked
+        .iter()
+        .filter(|c| c.anchor)
+        .map(|c| c.id.as_str())
+        .collect();
+    let used: BTreeSet<String> = state
+        .map
+        .edges
+        .iter()
+        .filter(|e| {
+            e.kind == foker_map::model::EdgeKind::UsesSymbol && anchor_ids.contains(e.from.as_str())
+        })
+        .map(|e| e.to.clone())
+        .collect();
     let render = |candidate: &Candidate, level, note| {
-        render_candidate(&index, root, candidate, level, note, explain)
+        let only = (!candidate.anchor && !used.is_empty()).then_some(&used);
+        render_candidate(&index, root, candidate, level, note, explain, only)
     };
     let mut targets = Vec::new();
     let mut symbols_by_file: Option<BTreeMap<&str, Vec<&foker_map::model::MapSymbol>>> = None;
@@ -275,18 +302,48 @@ pub fn select(
     let mut included: BTreeSet<_> = targets.iter().map(|p| p.0.id.clone()).collect();
     let maximum = ranked.first().map_or(0.0, |c| c.score);
     let best_optional = ranked.iter().find(|c| !c.anchor).map_or(0.0, |c| c.score);
-    let sufficient = |c: &Candidate| {
+    // Prioridad ancla > vecinos directos > ranking: un vecino directo (dependencia, dependiente
+    // o test de un ancla) solo cede ante el presupuesto; el resto exige related_min_relative.
+    let neighbor = |c: &Candidate| {
+        c.reasons.iter().any(|reason| {
+            ["DEPENDENCY_OF:", "DEPENDENT_OF:", "TEST_OF:"]
+                .iter()
+                .any(|prefix| {
+                    reason
+                        .strip_prefix(prefix)
+                        .is_some_and(|id| anchor_ids.contains(id))
+                })
+        })
+    };
+    let base_sufficient = |c: &Candidate| {
         !below_relevance(c.score, maximum, params.relevance_fraction)
             && !below_relevance(c.score, best_optional, params.sufficiency_fraction)
     };
+    let relevant = |c: &Candidate| {
+        neighbor(c) || !below_relevance(c.score, best_optional, params.related_min_relative)
+    };
+    let sufficient = |c: &Candidate| base_sufficient(c) && relevant(c);
+    // Franquicia: mientras related cueste menos que esta fracción, el corte relativo no poda
+    // (un proyecto pequeño cabe entero sin perder contexto barato).
+    let free_tokens = (budget as f64 * params.related_free_fraction).floor() as usize;
     let per_file_limit = if params.related_max_fraction > 0.0 {
         (budget as f64 * params.related_max_fraction).floor() as usize
     } else {
         usize::MAX
     };
     let mut accepted_count = 0;
-    for candidate in ranked.iter().filter(|c| !c.anchor) {
-        if !sufficient(candidate) || accepted_count >= related_limit {
+    // Orden estable: vecinos directos primero (por score), después el resto del ranking.
+    let ordered: Vec<&Candidate> = ranked
+        .iter()
+        .filter(|c| !c.anchor && neighbor(c))
+        .chain(ranked.iter().filter(|c| !c.anchor && !neighbor(c)))
+        .collect();
+    for candidate in ordered {
+        let within_free = section("related", &related).section.tokens < free_tokens;
+        if !base_sufficient(candidate)
+            || accepted_count >= related_limit
+            || (!within_free && !relevant(candidate))
+        {
             omitted.insert(candidate.id.clone(), "RANK_CUTOFF");
             continue;
         }
@@ -436,6 +493,23 @@ pub fn select(
             reason: omitted.get(&c.id).unwrap_or(&"RANK_CUTOFF").to_string(),
         })
         .collect();
+    let delta = |pairs: Vec<RenderedFile>| -> Vec<RenderedFile> {
+        pairs
+            .into_iter()
+            .map(|(mut file, text)| {
+                file.hash = short_hash(&text);
+                if delivered.get(&file.id) == Some(&file.hash) {
+                    let stub = render::unchanged(&file);
+                    file.unchanged = true;
+                    file.tokens = estimate_tokens(&stub);
+                    (file, stub)
+                } else {
+                    (file, text)
+                }
+            })
+            .collect()
+    };
+    let (targets, related, core) = (delta(targets), delta(related), delta(core));
     Ok(Selection {
         core: section("core", &core),
         related: section("related", &related),
@@ -448,6 +522,12 @@ pub fn select(
             .collect(),
         excluded,
     })
+}
+/// Huella corta de una entrada renderizada: 16 hex de blake3 (64 bits) bastan dentro de una tarea.
+pub fn short_hash(text: &str) -> String {
+    let full = foker_map::canonical::hash_bytes(text.as_bytes());
+    let hex = full.strip_prefix("blake3:").unwrap_or(&full);
+    hex.chars().take(16).collect()
 }
 /// Corte inclusivo; un máximo nulo no elimina candidatos.
 fn below_relevance(score: f64, maximum: f64, fraction: f64) -> bool {

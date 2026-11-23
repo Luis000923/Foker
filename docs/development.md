@@ -49,15 +49,14 @@ herramientas MCP autocontenidos (sin `$ref`), como exigen los clientes.
 
 | Nivel | Herramienta |
 |---|---|
-| Unit Rust | `cargo nextest` |
-| Unit TS | `vitest` |
-| Property-based | `proptest`, `fast-check` |
-| Snapshot | `insta`, snapshots de `vitest` |
-| Contract | `vitest` + `ajv` |
-| E2E | `vitest` + `execa` sobre el paquete empaquetado |
+| Unit e integración Rust | `cargo test --workspace` (`crates/*/tests/`) |
+| Unit TS | `node:test` nativo (Node ≥ 22.18 quita los tipos): `packages/*/test/*.test.ts` |
+| E2E MCP | `node:test` lanzando `foker mcp` por stdio (`packages/mcp/test/`) |
+| Tokens y latencia | `pnpm bench:tokens -- --baseline-ref <ref>` ([informe](benchmarks/tokens.md)) |
 
-Fixtures deterministas en `fixtures/` con salidas doradas en `expected/`. `UPDATE_SNAPSHOTS=1 pnpm test`
-las regenera; un cambio en doradas exige revisión explícita. Los fixtures no dependen de red ni de la hora.
+`pnpm test` compila los paquetes, ejecuta los tests TS contra `dist/` (los importan por nombre de
+paquete; `tsc` los comprueba contra `src/` con la condición `@foker/source`) y después `cargo test`.
+Los tests no dependen de red ni de la hora; los fixtures se crean en directorios temporales.
 
 ## Addon nativo
 

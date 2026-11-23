@@ -85,7 +85,7 @@ REQ-POL-001 y las relajaciones justificadas están en [configuration.md](configu
 `packages/policy/src/secrets/index.ts` implementa 24 reglas con tests positivos/negativos.
 Las asignaciones genéricas requieren longitud ≥12 y entropía ≥3,5; generan warning, que el gate
 actual trata como detección y bloquea. Los mensajes omiten valores; la redacción produce
-`[REDACTED:<regla>]`. Checks eliminan valores del entorno no permitido y aplican el escáner;
+`[REDACTED:<regla>]`. Checks eliminan valores del entorno no permitido y aplican el escáner (un valor de menos de 8 caracteres solo se redacta como palabra completa; los literales booleanos y las variables de sesión, editor y locale no se tratan como secretos);
 MCP sanea strings y claves antes de devolverlos. La captura de checks se limita a 1 MiB y el tail
 a 50 líneas; MCP limita su salida a 80.000 caracteres.
 

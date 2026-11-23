@@ -61,12 +61,14 @@ pub(crate) fn build_with_seed_counts(
             inputs.core_files
         },
         &params,
+        &inputs.delivered,
     )?;
     let mut fixed = fixed.into_iter();
     let sections_text: Vec<_> = vec![
         fixed.next().expect("rules"),
         selection.core,
         fixed.next().expect("skill"),
+        fixed.next().expect("requirements"),
         fixed.next().expect("task_scope"),
         selection.related,
         selection.targets,

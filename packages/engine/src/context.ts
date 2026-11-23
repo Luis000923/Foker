@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { type ContextRequest, normalizePath } from '@foker/core';
 import { gitDirtyFiles } from './git.js';
+import { gatherRequirements } from './requirements.js';
 import { loadSkill } from './skills/index.js';
 
 async function optionalFile(path: string): Promise<string | undefined> {
@@ -16,8 +17,8 @@ async function optionalFile(path: string): Promise<string | undefined> {
 /** Lee reglas, skill y cambios locales para el Context Engine. */
 export async function gatherContextInputs(
   root: string,
-  options: { skill?: string; configPath?: string } = {},
-): Promise<Pick<ContextRequest, 'rules' | 'skill' | 'dirtyFiles'>> {
+  options: { skill?: string; configPath?: string; task?: string } = {},
+): Promise<Pick<ContextRequest, 'rules' | 'skill' | 'dirtyFiles' | 'requirements'>> {
   const rules = await optionalFile(join(root, normalizePath(root, 'foker/rules.md')));
   let skill: ContextRequest['skill'];
   if (options.skill !== undefined) {
@@ -30,5 +31,12 @@ export async function gatherContextInputs(
     };
   }
   const dirtyFiles = await gitDirtyFiles(root);
-  return { ...(rules === undefined ? {} : { rules }), ...(skill ? { skill } : {}), dirtyFiles };
+  // Solo las secciones de REQUIREMENTS.md/foker.md que toca la tarea (lectura segmentada).
+  const requirements = options.task === undefined ? undefined : await gatherRequirements(root, options.task);
+  return {
+    ...(rules === undefined ? {} : { rules }),
+    ...(skill ? { skill } : {}),
+    ...(requirements ? { requirements } : {}),
+    dirtyFiles,
+  };
 }

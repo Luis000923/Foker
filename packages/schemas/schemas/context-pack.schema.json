@@ -323,6 +323,18 @@
               "minimum": 0,
               "maximum": 1
             },
+            "related_free_fraction": {
+              "description": "Interno Rust: fracción del presupuesto que related ocupa antes de aplicar related_min_relative. Solo si difiere del default.",
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "related_min_relative": {
+              "description": "Interno Rust: corte de related respecto al mejor opcional; los vecinos directos de un ancla lo evitan. Solo si difiere del default.",
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
             "related_limits": {
               "description": "Interno Rust: máximos por fix, test, refactor, add, modify, explain (ADR-031).",
               "type": "array",
@@ -354,7 +366,7 @@
       "additionalProperties": false,
       "required": ["id", "class", "stability", "tokens", "hash"],
       "properties": {
-        "id": { "enum": ["rules", "core", "skill", "task_scope", "related", "targets", "request"] },
+        "id": { "enum": ["rules", "core", "skill", "requirements", "task_scope", "related", "targets", "request"] },
         "class": { "enum": ["mandatory", "optional"] },
         "stability": { "enum": ["static", "session", "task"] },
         "tokens": { "type": "integer", "minimum": 0 },
@@ -375,7 +387,16 @@
         },
         "score": { "description": "PPR redondeado a 1e-12.", "type": "number", "minimum": 0 },
         "reasons": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/reason" } },
-        "note": { "description": "Aviso, p. ej. contenido completo omitido por presupuesto.", "type": "string" }
+        "note": { "description": "Aviso, p. ej. contenido completo omitido por presupuesto.", "type": "string" },
+        "hash": {
+          "description": "Huella corta (16 hex de blake3) de la entrada renderizada; identifica entregas repetidas en una tarea.",
+          "type": "string",
+          "pattern": "^[0-9a-f]{16}$"
+        },
+        "unchanged": {
+          "description": "Entrada idéntica a una ya entregada en la misma tarea; va como referencia (contexto diferencial).",
+          "const": true
+        }
       }
     },
     "excludedFile": {

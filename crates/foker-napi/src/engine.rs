@@ -404,6 +404,10 @@ pub struct ContextParams {
     pub bm25_k1: Option<f64>,
     /// Interno: bm25_b.
     pub bm25_b: Option<f64>,
+    /// Interno: corte de related no vecino respecto al mejor opcional.
+    pub related_min_relative: Option<f64>,
+    /// Interno: franquicia de related antes del corte relativo.
+    pub related_free_fraction: Option<f64>,
 }
 impl TryFrom<ContextParams> for foker_context::ContextParams {
     type Error = foker_context::ContextError;
@@ -438,6 +442,12 @@ impl TryFrom<ContextParams> for foker_context::ContextParams {
             core_fraction: value.core_fraction.unwrap_or(defaults.core_fraction),
             bm25_k1: value.bm25_k1.unwrap_or(defaults.bm25_k1),
             bm25_b: value.bm25_b.unwrap_or(defaults.bm25_b),
+            related_min_relative: value
+                .related_min_relative
+                .unwrap_or(defaults.related_min_relative),
+            related_free_fraction: value
+                .related_free_fraction
+                .unwrap_or(defaults.related_free_fraction),
             ..defaults
         }
         .with_counts([
@@ -475,6 +485,19 @@ pub struct ContextRequest {
     pub task_scope: Option<ContextTaskScope>,
     /// Campo dirty_files.
     pub dirty_files: Option<Vec<String>>,
+    /// Entradas ya entregadas en la tarea (id → hash de PackFile); activa el contexto diferencial.
+    pub delivered: Option<std::collections::HashMap<String, String>>,
+    /// Secciones de requisitos elegidas para la tarea.
+    pub requirements: Option<ContextRequirements>,
+}
+
+/// Contrato de contexto: ContextRequirements.
+#[napi(object)]
+pub struct ContextRequirements {
+    /// Documento de origen (REQUIREMENTS.md o foker.md).
+    pub id: String,
+    /// Secciones elegidas, en orden del documento.
+    pub body: String,
 }
 
 /// Contrato de contexto: ContextBudget.
@@ -493,7 +516,7 @@ pub struct ContextBudget {
 pub struct PackSection {
     /// Campo id.
     #[napi(
-        ts_type = "'rules' | 'core' | 'skill' | 'task_scope' | 'related' | 'targets' | 'request'"
+        ts_type = "'rules' | 'core' | 'skill' | 'requirements' | 'task_scope' | 'related' | 'targets' | 'request'"
     )]
     pub id: String,
     /// Campo class.
@@ -524,6 +547,10 @@ pub struct PackFile {
     pub reasons: Vec<String>,
     /// Campo note.
     pub note: Option<String>,
+    /// Huella corta de la entrada renderizada.
+    pub hash: String,
+    /// Entrada idéntica a una ya entregada en la tarea; va como referencia.
+    pub unchanged: Option<bool>,
 }
 
 /// Contrato de contexto: ContextExcluded.
@@ -721,6 +748,13 @@ impl FokerEngine {
                     .map(|v| v as usize)
                     .unwrap_or_else(|| foker_context::ContextInputs::default().core_files),
                 dirty_files: request.dirty_files.unwrap_or_default(),
+                delivered: request.delivered.unwrap_or_default().into_iter().collect(),
+                requirements: request
+                    .requirements
+                    .map(|r| foker_context::RequirementsInput {
+                        id: r.id,
+                        body: r.body,
+                    }),
             };
             let state = engine
                 .state()
@@ -760,6 +794,8 @@ impl FokerEngine {
                         score: f.score,
                         reasons: f.reasons,
                         note: f.note,
+                        hash: f.hash,
+                        unchanged: f.unchanged.then_some(true),
                     })
                     .collect(),
                 excluded: pack
