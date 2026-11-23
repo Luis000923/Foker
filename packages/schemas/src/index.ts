@@ -11,6 +11,15 @@ export {
   WIRE_OUTPUT_DEPTH,
   wireSchema,
 } from './bundle.js';
+export {
+  DEFAULT_DEPENDENCY_POLICY,
+  DEPENDENCY_SEVERITY_RANK,
+  type ResolvedDependencyPolicy,
+  resolveDependencyPolicy,
+  validateDependencyPolicy,
+  validateDependencyReport,
+  validateDependencyWaivers,
+} from './dependency-security.js';
 export { designPreset, designPresetNames } from './design.js';
 export { type ErrorCodeInfo, errorCode, errorCodes, type Recoverability } from './errors.js';
 export * from './generated/types.js';
@@ -31,12 +40,3 @@ export {
   validate,
   validator,
 } from './validate.js';
-export {
-  DEFAULT_DEPENDENCY_POLICY,
-  DEPENDENCY_SEVERITY_RANK,
-  type ResolvedDependencyPolicy,
-  resolveDependencyPolicy,
-  validateDependencyPolicy,
-  validateDependencyReport,
-  validateDependencyWaivers,
-} from './dependency-security.js';
