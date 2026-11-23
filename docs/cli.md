@@ -263,6 +263,18 @@ Reglas defensivas OWASP ASVS Nivel 2 (15 reglas estáticas FKR-SEC-NNN)
 |---|---|---|---|
 | --strict | boolean | false | Los avisos también fallan |
 
+## foker check-deps
+
+Seguridad de dependencias de terceros (FKR-DEP-001..012), separada de `check-security`. Salida: 0 PASS/WARN, 1 hallazgos bloqueantes, 2 uso inválido (3 configuración inválida). Ver [security.md](security.md#seguridad-de-dependencias-de-terceros-fkr-dep).
+
+| Flag | Tipo | Default | Descripción |
+|---|---|---|---|
+| --offline | boolean | false | Sin red: solo reglas deterministas (por defecto salvo política hybrid) |
+| --online | boolean | false | Activa OSV y metadatos del registro (FKR-DEP-009..011) |
+| --strict | boolean | false | Falla desde severidad medium y ante errores de red (fail-closed) |
+| --diff-base | string | "" | Audita solo el delta frente a un ref de git |
+| --sbom | string | "" | Exporta un SBOM CycloneDX 1.5 JSON a esta ruta |
+
 ## foker sync
 
 Genera o actualiza la configuración de los agentes anfitriones

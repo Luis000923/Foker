@@ -4,11 +4,12 @@ Arranque: `foker mcp --root <ruta>`. Usa stdio; stdout contiene únicamente mens
 
 ## Herramientas
 
-Las ocho herramientas aparecen en orden alfabético, con título, anotaciones y esquemas autocontenidos de `@foker/schemas`. Se validan entrada y salida con Ajv 2020-12.
+Las diez herramientas aparecen en orden alfabético, con título, anotaciones y esquemas autocontenidos de `@foker/schemas`. Se validan entrada y salida con Ajv 2020-12.
 
 | Herramienta | Uso |
 |---|---|
 | `foker_check` | Ejecuta un perfil confiado, por defecto `quick`; los timeouts son resultados con `status: timeout`, `isError: false`. |
+| `foker_check_deps` | Solo lectura y siempre offline: reglas FKR-DEP sobre manifiestos y lockfiles; `diff_base` audita el delta frente a un ref, `strict` bloquea desde medium. No exige trust (no ejecuta comandos). |
 | `foker_context` | ContextPack, presupuesto 1000–20000 tokens; Markdown en `content[0]`, `rendered` en structuredContent solo con `explain`. |
 | `foker_impact` | Dependencias o dependientes, profundidad 1–3. |
 | `foker_search` | Archivos y símbolos, máximo 50 resultados. |

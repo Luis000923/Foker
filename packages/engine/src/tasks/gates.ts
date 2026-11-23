@@ -21,6 +21,7 @@ import type {
   TaskRecord,
 } from '@foker/schemas';
 import { loadConfig } from '../config.js';
+import { dependencyGateFindings, runDependencyCheck } from '../dependencies.js';
 import { type FindingParser, runProfileCheck } from '../findings/index.js';
 import { gitDirtyFiles, gitRead } from '../git.js';
 import { checkSecurity } from '../security.js';
@@ -163,6 +164,8 @@ async function execute(
         findings: report.findings,
         output_tail: `Static Automatable Security Controls (OWASP ASVS L2 Subset): ${report.scanned} archivos analizados.`,
       });
+    } else if (check.builtin === 'dependency-security') {
+      checks.push(await runDependencyCheck(root, name, loaded.policy.dependency_security));
     } else {
       checks.push({
         check: name,
@@ -302,6 +305,7 @@ async function evaluate(root: string, task: TaskRecord, options: Options): Promi
     const scope: GateResult = { gate: 'scope', status: 'pass', findings: [] };
     const secretFindings: Finding[] = [];
     const policy: GateResult = { gate: 'policy', status: 'pass', findings: [] };
+    let dependencyChange = false;
     for (const change of changes) {
       const inScope = effectiveWritePaths(task.scope.paths, skill?.permissions ?? {})(change.path);
       if (!inScope && !approvedPaths.has(change.path)) {
@@ -338,6 +342,7 @@ async function evaluate(root: string, task: TaskRecord, options: Options): Promi
           dependencies = true;
         }
       }
+      if (dependencies) dependencyChange = true;
       if (
         !approvedPaths.has(change.path) &&
         (matchGlobs(change.path, loaded.policy.approval_required.paths) ||
@@ -350,6 +355,14 @@ async function evaluate(root: string, task: TaskRecord, options: Options): Promi
           message: 'Cambio requiere aprobación',
         });
       }
+    }
+    // T11: la aprobación de dependencias exige análisis real (FKR-DEP-*), separado de static-security.
+    if (dependencyChange && loaded.policy.approval_required.dependency_changes) {
+      const result = await dependencyGateFindings(root, loaded.policy.dependency_security, (path) =>
+        baselineText(root, task, path),
+      );
+      policy.findings.push(...result.findings);
+      if (result.blocking && policy.status !== 'blocked') policy.status = 'fail';
     }
     gates.push(scope, policy);
     let packages: string[] = [];

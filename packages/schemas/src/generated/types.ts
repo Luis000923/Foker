@@ -83,13 +83,15 @@ cwd?: Glob
  */
 parser?: ("tsc" | "eslint" | "vitest" | "generic")
 } | {
-builtin: ("secret-scan" | "static-security")
+builtin: ("secret-scan" | "static-security" | "dependency-security")
 timeout_s?: number
 })
 /**
  * Argumento de argv. ${affected_packages} es el único marcador permitido y debe ocupar el argumento entero.
  */
 export type Argument = ("${affected_packages}" | string)
+export type DependencySeverity = ("critical" | "high" | "medium" | "low" | "info")
+export type DependencyRuleId = string
 export type FokerCheckOutput = ({
 ok: boolean
 results: McpCheckResult[]
@@ -99,6 +101,28 @@ diagnostics?: Diagnostics
  * Avisos no fatales, p. ej. salida truncada a 80.000 caracteres (FOKER-SPEC §10.5).
  */
 export type Diagnostics = Diagnostic[]
+export type FokerCheckDepsOutput = ({
+status: ("PASS" | "WARN" | "FAIL")
+/**
+ * packages, added, updated, removed, blocking, waived.
+ */
+summary: {
+[k: string]: number | undefined
+}
+/**
+ * @maxItems 200
+ */
+findings: {
+rule: string
+severity: ("critical" | "high" | "medium" | "low" | "info")
+blocking?: boolean
+file?: string
+package?: string
+message: string
+}[]
+truncated?: boolean
+diagnostics?: Diagnostics
+} | McpToolError)
 export type FokerContextOutput = ((McpContextPack | ContextPack) | McpToolError)
 export type FokerImpactInput = ({
 [k: string]: unknown | undefined
@@ -222,8 +246,12 @@ designTokens?: DesignTokens
 cliOutput?: CliOutput
 benchmarkResult?: BenchmarkResult
 benchmarkManifest?: BenchmarkManifest
+dependencyAuditReport?: DependencyAuditReport
+dependencyWaivers?: DependencyWaiversFile
 foker_check_input?: FokerCheckInput
 foker_check_output?: FokerCheckOutput
+foker_check_deps_input?: FokerCheckDepsInput
+foker_check_deps_output?: FokerCheckDepsOutput
 foker_context_input?: FokerContextInput
 foker_context_output?: FokerContextOutput
 foker_impact_input?: FokerImpactInput
@@ -780,6 +808,7 @@ paths?: Globs
 dependency_changes?: boolean
 file_deletions_outside_scope?: boolean
 }
+dependency_security?: DependencySecurityPolicy
 env_allowlist?: string[]
 tasks?: {
 max_attempts_default?: number
@@ -794,6 +823,46 @@ remove_protected_paths?: Globs
 remove_approval_paths?: Globs
 justification: string
 }[]
+}
+/**
+ * Política de `policy.dependency_security` en foker.config.yaml. Todo es opcional; los valores por defecto viven en @foker/schemas (DEFAULT_DEPENDENCY_POLICY).
+ */
+export interface DependencySecurityPolicy {
+enabled?: boolean
+mode?: ("offline" | "hybrid")
+fail_on?: ("critical" | "high" | "medium" | "low")
+allowed_registries?: string[]
+allowed_licenses?: string[]
+denied_licenses?: string[]
+require_ignore_scripts?: boolean
+require_integrity_hash?: boolean
+block_floating_versions?: boolean
+/**
+ * Si es true, FKR-DEP-010 informa paquetes sin attestations de procedencia (modo hybrid).
+ */
+require_provenance?: boolean
+min_release_age_hours?: number
+/**
+ * Nombres (`pkg`) o versiones exactas (`pkg@1.2.3`) prohibidos (FKR-DEP-007).
+ */
+banned_packages?: string[]
+/**
+ * Nombres internos adicionales para FKR-DEP-006 (además de los paquetes del workspace).
+ */
+internal_packages?: string[]
+/**
+ * Paquetes donde una versión mayor duplicada es un hallazgo FKR-DEP-008.
+ */
+critical_packages?: string[]
+/**
+ * Clave de overrides/resolutions → motivo (FKR-DEP-008).
+ */
+override_justifications?: {
+[k: string]: string | undefined
+}
+on_network_error?: ("warn" | "fail-closed")
+cache_ttl_hours?: number
+network_timeout_ms?: number
 }
 /**
  * Contrato de Foker para una Skill (FOKER-SPEC §13). Acompaña a un SKILL.md compatible con el estándar Agent Skills (agentskills.io). 'permissions' solo puede restringir.
@@ -1278,6 +1347,80 @@ smoke: [string, string, string]
 full: [string, ...(string)[]]
 }
 }
+/**
+ * Salida de `foker check-deps` y del check integrado `dependency-security` (reglas FKR-DEP-001..012). Separado de `static-security` (FKR-SEC-*).
+ */
+export interface DependencyAuditReport {
+schema_version: 1
+status: ("PASS" | "WARN" | "FAIL")
+mode: ("offline" | "hybrid")
+generated_at: string
+fail_on?: DependencySeverity
+lockfiles?: string[]
+summary: DependencyAuditSummary
+diff: DependencyDiffEntry[]
+findings: DependencyFinding[]
+}
+export interface DependencyAuditSummary {
+packages: number
+added: number
+updated: number
+removed: number
+findings: number
+blocking: number
+waived: number
+by_severity?: {
+critical?: number
+high?: number
+medium?: number
+low?: number
+info?: number
+}
+}
+export interface DependencyDiffEntry {
+name: string
+ecosystem: ("npm" | "cargo")
+changeType: ("added" | "updated" | "removed")
+direct: boolean
+fromVersion?: string
+toVersion?: string
+resolvedUrl?: string
+integrity?: string
+hasLifecycleScripts?: boolean
+lifecycleScripts?: string[]
+license?: string
+}
+export interface DependencyFinding {
+ruleId: DependencyRuleId
+severity: DependencySeverity
+packageName?: string
+version?: string
+file?: string
+message: string
+remediation: string
+evidence?: string
+waived?: boolean
+waiverId?: string
+}
+/**
+ * Contenido de `.foker/dep-waivers.json` (ruta protegida: la edita una persona).
+ */
+export interface DependencyWaiversFile {
+schema_version?: 1
+/**
+ * @maxItems 1000
+ */
+waivers: DependencyWaiver[]
+}
+export interface DependencyWaiver {
+id: string
+ruleId: DependencyRuleId
+packageName: string
+versionRange: string
+reason: string
+approvedBy: string
+expiresAt: string
+}
 export interface FokerCheckInput {
 profile?: string
 /**
@@ -1305,6 +1448,17 @@ code: ErrorCode
 message: string
 recoverable: boolean
 retry_after_ms?: number
+}
+export interface FokerCheckDepsInput {
+/**
+ * Ref de git: audita solo el delta frente a él.
+ */
+diff_base?: string
+/**
+ * Bloquea desde severidad medium.
+ */
+strict?: boolean
+max_findings?: number
 }
 export interface FokerContextInput {
 task: string

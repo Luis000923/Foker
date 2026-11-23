@@ -1,5 +1,6 @@
 /** Nombre del paquete npm. */
 export const PACKAGE_NAME = '@foker/policy';
+export * from './dependencies/index.js';
 export * from './exec.js';
 export * from './policy.js';
 export * from './secrets/index.js';

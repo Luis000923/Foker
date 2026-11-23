@@ -6,10 +6,12 @@ import {
   assertChecksExist,
   assertUnprotectedScope,
   type ContextRequest,
+  checkDependenciesInRepo,
   deriveScopePaths,
   type Engine,
   FokerError,
   gatherContextInputs,
+  isDependencyBlocking,
   loadConfig,
   loadSkill,
   nonexistentScopePaths,
@@ -24,6 +26,7 @@ import {
 import {
   ajv,
   type ContextPack,
+  type FokerCheckDepsInput,
   type FokerCheckInput,
   type FokerContextInput,
   type FokerImpactInput,
@@ -279,6 +282,34 @@ function serverFactory(options: FokerServerOptions) {
               ...gate,
               ...(gate.checks ? { checks: gate.checks.map(compactCheck) } : {}),
             })),
+          },
+        };
+      }
+      if (name === 'foker_check_deps') {
+        // Solo lectura y siempre offline: no ejecuta comandos ni usa red, por eso no exige trust.
+        const input = args as FokerCheckDepsInput;
+        const policy = (await loadConfig(root)).policy.dependency_security;
+        const { report } = await checkDependenciesInRepo(root, {
+          ...(policy ? { policy } : {}),
+          mode: 'offline',
+          ...(input.strict ? { failOn: 'medium' as const } : {}),
+          ...(input.diff_base ? { diffBase: input.diff_base } : {}),
+        });
+        const max = input.max_findings ?? 50;
+        const { findings: _, by_severity: __, ...summary } = report.summary;
+        return {
+          data: {
+            status: report.status,
+            summary,
+            findings: report.findings.slice(0, max).map((f) => ({
+              rule: f.ruleId,
+              severity: f.severity,
+              ...(isDependencyBlocking(f, report.fail_on ?? 'high') ? { blocking: true } : {}),
+              ...(f.file ? { file: f.file } : {}),
+              ...(f.packageName ? { package: f.version ? `${f.packageName}@${f.version}` : f.packageName } : {}),
+              message: `${f.message}${f.waived ? ` (waiver ${f.waiverId})` : ''} ${f.remediation}`.trim(),
+            })),
+            ...(report.findings.length > max ? { truncated: true } : {}),
           },
         };
       }

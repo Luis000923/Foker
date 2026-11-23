@@ -154,7 +154,7 @@
           "additionalProperties": false,
           "required": ["builtin"],
           "properties": {
-            "builtin": { "enum": ["secret-scan", "static-security"] },
+            "builtin": { "enum": ["secret-scan", "static-security", "dependency-security"] },
             "timeout_s": { "type": "integer", "minimum": 1, "maximum": 3600 }
           }
         }
@@ -175,6 +175,10 @@
             "dependency_changes": { "type": "boolean", "default": true },
             "file_deletions_outside_scope": { "type": "boolean", "default": true }
           }
+        },
+        "dependency_security": {
+          "description": "Seguridad de dependencias de terceros (FKR-DEP-*), independiente de static-security.",
+          "$ref": "../dependency-security/v1.json#/$defs/policy"
         },
         "env_allowlist": {
           "type": "array",

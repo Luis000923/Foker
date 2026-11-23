@@ -14,6 +14,7 @@ export const SCHEMA_NAMES = [
   'benchmark-result',
   'benchmark-manifest',
   'mcp-tools',
+  'dependency-security',
 ] as const;
 
 export type SchemaName = (typeof SCHEMA_NAMES)[number];
@@ -34,6 +35,7 @@ const FILES: Record<SchemaName, string> = {
   'benchmark-result': 'benchmark-result.schema.json',
   'benchmark-manifest': 'benchmark-manifest.schema.json',
   'mcp-tools': 'mcp-tools.json',
+  'dependency-security': 'dependency-security.schema.json',
 };
 
 /** Base de los `$id`: `https://foker.dev/schemas/<nombre>/v1.json`. */

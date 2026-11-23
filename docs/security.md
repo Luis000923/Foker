@@ -56,8 +56,8 @@ Rutas relativas al repo de Foker; cada fila identifica controles existentes y l�
 | T8 escritura arbitraria MCP | API sin edición de código; estado en .foker: `packages/mcp/src/index.ts`, tests E2E. | El anfitrión conserva herramientas de escritura. |
 | T9 secretos en contexto | Exclusión antes de lectura: `crates/foker-map/src/discover.rs`; redacción: `packages/mcp/src/safety.ts`. | Formatos desconocidos o secretos fragmentados pueden escapar. |
 | T10 entorno de checks | Allowlist y redacción: `packages/policy/src/exec.ts`. | Un proceso confiado aún puede leer secretos del disco. |
-| T11 dependencias del proyecto | Gate de dependencies/lockfiles: `packages/engine/src/tasks/gates.ts`; plantilla pnpm en `templates/nextjs-turbo/`. | Aprobación no implica análisis del paquete. |
-| T12 supply chain Foker | Lockfiles, `deny.toml`, `pnpm-workspace.yaml`, Actions por SHA en `.github/workflows/`. | Trusted publishing/procedencia es PENDIENTE FKR-080; release es dry-run. |
+| T11 dependencias del proyecto | `dependency-security` (FKR-DEP-001..012): `packages/policy/src/dependencies/`, gate en `packages/engine/src/tasks/gates.ts`, `foker check-deps`, `foker_check_deps`. Hallazgos ≥ `fail_on` sin waiver rechazan la tarea; el resto llega a AWAITING_APPROVAL con diff por paquete. | Heurístico y estático: no ejecuta ni descompila paquetes; CVEs, cooldown y deprecated del registro solo en modo `hybrid`. Un paquete nuevo sin avisos públicos puede ser malicioso. |
+| T12 supply chain Foker | Lockfiles, `deny.toml` (`cargo deny`), `pnpm audit --audit-level high` y `foker check-deps --offline` en CI, `pnpm-workspace.yaml` (`minimumReleaseAge`, `allowBuilds: {}`), Actions por SHA en `.github/workflows/`. | Trusted publishing/procedencia es PENDIENTE FKR-080; release es dry-run. |
 | T13 escalada editando política | `DEFAULT_POLICY` en `packages/policy/src/policy.ts`, gate y hash de comandos en `packages/engine/src/config.ts`. | La protección cubre las rutas enumeradas, no todo foker/ indiscriminadamente; sin C4 hay riesgo de manipulación local. |
 | T14 git destructivo | Git de lectura: `packages/engine/src/git.ts`; deny/hook en `packages/integrations/src/` y CLI policy. | La detección de comandos conocidos no es un sandbox de shell. |
 | T15 abuso de red | network documenta intención de checks: schema/config/`packages/policy/src/exec.ts`. | `network: false` NO bloquea conexiones. Solo C4 puede imponerlo. |
@@ -72,7 +72,8 @@ en Windows usa APPDATA. Une realpath del root y hash BLAKE3 canónico de validat
 Cambiar checks, perfiles, network o allowlist invalida esa entrada. `foker trust` muestra argv y
 exige confirmación en TTY; `--yes` exige `--ci` explícito y `CI=true`. MCP nunca concede trust.
 
-Dependencias, lockfiles y rutas de aprobación llevan a AWAITING_APPROVAL si los demás gates pasan.
+Dependencias, lockfiles y rutas de aprobación llevan a AWAITING_APPROVAL si los demás gates pasan;
+los cambios de dependencias pasan antes por `dependency-security` (ver abajo).
 Approve/reject/unblock son acciones CLI humanas con confirmación; admiten la excepción de CI explícito
 (`--ci` y `CI=true`). No son autenticación fuerte: el actor `cli:<usuario>` identifica al usuario
 local. Cambios protegidos y secretos bloquean, no se solucionan con approve. Revisa evidencia y
@@ -112,3 +113,68 @@ sin filtro de inquilino, CSP/HSTS ausentes, HTML sin escapar, `eval`, shell con 
 criptografía débil, CORS abierto, cookies sin atributos, herramientas MCP sin validación. Ejecuta
 `foker validate --profile security`; `foker check-security` delega al mismo perfil. Son heurísticas
 léxicas: pueden fallar en ambos sentidos y no equivalen a cumplir ASVS ni sustituyen un SAST (ADR-017).
+
+## Seguridad de dependencias de terceros (FKR-DEP)
+
+Dos capas separadas, con comandos, reglas y evidencia propios:
+
+| Capa | Qué analiza | Reglas | Comando / check / MCP |
+|---|---|---|---|
+| A. Código propio | Código de la aplicación (heurística léxica) | `FKR-SEC-001..015` | `foker check-security`, `builtin: static-security` |
+| B. Dependencias de terceros | `package.json`, lockfiles, `.npmrc`, `node_modules/*/package.json` | `FKR-DEP-001..012` | `foker check-deps`, `builtin: dependency-security`, `foker_check_deps` |
+
+Nada de la capa B instala paquetes ni ejecuta scripts: todo se lee de forma estática y se trata como
+entrada no confiable (tamaños acotados, sin seguir enlaces fuera del root, respuestas de red saneadas).
+Soporta `pnpm-lock.yaml` (v5–v9), `package-lock.json`/`npm-shrinkwrap.json` (v1–v3) y `yarn.lock`
+(v1 y berry). Solo usa APIs de Node.js, sin binarios POSIX.
+
+| Regla | Modo | Severidad | Detecta |
+|---|---|---|---|
+| FKR-DEP-001 | offline | high | Lockfile ausente, inválido, desincronizado con `package.json` o varios lockfiles (medium). |
+| FKR-DEP-002 | offline | high | `*`, vacío, `latest`/`next`/dist-tags, `http://`, Git sin commit SHA de 40 caracteres. |
+| FKR-DEP-003 | offline | critical | Sin hash `integrity`, origen fuera de `allowed_registries`; sha1 es high. `registry.yarnpkg.com` cuenta como npmjs. |
+| FKR-DEP-004 | offline | high / medium / low | Scripts `preinstall`/`install`/`postinstall` (y `prepare` de Git). high si se ejecutarían, medium si están en `allowBuilds`, low si quedan bloqueados. Sin `ignore-scripts=true` ni pnpm ≥10 en modo allowlist: high. |
+| FKR-DEP-005 | offline | high / medium | Licencia SPDX en `denied_licenses` (high) o fuera de `allowed_licenses` (medium). Expresiones OR/AND. |
+| FKR-DEP-006 | offline | high / medium | Typosquatting/slopsquatting (Levenshtein ≤2 frente a ~130 paquetes populares y nombres internos) y dependency confusion (nombre interno resuelto desde el registro). |
+| FKR-DEP-007 | offline | critical | `banned_packages`, waivers expirados o `.foker/dep-waivers.json` inválido. |
+| FKR-DEP-008 | offline | medium | `overrides`/`resolutions`/`pnpm.overrides` sin `override_justifications`, mayores duplicadas en `critical_packages`. |
+| FKR-DEP-009 | hybrid | según OSV | CVE/GHSA vía `https://api.osv.dev/v1/querybatch` (severidad GHSA o CVSS; sin severidad publicada: high). |
+| FKR-DEP-010 | hybrid | high / medium | Publicado hace menos de `min_release_age_hours` (72 h); sin npm provenance si `require_provenance`. |
+| FKR-DEP-011 | offline + hybrid | medium / high | `deprecated` (pnpm lo guarda en el lockfile; el registro en hybrid); versión inexistente/retirada: high. |
+| FKR-DEP-012 | offline | info | SBOM CycloneDX 1.5 JSON determinista ordenado por `purl` (`--sbom`). |
+
+**Modos.** `offline` (por defecto) no abre conexiones. `hybrid` (`--online` o `mode: hybrid`) consulta OSV
+y el registro con timeout de 8 s por petición y caché en `.foker/cache/dep-intel.json` (TTL 6 h).
+Con `on_network_error: warn` un fallo de red es un hallazgo low; con `fail-closed` (o `--strict`) es
+critical y bloquea. MCP es siempre offline.
+
+**Delta y gate.** Con línea base (la de la tarea, o `--diff-base <ref>` en CLI) las reglas por paquete
+solo examinan lo añadido o actualizado, y las de declaración solo los especificadores que cambiaron.
+FKR-DEP-001, la política de scripts y los waivers se evalúan siempre. En `foker task submit`, si cambian
+manifiestos o lockfiles y `approval_required.dependency_changes` está activo: hallazgos ≥ `fail_on`
+sin waiver ponen el gate `policy` en `fail` (REJECTED; FAILED al agotar intentos), nunca en
+AWAITING_APPROVAL. Si no, la tarea espera aprobación con un hallazgo `dependency/diff` por paquete
+(versión, directa/transitiva, licencia, integridad, scripts, origen) y los avisos no bloqueantes.
+
+**Waivers.** `.foker/dep-waivers.json` es ruta protegida: lo edita una persona.
+Cada waiver exige `id`, `ruleId`, `packageName`, `versionRange` (semver o `*`), `reason` (≥10
+caracteres), `approvedBy` y `expiresAt` ISO-8601. Un waiver vencido no se aplica y genera FKR-DEP-007.
+
+```json
+{ "waivers": [{ "id": "lodash-merge", "ruleId": "FKR-DEP-009", "packageName": "lodash", "versionRange": "<4.17.21",
+  "reason": "Ruta vulnerable no alcanzable; migración en FKR-123", "approvedBy": "luis", "expiresAt": "2027-01-31T00:00:00Z" }] }
+```
+
+**Política** (`policy.dependency_security` en `foker.config.yaml`; detalle en
+[configuration.md](configuration.md)): `enabled`, `mode`, `fail_on` (high), `allowed_registries`,
+`allowed_licenses`, `denied_licenses` (AGPL, SSPL-1.0, BUSL-1.1 por defecto), `require_ignore_scripts`,
+`require_integrity_hash`, `block_floating_versions`, `require_provenance`, `min_release_age_hours`,
+`banned_packages`, `internal_packages`, `critical_packages`, `override_justifications`,
+`on_network_error`, `cache_ttl_hours`, `network_timeout_ms`.
+
+**Cadena de suministro de Foker (T12).** CI ejecuta `cargo deny --locked check`, `pnpm audit
+--audit-level high` y `foker check-deps --offline` en Linux, macOS y Windows. `.npmrc` no fija
+`ignore-scripts=true`: pnpm ≥10 con `allowBuilds: {}` ya impide los scripts de dependencias, y los
+binarios de `@napi-rs` son optionalDependencies precompiladas. Hoja de ruta FKR-080: publicar con
+npm Trusted Publishing (OIDC de GitHub Actions, sin tokens de larga duración) y `--provenance`,
+y verificar attestations con `require_provenance` en proyectos gestionados.

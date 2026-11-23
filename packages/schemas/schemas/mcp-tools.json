@@ -76,6 +76,71 @@
       "timeout_s": 600
     },
     {
+      "name": "foker_check_deps",
+      "title": "Auditar dependencias de terceros",
+      "description": "Solo lectura, offline: audita dependencias de terceros (FKR-DEP: lockfile, rangos, integridad, registro, scripts, licencias, typosquatting). Úsalo antes de submit si cambiaste dependencias.",
+      "inputSchema": {
+        "title": "FokerCheckDepsInput",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "diff_base": {
+            "description": "Ref de git: audita solo el delta frente a él.",
+            "type": "string",
+            "pattern": "^(?!-)(?!.*\\.\\.)[A-Za-z0-9._/@^~{}-]{1,200}$"
+          },
+          "strict": { "description": "Bloquea desde severidad medium.", "type": "boolean", "default": false },
+          "max_findings": { "type": "integer", "minimum": 1, "maximum": 200, "default": 50 }
+        }
+      },
+      "outputSchema": {
+        "title": "FokerCheckDepsOutput",
+        "type": "object",
+        "anyOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["status", "summary", "findings"],
+            "properties": {
+              "status": { "enum": ["PASS", "WARN", "FAIL"] },
+              "summary": {
+                "description": "packages, added, updated, removed, blocking, waived.",
+                "type": "object",
+                "additionalProperties": { "type": "integer", "minimum": 0 }
+              },
+              "findings": {
+                "type": "array",
+                "maxItems": 200,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["rule", "severity", "message"],
+                  "properties": {
+                    "rule": { "type": "string" },
+                    "severity": { "enum": ["critical", "high", "medium", "low", "info"] },
+                    "blocking": { "type": "boolean" },
+                    "file": { "type": "string" },
+                    "package": { "type": "string" },
+                    "message": { "type": "string" }
+                  }
+                }
+              },
+              "truncated": { "type": "boolean" },
+              "diagnostics": { "$ref": "#/$defs/diagnostics" }
+            }
+          },
+          { "$ref": "#/$defs/mcpToolError" }
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "timeout_s": 120
+    },
+    {
       "name": "foker_context",
       "title": "Contexto para una tarea",
       "description": "Pack de reglas, skill, dependencias y código objetivo. Usa anclas conocidas; explain=true añade razones. No releas objetivos salvo aviso de omisión. Con task_id, lo ya entregado llega como unchanged; full=true lo reenvía.",

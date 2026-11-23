@@ -3,10 +3,26 @@ export const PACKAGE_NAME = '@foker/engine';
 export type { ContextRequest, Engine } from '@foker/core';
 // Primitivas compartidas por los adaptadores; la lógica sigue en core/policy.
 export { FokerError, hashCanonicalJson, matchGlobs, normalizePath, openEngine } from '@foker/core';
-export { assertCanTrust, isTrusted, redactSecrets, runCheck, SECURITY_RULES, TrustStore } from '@foker/policy';
+export {
+  assertCanTrust,
+  checkDependencies,
+  isBlocking as isDependencyBlocking,
+  isTrusted,
+  redactSecrets,
+  runCheck,
+  SECURITY_RULES,
+  TrustStore,
+} from '@foker/policy';
 export * from './compressor/index.js';
 export { loadConfig, resolveConfig } from './config.js';
 export { gatherContextInputs } from './context.js';
+export {
+  checkDependenciesInRepo,
+  dependencyGateFindings,
+  runDependencyCheck,
+  summarize as summarizeDependencyReport,
+  toGateFinding as toDependencyGateFinding,
+} from './dependencies.js';
 export { renderTokensCss } from './design/tokens.js';
 export * from './findings/index.js';
 export { gatherRequirements, REQUIREMENTS_FILES, selectRequirements, splitSections } from './requirements.js';

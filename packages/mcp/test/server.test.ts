@@ -72,6 +72,7 @@ test('las respuestas cumplen el outputSchema compacto publicado en tools/list', 
     ['foker_search', { query: 'twice' }],
     ['foker_impact', { files: ['src/util.ts'] }],
     ['foker_context', { task: 'Cambiar twice', anchors: { files: ['src/util.ts'] } }],
+    ['foker_check_deps', {}],
   ] as const) {
     const result = await call(name, args);
     assert.ok(!result.isError, `${name}: ${result.content[0]?.text}`);
@@ -110,4 +111,20 @@ test('contexto diferencial por task_id; full=true reenvía', async () => {
   assert.equal(full.structuredContent?.['unchanged_files'], undefined);
   assert.ok(full.content[0]?.text.includes('return n * 2'));
   await call('foker_task_cancel', { task_id });
+});
+
+test('foker_check_deps: solo lectura, offline y con inputSchema estricto', async () => {
+  const list = (await rpc('tools/list', {}))['result'] as {
+    tools: { name: string; annotations: { readOnlyHint: boolean; openWorldHint: boolean } }[];
+  };
+  const tool = list.tools.find((t) => t.name === 'foker_check_deps');
+  assert.equal(tool?.annotations.readOnlyHint, true);
+  assert.equal(tool?.annotations.openWorldHint, false);
+  writeFileSync(join(root, 'package.json'), JSON.stringify({ dependencies: { zod: 'latest' } }));
+  const result = await call('foker_check_deps', {});
+  assert.equal(result.structuredContent?.['status'], 'FAIL');
+  const rejected = await call('foker_check_deps', { diff_base: '--output=/tmp/x' });
+  assert.ok(rejected.isError);
+  const extra = await call('foker_check_deps', { online: true });
+  assert.ok(extra.isError);
 });

@@ -32,7 +32,10 @@ Dentro del alcance (FOKER-SPEC §11):
 - Evasión de los gates (llegar a `COMPLETED` saltándose alcance, rutas protegidas, secretos o checks).
 - Fuga de secretos en Context Packs, salidas MCP, logs o auditoría.
 - Manipulación del ledger o de la evidencia no detectada por `verifyLedger` / `foker task verify`.
-- Cadena de suministro de los paquetes `foker` y `@foker/*` y del addon nativo.
+- Cadena de suministro de los paquetes `foker` y `@foker/*` y del addon nativo (T12: `cargo deny`, `pnpm audit`,
+  `foker check-deps` en CI; procedencia con npm Trusted Publishing pendiente en FKR-080).
+- Evasión de `dependency-security` (FKR-DEP-*): aceptar en una tarea un registro no permitido, un lockfile
+  sin integridad, un especificador flotante o un waiver vencido sin que el gate lo rechace.
 
 Fuera del alcance:
 
