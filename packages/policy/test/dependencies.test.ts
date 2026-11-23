@@ -368,7 +368,8 @@ test('FKR-DEP-011 offline desde pnpm-lock y FKR-DEP-012 SBOM determinista', asyn
   assert.ok(a.report.findings.some((f) => f.ruleId === 'FKR-DEP-012' && f.severity === 'info'));
   assert.deepEqual(a.sbom, b.sbom);
   assert.equal(a.sbom?.['specVersion'], '1.5');
-  const comp = ((a.sbom ?? {})['components'] as { purl: string; hashes: { alg: string }[] }[])[0];
+  assert.ok(a.sbom);
+  const comp = (a.sbom['components'] as { purl: string; hashes: { alg: string }[] }[])[0];
   assert.equal(comp?.purl, 'pkg:npm/request@2.88.2');
   assert.equal(comp?.hashes[0]?.alg, 'SHA-512');
 });
