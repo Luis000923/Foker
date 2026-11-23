@@ -2,7 +2,7 @@
 
 - Fecha: 2026-11-23
 - baseline: `bfca7de`
-- candidato: `bfca7de+cambios`
+- candidato: `3869b1f`
 - Fixtures: árbol de `bfca7de` (repo Foker) y `examples/aurora-analytics` + `REQUIREMENTS.md`
 - Repeticiones: 7 (p50/p95 por percentil de rango); Node v22.23.2, linux
 - Tokens: estimador `bytes-lf/3.2@1` = ceil(bytes UTF-8 tras CRLF→LF × 5/16), determinista
@@ -36,18 +36,18 @@
 
 | Medida | baseline | candidato | Δ |
 |---|---:|---:|---:|
-| cli_context_exploracion_p50 | 342 | 195 | -43.0 % |
-| cli_context_focal_p50 | 358 | 192 | -46.2 % |
-| cli_context_cross_p50 | 348 | 185 | -46.9 % |
-| cli_context_aurora_p50 | 315 | 173 | -45.0 % |
-| mcp_context_warm_p50 | 52 | 32 | -38.5 % |
-| mcp_context_warm_p95 | 59 | 34 | -42.7 % |
-| mcp_context_cold_p50 | 379 | 328 | -13.5 % |
-| cli_version_p50 | 277 | 77 | -72.1 % |
-| cli_version_p95 | 288 | 83 | -71.1 % |
-| cli_map_cold_p50 | 344 | 174 | -49.5 % |
-| cli_map_warm_p50 | 313 | 164 | -47.6 % |
-| cli_map_warm_p95 | 320 | 169 | -47.2 % |
+| cli_context_exploracion_p50 | 361 | 196 | -45.6 % |
+| cli_context_focal_p50 | 357 | 194 | -45.8 % |
+| cli_context_cross_p50 | 355 | 202 | -43.1 % |
+| cli_context_aurora_p50 | 318 | 161 | -49.5 % |
+| mcp_context_warm_p50 | 59 | 32 | -44.7 % |
+| mcp_context_warm_p95 | 67 | 35 | -47.9 % |
+| mcp_context_cold_p50 | 374 | 329 | -11.9 % |
+| cli_version_p50 | 282 | 82 | -70.8 % |
+| cli_version_p95 | 311 | 88 | -71.7 % |
+| cli_map_cold_p50 | 338 | 177 | -47.6 % |
+| cli_map_warm_p50 | 333 | 175 | -47.5 % |
+| cli_map_warm_p95 | 358 | 194 | -45.8 % |
 
 ## Retención (Zero-Degradation Check)
 
