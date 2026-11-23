@@ -7,6 +7,13 @@ export { assertCanTrust, isTrusted, redactSecrets, runCheck, SECURITY_RULES, Tru
 export * from './compressor/index.js';
 export { loadConfig, resolveConfig } from './config.js';
 export { gatherContextInputs } from './context.js';
+export {
+  checkDependenciesInRepo,
+  dependencyGateFindings,
+  runDependencyCheck,
+  summarize as summarizeDependencyReport,
+  toGateFinding as toDependencyGateFinding,
+} from './dependencies.js';
 export { renderTokensCss } from './design/tokens.js';
 export * from './findings/index.js';
 export { gatherRequirements, REQUIREMENTS_FILES, selectRequirements, splitSections } from './requirements.js';
