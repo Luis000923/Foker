@@ -2,8 +2,21 @@
   "name": "@foker/mcp",
   "version": "0.1.2",
   "description": "Foker Model Context Protocol (MCP) stdio server.",
+  "keywords": [
+    "foker",
+    "mcp",
+    "mcp-server",
+    "model-context-protocol",
+    "ai-agents",
+    "claude-code",
+    "codex"
+  ],
   "license": "Apache-2.0",
   "author": "Luis (@Luis000923)",
+  "homepage": "https://foker.pdsx.org/",
+  "bugs": {
+    "url": "https://github.com/Luis000923/Foker/issues"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Luis000923/Foker.git",

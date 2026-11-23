@@ -1,9 +1,24 @@
 {
   "name": "@foker/policy",
   "version": "0.1.2",
-  "description": "Foker policy: protected paths, approvals, secrets, workspace trust, and static ASVS L2 subset security audit.",
+  "description": "Foker policy: protected paths, approvals, secrets, workspace trust, static ASVS L2 subset security audit, and third-party dependency security (lockfiles, SBOM, OSV).",
+  "keywords": [
+    "foker",
+    "ai-agents",
+    "security",
+    "owasp",
+    "secret-scanning",
+    "supply-chain-security",
+    "sbom",
+    "cyclonedx",
+    "lockfile"
+  ],
   "license": "Apache-2.0",
   "author": "Luis (@Luis000923)",
+  "homepage": "https://foker.pdsx.org/",
+  "bugs": {
+    "url": "https://github.com/Luis000923/Foker/issues"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Luis000923/Foker.git",

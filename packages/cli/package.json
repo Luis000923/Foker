@@ -2,8 +2,33 @@
   "name": "@foker/cli",
   "version": "0.1.2",
   "description": "Foker CLI: deterministic infrastructure for AI agents working on TypeScript monorepos.",
+  "keywords": [
+    "foker",
+    "ai-agents",
+    "ai-coding",
+    "agentic-coding",
+    "llm",
+    "mcp",
+    "model-context-protocol",
+    "claude-code",
+    "codex",
+    "opencode",
+    "context-engineering",
+    "code-map",
+    "ast",
+    "cli",
+    "developer-tools",
+    "typescript",
+    "monorepo",
+    "supply-chain-security",
+    "sbom"
+  ],
   "license": "Apache-2.0",
   "author": "Luis (@Luis000923)",
+  "homepage": "https://foker.pdsx.org/",
+  "bugs": {
+    "url": "https://github.com/Luis000923/Foker/issues"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Luis000923/Foker.git",

@@ -2,8 +2,20 @@
   "name": "@foker/schemas",
   "version": "0.1.2",
   "description": "JSON Schemas and contracts for Foker: generated TypeScript types and validators.",
+  "keywords": [
+    "foker",
+    "json-schema",
+    "ajv",
+    "mcp",
+    "ai-agents",
+    "typescript"
+  ],
   "license": "Apache-2.0",
   "author": "Luis (@Luis000923)",
+  "homepage": "https://foker.pdsx.org/",
+  "bugs": {
+    "url": "https://github.com/Luis000923/Foker/issues"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Luis000923/Foker.git",

@@ -2,8 +2,23 @@
   "name": "@foker/core",
   "version": "0.1.2",
   "description": "Foker native core: Rust AST context engine and PageRank bindings (napi-rs) for macOS, Linux (glibc) and Windows x64.",
+  "keywords": [
+    "foker",
+    "ai-agents",
+    "ai-coding",
+    "mcp",
+    "ast",
+    "code-map",
+    "context-engineering",
+    "rust",
+    "napi-rs"
+  ],
   "license": "Apache-2.0",
   "author": "Luis (@Luis000923)",
+  "homepage": "https://foker.pdsx.org/",
+  "bugs": {
+    "url": "https://github.com/Luis000923/Foker/issues"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Luis000923/Foker.git",
