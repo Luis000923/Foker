@@ -59,9 +59,14 @@ before(async () => {
   });
   child.stdin?.write(`${JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' })}\n`);
 });
-after(() => {
-  child?.kill();
-  rmSync(root, { recursive: true, force: true });
+after(async () => {
+  // En Windows el directorio sigue bloqueado (EBUSY) hasta que el servidor termina de verdad.
+  if (child && child.exitCode === null && child.signalCode === null) {
+    const exited = new Promise((resolve) => child.once('exit', resolve));
+    child.kill();
+    await exited;
+  }
+  rmSync(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
 });
 
 test('las respuestas cumplen el outputSchema compacto publicado en tools/list', async () => {
