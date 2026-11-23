@@ -1,6 +1,6 @@
 # ADR-042 · Asistente de requisitos y extensión aditiva de Design Tokens
 
-- **Estado**: Propuesta (pendiente de aprobación de la persona)
+- **Estado**: Aceptada (decisión de la persona, 2026-11-23)
 - **Modifica**: ADR-019 (nuevo esquema `requirements-answers`) y ADR-041 (claves opcionales de Design Tokens).
 
 ## Contexto
@@ -11,8 +11,8 @@ segmentable que el Context Engine pueda inyectar por partes.
 
 ## Decisión
 
-1. Nuevo esquema `requirements-answers/v1`: solo `idea` es obligatoria; el resto toma defaults
-   deterministas por tipo de producto y estilo visual.
+1. Nuevo esquema `requirements-answers/v1`: los campos obligatorios son `schema_version` (marca de
+   versión, valor `1`) e `idea`; el resto toma defaults deterministas por tipo de producto y estilo visual.
 2. `foker init` (salvo `--skip-spec`) y el nuevo `foker spec` entrevistan en 4 bloques o leen
    `--answers <json|yaml>`. Sin TTY nunca preguntan. Toda escritura es atómica y ocurre al final.
 3. `REQUIREMENTS.md` usa encabezados fijos (`## Resumen`, `## Rutas`…); `foker context --spec <id>`
@@ -27,4 +27,5 @@ segmentable que el Context Engine pueda inyectar por partes.
 
 - Cambio compatible: ningún documento v1 previo deja de validar.
 - La detección de inyección es heurística: marca para revisión humana, no bloquea.
-- Las tipografías se nombran con pila de respaldo; cargar webfonts queda para una tarea del backlog.
+- Las tipografías se nombran con pila de respaldo del sistema. Cargar las webfonts (`next/font`) es una mejora
+  futura: el backlog generado actualmente no incluye ninguna tarea para ello.

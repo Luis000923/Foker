@@ -49,3 +49,39 @@ describe('servidor MCP: FKR-POL-001 llega al cliente', () => {
     expect(data?.message).toBe('El estado .foker no admite symlinks.');
   });
 });
+
+describe('servidor MCP sin git en el PATH (modo degradado)', () => {
+  let base: string;
+  let client: Client | undefined;
+  const path = process.env['PATH'];
+  beforeEach(async () => {
+    base = await mkdtemp(join(tmpdir(), 'foker-mcp-nogit-'));
+  });
+  afterEach(async () => {
+    process.env['PATH'] = path;
+    await client?.close();
+    await rm(base, { recursive: true, force: true });
+  });
+
+  it('foker_context responde sin error y lleva el aviso en _meta.diagnostics', async () => {
+    const { writeFile } = await import('node:fs/promises');
+    await mkdir(join(base, 'src'));
+    await writeFile(join(base, 'src/a.ts'), 'export const a = 1;\n');
+    const server = await createFokerServer({ root: base, stderr: () => {} });
+    client = new Client({ name: 'test', version: '1' }, { versionNegotiation: { mode: { pin: '2026-07-28' } } });
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    await server.connect(serverTransport);
+    await client.connect(clientTransport);
+    process.env['PATH'] = join(base, 'sin-binarios');
+    const result = await client.callTool({
+      name: 'foker_context',
+      arguments: { task: 'revisar a.ts', anchors: { files: ['src/a.ts'] } },
+    });
+    expect(result.isError).toBeFalsy();
+    const diagnostics = (result._meta as { diagnostics?: { code: string; message: string }[] } | undefined)
+      ?.diagnostics;
+    expect(diagnostics).toEqual([
+      expect.objectContaining({ code: 'FKR-MAP-001', message: expect.stringContaining('git no está instalado') }),
+    ]);
+  });
+});

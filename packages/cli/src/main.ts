@@ -2,6 +2,7 @@ import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 import { type ParseArgsConfig, parseArgs } from 'node:util';
 import { FokerError } from '@foker/core';
+import { drainGitWarnings } from '@foker/engine';
 import { errorCode } from '@foker/schemas';
 import { commands, globalFlags, help } from './registry.js';
 import type { Message, Result } from './types.js';
@@ -103,6 +104,7 @@ export async function main(argv: string[], env: NodeJS.ProcessEnv, io: IO): Prom
         const value = parsed.values[f.name] ?? f.default;
         flags[f.name] = Array.isArray(value) ? value.map(String) : value;
       }
+      drainGitWarnings(); // descarta avisos de ejecuciones previas en el mismo proceso
       result = await command.run({
         env,
         ...(io.confirm ? { confirm: io.confirm } : {}),
@@ -131,6 +133,9 @@ export async function main(argv: string[], env: NodeJS.ProcessEnv, io: IO): Prom
     errors.push({ code: failure.code, message: failure.message });
     if (debug && !mcpMode) io.stderr(`${failure.stack ?? failure.message}\n`);
   }
+  // Modo degradado: `git` ausente no rompe el comando, pero el aviso debe verse.
+  for (const message of drainGitWarnings())
+    result.warnings.push({ code: 'FKR-MAP-001', message, hint: 'foker doctor' });
   errors.push(...(result.errors ?? []));
   const duration = Math.max(0, Math.round(performance.now() - start));
   if (mcpMode && (errors.length || (!argv.includes('--help') && !argv.includes('-h') && !argv.includes('--version')))) {

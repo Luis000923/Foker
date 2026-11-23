@@ -7,6 +7,7 @@ import {
   assertUnprotectedScope,
   type ContextRequest,
   deriveScopePaths,
+  drainGitWarnings,
   type Engine,
   FokerError,
   gatherContextInputs,
@@ -431,16 +432,22 @@ function serverFactory(options: FokerServerOptions) {
                 .join('; ')}`,
             );
           await assertPrivateState(root);
+          drainGitWarnings(); // descarta avisos de solicitudes anteriores
           const output = await dispatch(request.params.name, args, ctx);
           if (!definition.output(output.data)) throw new FokerError('FKR-INT-001', 'Salida inválida del motor.');
           const limited = limitOutput(output.data, output.text);
+          // Modo degradado: `git` ausente no es un error, pero el cliente debe poder verlo.
+          const diagnostics = [
+            ...(limited.diagnostics ?? []),
+            ...drainGitWarnings().map((message) => ({ code: 'FKR-MAP-001', message })),
+          ];
           if (!definition.output(limited.structured))
             throw new FokerError('FKR-INT-001', 'Salida inválida después de redacción/truncado.');
           result = {
             isError: false,
             structuredContent: limited.structured,
             content: [{ type: 'text', text: limited.rendered ?? JSON.stringify(limited.structured) }],
-            ...(limited.diagnostics ? { _meta: { diagnostics: limited.diagnostics } } : {}),
+            ...(diagnostics.length ? { _meta: { diagnostics } } : {}),
           };
         }
       } catch (error) {
